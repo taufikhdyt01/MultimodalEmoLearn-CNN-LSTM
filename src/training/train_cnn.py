@@ -11,12 +11,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Load data yang sudah dipersiapkan
-X_train_images = np.load('D:/Preprocessing/CNN_Data/X_train_images.npy')
-y_train = np.load('D:/Preprocessing/CNN_Data/y_train_images.npy')
-X_val_images = np.load('D:/Preprocessing/CNN_Data/X_val_images.npy')
-y_val = np.load('D:/Preprocessing/CNN_Data/y_val_images.npy')
-X_test_images = np.load('D:/Preprocessing/CNN_Data/X_test_images.npy')
-y_test = np.load('D:/Preprocessing/CNN_Data/y_test_images.npy')
+X_train_images = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/images/X_train_images.npy')
+y_train = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/images/y_train_images.npy')
+X_val_images = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/images/X_val_images.npy')
+y_val = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/images//y_val_images.npy')
+X_test_images = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/images/X_test_images.npy')
+y_test = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/images/y_test_images.npy')
 
 # Periksa label apa saja yang ada
 print("Unique labels in training data:", np.unique(y_train))
@@ -107,11 +107,11 @@ def build_cnn_model(input_shape=(224, 224, 3), num_classes=7):
     return model
 
 # Buat direktori untuk menyimpan model jika belum ada
-os.makedirs('D:/Models', exist_ok=True)
+os.makedirs('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/', exist_ok=True)
 
 # Buat callbacks
 checkpoint = ModelCheckpoint(
-    'D:/Models/cnn_model_best.h5',
+    'D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/cnn_model_best.h5',
     monitor='val_accuracy', 
     save_best_only=True, 
     mode='max', 
@@ -141,7 +141,7 @@ cnn_history = cnn_model.fit(
 
 # Evaluasi model
 print("Evaluating CNN model...")
-cnn_model = load_model('D:/Models/cnn_model_best.h5')  # Load model terbaik
+cnn_model = load_model('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/cnn_model_best.h5')  # Load model terbaik
 test_loss, test_acc = cnn_model.evaluate(X_test_images, y_test_one_hot)
 print(f"Test accuracy: {test_acc}")
 
@@ -162,7 +162,7 @@ sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=target_names, yti
 plt.title('Confusion Matrix')
 plt.ylabel('True Label')
 plt.xlabel('Predicted Label')
-plt.savefig('D:/Models/cnn_confusion_matrix.png')
+plt.savefig('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/cnn_confusion_matrix.png')
 plt.close()
 
 # Plot training history
@@ -182,12 +182,12 @@ plt.title('Model Loss')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
 plt.legend(['Train', 'Validation'], loc='upper left')
-plt.savefig('D:/Models/cnn_training_history.png')
+plt.savefig('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/cnn_training_history.png')
 plt.close()
 
 # Simpan label mapping untuk digunakan kembali
 import pickle
-with open('D:/Models/label_map.pkl', 'wb') as f:
+with open('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/label_map.pkl', 'wb') as f:
     pickle.dump(label_map, f)
 
 print("Training and evaluation completed. Results saved to D:/Models/")
