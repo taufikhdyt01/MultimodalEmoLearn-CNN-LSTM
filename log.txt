@@ -11,3 +11,30 @@ conda install pandas -c conda-forge -y
 
 # Juga install packages lain via conda untuk consistency
 conda install matplotlib seaborn scikit-learn -c conda-forge -y
+
+# Deactivate dan remove environment
+conda deactivate
+conda env remove -n multimodal-emotion -y
+
+# Create fresh environment dengan semua packages sekaligus
+conda create -n multimodal-emotion python=3.9 numpy=1.23.5 pandas matplotlib seaborn scikit-learn jupyter -c conda-forge -y
+
+# Activate environment
+conda activate multimodal-emotion
+
+# Install TensorFlow components via pip (karena tidak ada di conda)
+pip install tensorflow-cpu==2.10.0
+pip install tensorflow-directml-plugin
+
+# Install additional packages
+pip install pillow opencv-python tqdm ipykernel
+
+# Add Jupyter kernel
+python -m ipykernel install --user --name multimodal-emotion --display-name "Multimodal Emotion (Fixed)"
+
+# Force reinstall NumPy dan pandas dengan compatible versions
+pip uninstall numpy pandas -y
+pip install numpy==1.23.5
+pip install pandas==1.5.3
+
+# Restart Jupyter kernel setelah ini
