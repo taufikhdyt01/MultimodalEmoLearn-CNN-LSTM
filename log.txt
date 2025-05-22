@@ -1,41 +1,131 @@
-🧪 Test GPU Functionality
-Coba jalankan test ini:
-cmdpython -c "import tensorflow as tf; print('TF version:', tf.__version__); print('GPU devices:', tf.config.list_physical_devices('GPU')); print('DML devices:', tf.config.list_physical_devices('DML'))"
-🔧 Jika ada error, kita perlu clean installation:
-cmd# Uninstall semua TensorFlow packages
-pip uninstall tensorflow tensorflow-cpu tensorflow-intel tensorflow-directml-plugin -y
+---------------------------------------------------------------------------
+ImportError                               Traceback (most recent call last)
+Cell In[1], line 3
+      1 # Import libraries
+      2 import numpy as np
+----> 3 import pandas as pd
+      4 import matplotlib.pyplot as plt
+      5 import seaborn as sns
 
-# Clean install with DirectML
-pip install tensorflow-cpu==2.10.0
-pip install tensorflow-directml-plugin
-📦 Install Dependencies yang Dibutuhkan:
-cmdpip install numpy pandas matplotlib seaborn scikit-learn jupyter
-🎯 Test Script untuk RX 6600 LE:
-Buat file test_gpu.py:
-pythonimport tensorflow as tf
-print(f"TensorFlow version: {tf.__version__}")
+File ~\miniconda3\envs\multimodal-emotion\lib\site-packages\pandas\__init__.py:49
+     46 # let init-time option registration happen
+     47 import pandas.core.config_init  # pyright: ignore[reportUnusedImport] # noqa: F401
+---> 49 from pandas.core.api import (
+     50     # dtype
+     51     ArrowDtype,
+     52     Int8Dtype,
+     53     Int16Dtype,
+     54     Int32Dtype,
+     55     Int64Dtype,
+     56     UInt8Dtype,
+     57     UInt16Dtype,
+     58     UInt32Dtype,
+     59     UInt64Dtype,
+     60     Float32Dtype,
+     61     Float64Dtype,
+     62     CategoricalDtype,
+     63     PeriodDtype,
+     64     IntervalDtype,
+     65     DatetimeTZDtype,
+     66     StringDtype,
+     67     BooleanDtype,
+     68     # missing
+     69     NA,
+     70     isna,
+     71     isnull,
+     72     notna,
+     73     notnull,
+     74     # indexes
+     75     Index,
+     76     CategoricalIndex,
+     77     RangeIndex,
+     78     MultiIndex,
+     79     IntervalIndex,
+     80     TimedeltaIndex,
+     81     DatetimeIndex,
+     82     PeriodIndex,
+     83     IndexSlice,
+     84     # tseries
+     85     NaT,
+     86     Period,
+     87     period_range,
+     88     Timedelta,
+     89     timedelta_range,
+     90     Timestamp,
+     91     date_range,
+     92     bdate_range,
+     93     Interval,
+     94     interval_range,
+     95     DateOffset,
+     96     # conversion
+     97     to_numeric,
+     98     to_datetime,
+     99     to_timedelta,
+    100     # misc
+    101     Flags,
+    102     Grouper,
+    103     factorize,
+    104     unique,
+    105     value_counts,
+    106     NamedAgg,
+    107     array,
+    108     Categorical,
+    109     set_eng_float_format,
+    110     Series,
+    111     DataFrame,
+    112 )
+    114 from pandas.core.dtypes.dtypes import SparseDtype
+    116 from pandas.tseries.api import infer_freq
 
-# Check GPU/DML devices
-gpu_devices = tf.config.list_physical_devices('GPU')
-dml_devices = tf.config.list_physical_devices('DML')
+File ~\miniconda3\envs\multimodal-emotion\lib\site-packages\pandas\core\api.py:1
+----> 1 from pandas._libs import (
+      2     NaT,
+      3     Period,
+      4     Timedelta,
+      5     Timestamp,
+      6 )
+      7 from pandas._libs.missing import NA
+      9 from pandas.core.dtypes.dtypes import (
+     10     ArrowDtype,
+     11     CategoricalDtype,
+   (...)
+     14     PeriodDtype,
+     15 )
 
-print(f"GPU devices: {gpu_devices}")
-print(f"DML devices: {dml_devices}")
+File ~\miniconda3\envs\multimodal-emotion\lib\site-packages\pandas\_libs\__init__.py:18
+     16 import pandas._libs.pandas_parser  # isort: skip # type: ignore[reportUnusedImport]
+     17 import pandas._libs.pandas_datetime  # noqa: F401 # isort: skip # type: ignore[reportUnusedImport]
+---> 18 from pandas._libs.interval import Interval
+     19 from pandas._libs.tslibs import (
+     20     NaT,
+     21     NaTType,
+   (...)
+     26     iNaT,
+     27 )
 
-if gpu_devices or dml_devices:
-    print("✅ AMD GPU detected!")
-    
-    # Test simple computation on GPU
-    try:
-        with tf.device('/GPU:0'):
-            a = tf.constant([[1.0, 2.0], [3.0, 4.0]])
-            b = tf.constant([[2.0, 1.0], [1.0, 2.0]])
-            c = tf.matmul(a, b)
-            print("🚀 GPU computation test:")
-            print(c.numpy())
-    except Exception as e:
-        print(f"GPU test error: {e}")
-else:
-    print("⚠️ No GPU detected")
-Jalankan:
-cmdpython test_gpu.py
+File interval.pyx:1, in init pandas._libs.interval()
+
+File hashtable.pyx:1, in init pandas._libs.hashtable()
+
+File missing.pyx:1, in init pandas._libs.missing()
+
+File ~\miniconda3\envs\multimodal-emotion\lib\site-packages\pandas\_libs\tslibs\__init__.py:39
+      1 __all__ = [
+      2     "dtypes",
+      3     "localize_pydatetime",
+   (...)
+     36     "is_supported_dtype",
+     37 ]
+---> 39 from pandas._libs.tslibs import dtypes  # pylint: disable=import-self
+     40 from pandas._libs.tslibs.conversion import localize_pydatetime
+     41 from pandas._libs.tslibs.dtypes import (
+     42     Resolution,
+     43     periods_per_day,
+     44     periods_per_second,
+     45 )
+
+File dtypes.pyx:1, in init pandas._libs.tslibs.dtypes()
+
+File ccalendar.pyx:1, in init pandas._libs.tslibs.ccalendar()
+
+ImportError: numpy.core.multiarray failed to import (auto-generated because you didn't call 'numpy.import_array()' after cimporting numpy; use '<void>numpy._import_array' to disable if you are certain you don't need it).
