@@ -282,7 +282,8 @@ pip install pillow opencv-python tqdm ipykernel
 
 python -m ipykernel install --user --name multimodal-emotion --display-name "Multimodal Emotion (Dual GPU)"
 🧪 Final Test:
-cmdpython -c "
+cmd
+python -c "
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
