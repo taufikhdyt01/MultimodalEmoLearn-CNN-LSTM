@@ -1,9 +1,34 @@
-PS D:\research\2025_iris_taufik\MultimodalEmoLearn-CNN-LSTM> python --version
->> python -c "import platform; print('Platform:', platform.platform())"
->> python -c "import sys; print('Architecture:', sys.maxsize > 2**32 and '64-bit' or '32-bit')"
->> pip --version
-Python 3.10.11
-Platform: Windows-10-10.0.26100-SP0
-Architecture: 64-bit
-pip 25.1.1 from C:\Users\fitra\AppData\Local\Programs\Python\Python310\lib\site-packages\pip (python 3.10)
-PS D:\research\2025_iris_taufik\MultimodalEmoLearn-CNN-LSTM> 
+Perfect! Setup Anda sebenarnya bagus - Python 3.10.11 masih dalam range yang supported. Mari kita coba beberapa fix:
+🚀 Solution 1: Try with Index URL
+cmdpython -m pip install --upgrade pip
+pip install tensorflow-directml --extra-index-url https://pypi.org/simple/
+🔧 Solution 2: Jika masih error, coba specific version
+cmdpip install tensorflow-directml==1.15.8
+🐍 Solution 3: Create Conda Environment (Recommended)
+System Python kadang punya masalah dengan package dependencies. Lebih baik pakai conda environment:
+cmd# Install conda dulu jika belum ada (download Miniconda/Anaconda)
+# Atau coba dengan venv dulu:
+
+# Buat virtual environment
+python -m venv tf-directml-env
+
+# Activate environment
+tf-directml-env\Scripts\activate
+
+# Install packages
+pip install --upgrade pip
+pip install tensorflow-directml
+🎯 Solution 4: Alternative - Use Regular TensorFlow First
+Kalau DirectML masih bermasalah, kita bisa mulai dengan CPU dulu:
+cmdpip install tensorflow
+pip install numpy pandas matplotlib seaborn scikit-learn jupyter
+Lalu jalankan notebooks dengan CPU, nanti kita optimasi untuk GPU.
+💡 Let's Try Solution 1 First:
+Copy-paste ini di PowerShell:
+cmdpython -m pip install --upgrade pip
+pip install tensorflow-directml --extra-index-url https://pypi.org/simple/
+Jika berhasil, test dengan:
+cmdpython -c "import tensorflow as tf; print('TF version:', tf.__version__); print('GPU available:', len(tf.config.list_physical_devices('GPU')) > 0)"
+
+Coba Solution 1 dulu dan kasih tau hasilnya! Jika masih error, kita lanjut dengan alternatif lain.
+Sementara itu, apakah Anda sudah punya Anaconda atau Miniconda installed? Itu akan memudahkan environment management untuk project ini.
