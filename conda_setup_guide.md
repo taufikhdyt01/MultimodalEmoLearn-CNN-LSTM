@@ -220,39 +220,44 @@ Setelah semua checklist ✅, Anda siap menjalankan notebooks dengan GPU accelera
 === ENVIRONMENT CHECK ===
 Python: 3.9.21 (main, Dec 11 2024, 16:35:24) [MSC v.1929 64 bit (AMD64)]
 Environment: multimodal-emotion
-NumPy: 2.0.1
-ImportError: DLL load failed while importing _multiarray_umath: The specified module could not be found.
-ImportError: DLL load failed while importing _multiarray_umath: The specified module could not be found.
-ImportError: numpy.core._multiarray_umath failed to import
-ImportError: numpy.core.umath failed to import
-Traceback (most recent call last):
-  File "C:\Users\fitra\test_setup.py", line 17, in <module>
-    import tensorflow as tf
-  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\__init__.py", line 37, in <module>
-    from tensorflow.python.tools import module_util as _module_util
-  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\__init__.py", line 42, in <module>
-    from tensorflow.python import data
-  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\data\__init__.py", line 21, in <module>
-    from tensorflow.python.data import experimental
-  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\data\experimental\__init__.py", line 96, in <module>
-    from tensorflow.python.data.experimental import service
-  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\data\experimental\service\__init__.py", line 419, in <module>
-    from tensorflow.python.data.experimental.ops.data_service_ops import distribute
-  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\data\experimental\ops\data_service_ops.py", line 24, in <module>
-    from tensorflow.python.data.experimental.ops import compression_ops
-  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\data\experimental\ops\compression_ops.py", line 16, in <module>
-    from tensorflow.python.data.util import structure
-  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\data\util\structure.py", line 23, in <module>
-    from tensorflow.python.data.util import nest
-  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\data\util\nest.py", line 36, in <module>
-    from tensorflow.python.framework import sparse_tensor as _sparse_tensor
-  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\framework\sparse_tensor.py", line 24, in <module>
-    from tensorflow.python.framework import constant_op
-  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\framework\constant_op.py", line 25, in <module>
-    from tensorflow.python.eager import execute
-  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\eager\execute.py", line 23, in <module>
-    from tensorflow.python.framework import dtypes
-  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\framework\dtypes.py", line 34, in <module>
-    _np_bfloat16 = _pywrap_bfloat16.TF_bfloat16_type()
-TypeError: Unable to convert function return value to a Python type! The signature was
-        () -> handle
+NumPy: 1.23.5
+C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\requests\__init__.py:86: RequestsDependencyWarning: Unable to find acceptable character detection dependency (chardet or charset_normalizer).
+  warnings.warn(
+RuntimeError: CPU dispatcher tracer already initlized
+RuntimeError: CPU dispatcher tracer already initlized
+2025-05-22 11:14:04.863747: I tensorflow/c/logging.cc:34] Successfully opened dynamic library C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow-plugins/directml/directml.d6f03b303ac3c4f2eeb8ca631688c9757b361310.dll
+2025-05-22 11:14:04.870296: I tensorflow/c/logging.cc:34] Successfully opened dynamic library dxgi.dll
+2025-05-22 11:14:04.872696: I tensorflow/c/logging.cc:34] Successfully opened dynamic library d3d12.dll
+2025-05-22 11:14:05.261297: I tensorflow/c/logging.cc:34] DirectML device enumeration: found 2 compatible adapters.
+RuntimeError: CPU dispatcher tracer already initlized
+RuntimeError: CPU dispatcher tracer already initlized
+RuntimeError: CPU dispatcher tracer already initlized
+RuntimeError: CPU dispatcher tracer already initlized
+TensorFlow: 2.10.0
+GPU devices: 2
+DML devices: 0
+✅ AMD RX 6600 LE detected!
+2025-05-22 11:14:05.578424: I tensorflow/core/platform/cpu_feature_guard.cc:193] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2025-05-22 11:14:05.579294: I tensorflow/c/logging.cc:34] DirectML: creating device on adapter 0 (AMD Radeon RX 6600 LE)
+2025-05-22 11:14:05.641465: I tensorflow/c/logging.cc:34] Successfully opened dynamic library Kernel32.dll
+2025-05-22 11:14:05.643497: I tensorflow/c/logging.cc:34] DirectML: creating device on adapter 1 (AMD Radeon 780M Graphics)
+2025-05-22 11:14:05.688698: I tensorflow/core/common_runtime/pluggable_device/pluggable_device_factory.cc:306] Could not identify NUMA node of platform GPU ID 0, defaulting to 0. Your kernel may not have been built with NUMA support.
+2025-05-22 11:14:05.688771: I tensorflow/core/common_runtime/pluggable_device/pluggable_device_factory.cc:306] Could not identify NUMA node of platform GPU ID 1, defaulting to 0. Your kernel may not have been built with NUMA support.
+2025-05-22 11:14:05.688830: W tensorflow/core/common_runtime/pluggable_device/pluggable_device_bfc_allocator.cc:28] Overriding allow_growth setting because force_memory_growth was requested by the device.
+2025-05-22 11:14:05.688879: I tensorflow/core/common_runtime/pluggable_device/pluggable_device_factory.cc:272] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:0 with 35885 MB memory) -> physical PluggableDevice (device: 0, name: DML, pci bus id: <undefined>)
+2025-05-22 11:14:05.689563: W tensorflow/core/common_runtime/pluggable_device/pluggable_device_bfc_allocator.cc:28] Overriding allow_growth setting because force_memory_growth was requested by the device.
+2025-05-22 11:14:05.689615: I tensorflow/core/common_runtime/pluggable_device/pluggable_device_factory.cc:272] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:1 with 30778 MB memory) -> physical PluggableDevice (device: 1, name: DML, pci bus id: <undefined>)
+🚀 GPU computation successful!
+Result: [[ 4.  5.]
+ [10. 11.]]
+RuntimeError: CPU dispatcher tracer already initlized
+❌ pandas: Missing
+RuntimeError: CPU dispatcher tracer already initlized
+❌ matplotlib: Missing
+RuntimeError: CPU dispatcher tracer already initlized
+❌ seaborn: Missing
+RuntimeError: CPU dispatcher tracer already initlized
+❌ sklearn: Missing
+
+=== SETUP COMPLETE ===
