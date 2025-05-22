@@ -240,7 +240,8 @@ cnn_model = build_optimized_cnn_model(X_train_images.shape[1:], num_classes)
 
 print("📊 Model Summary:")
 print(f"Total Parameters: {cnn_model.count_params():,}")
-print(f"Trainable Parameters: {sum([tf.keras.utils.count_params(w) for w in cnn_model.trainable_weights]):,}")
+trainable_params = sum([tf.size(w).numpy() for w in cnn_model.trainable_weights])
+print(f"Trainable Parameters: {trainable_params:,}")
 
 if gpu_available:
     print(f"🎮 GPU Memory Usage Estimate: ~{(cnn_model.count_params() * 4 * BATCH_SIZE) / (1024**3):.2f} GB")
