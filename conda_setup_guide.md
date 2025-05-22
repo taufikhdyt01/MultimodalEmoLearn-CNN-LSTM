@@ -215,3 +215,44 @@ Jika menggunakan VS Code:
 - [ ] All required packages installed
 
 Setelah semua checklist ✅, Anda siap menjalankan notebooks dengan GPU acceleration!
+
+(multimodal-emotion) C:\Users\fitra>python test_setup.py
+=== ENVIRONMENT CHECK ===
+Python: 3.9.21 (main, Dec 11 2024, 16:35:24) [MSC v.1929 64 bit (AMD64)]
+Environment: multimodal-emotion
+NumPy: 2.0.1
+ImportError: DLL load failed while importing _multiarray_umath: The specified module could not be found.
+ImportError: DLL load failed while importing _multiarray_umath: The specified module could not be found.
+ImportError: numpy.core._multiarray_umath failed to import
+ImportError: numpy.core.umath failed to import
+Traceback (most recent call last):
+  File "C:\Users\fitra\test_setup.py", line 17, in <module>
+    import tensorflow as tf
+  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\__init__.py", line 37, in <module>
+    from tensorflow.python.tools import module_util as _module_util
+  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\__init__.py", line 42, in <module>
+    from tensorflow.python import data
+  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\data\__init__.py", line 21, in <module>
+    from tensorflow.python.data import experimental
+  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\data\experimental\__init__.py", line 96, in <module>
+    from tensorflow.python.data.experimental import service
+  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\data\experimental\service\__init__.py", line 419, in <module>
+    from tensorflow.python.data.experimental.ops.data_service_ops import distribute
+  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\data\experimental\ops\data_service_ops.py", line 24, in <module>
+    from tensorflow.python.data.experimental.ops import compression_ops
+  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\data\experimental\ops\compression_ops.py", line 16, in <module>
+    from tensorflow.python.data.util import structure
+  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\data\util\structure.py", line 23, in <module>
+    from tensorflow.python.data.util import nest
+  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\data\util\nest.py", line 36, in <module>
+    from tensorflow.python.framework import sparse_tensor as _sparse_tensor
+  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\framework\sparse_tensor.py", line 24, in <module>
+    from tensorflow.python.framework import constant_op
+  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\framework\constant_op.py", line 25, in <module>
+    from tensorflow.python.eager import execute
+  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\eager\execute.py", line 23, in <module>
+    from tensorflow.python.framework import dtypes
+  File "C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow\python\framework\dtypes.py", line 34, in <module>
+    _np_bfloat16 = _pywrap_bfloat16.TF_bfloat16_type()
+TypeError: Unable to convert function return value to a Python type! The signature was
+        () -> handle
