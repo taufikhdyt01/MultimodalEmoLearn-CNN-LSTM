@@ -139,14 +139,18 @@ def evaluate_fusion_performance(cnn_probs, landmark_probs, y_true, weights_to_te
     
     results = []
     
-    for weight_cnn in weights_to_test:
-        # Fusion with specific weight
+    for weight_cnn in weights:
+        # Fusion dengan bobot tertentu
         fused_probs = late_fusion_weighted(cnn_probs, landmark_probs, weight_cnn)
         y_pred_fused = np.argmax(fused_probs, axis=1)
         
-        # Calculate accuracy
-        accuracy = accuracy_score(y_true, y_pred_fused)
-        results.append((weight_cnn, accuracy))\n        \n        print(f\"CNN Weight: {weight_cnn:.1f}, Landmark Weight: {1-weight_cnn:.1f}, Accuracy: {accuracy:.4f}\")\n    \n    return results
+        # Hitung akurasi
+        accuracy = np.mean(y_pred_fused == y_true)
+        results.append((weight_cnn, accuracy))
+        
+        print(f"CNN Weight: {weight_cnn:.1f}, Landmark Weight: {1-weight_cnn:.1f}, Accuracy: {accuracy:.4f}")
+
+    return results
 
 # ============================
 # GPU-OPTIMIZED INFERENCE
