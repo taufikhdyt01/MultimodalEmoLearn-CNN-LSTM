@@ -444,7 +444,7 @@ report_lines.extend([
 ])
 
 # Save text report
-with open(MODEL_PATH + 'model_comparison_report.txt', 'w') as f:
+with open(MODEL_PATH + 'model_comparison_report.txt', 'w', encoding='utf-8') as f:
     f.write('\\n'.join(report_lines))
 
 # ============================
