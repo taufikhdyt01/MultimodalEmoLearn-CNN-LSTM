@@ -1,0 +1,67 @@
+# Import libraries
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+import time
+import pickle
+
+# Setup TensorFlow for AMD GPU (DirectML)
+import tensorflow as tf
+print(f"TensorFlow version: {tf.__version__}")
+
+# Try to setup DirectML for AMD GPU
+try:
+    # For AMD GPUs on Windows, try DirectML
+    from tensorflow.python.client import device_lib
+    
+    # List available devices
+    devices = device_lib.list_local_devices()
+    gpu_devices = [d for d in devices if d.device_type == 'GPU']
+    
+    if gpu_devices:
+        print(f"\n🎮 Found {len(gpu_devices)} GPU(s):")
+        for gpu in gpu_devices:
+            print(f"   - {gpu.name}: {gpu.physical_device_desc}")
+        
+        # Configure GPU memory growth to prevent OOM
+        gpus = tf.config.experimental.list_physical_devices('GPU')
+        if gpus:
+            try:
+                for gpu in gpus:
+                    tf.config.experimental.set_memory_growth(gpu, True)
+                print("✅ GPU memory growth enabled")
+            except RuntimeError as e:
+                print(f"⚠️ GPU setup warning: {e}")
+        
+        # Test GPU availability
+        print(f"\n🔍 GPU Test:")
+        print(f"   - GPU Available: {len(tf.config.list_physical_devices('GPU')) > 0}")
+        print(f"   - Built with GPU support: {tf.test.is_built_with_gpu_support()}")
+        
+        # Set default device for GPU operations
+        tf.config.set_soft_device_placement(True)
+        print("✅ GPU setup completed successfully!")
+        
+    else:
+        print("⚠️ No GPU detected. Using CPU mode.")
+        print("💡 For AMD GPU support, install: pip install tensorflow-directml")
+        
+except Exception as e:
+    print(f"⚠️ GPU setup failed: {e}")
+    print("💡 Falling back to CPU mode")
+    print("💡 For AMD RX 6600 LE support, install: pip install tensorflow-directml")
+
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, Input, concatenate
+from tensorflow.keras.optimizers import Adam
+from sklearn.metrics import classification_report, confusion_matrix
+
+# Set style
+plt.style.use('default')
+sns.set_palette('husl')
+
+print("\n✅ Libraries imported successfully!")
+
