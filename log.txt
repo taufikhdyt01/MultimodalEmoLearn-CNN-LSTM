@@ -1,158 +1,41 @@
-Perfect! Setup Anda sebenarnya bagus - Python 3.10.11 masih dalam range yang supported. Mari kita coba beberapa fix:
-🚀 Solution 1: Try with Index URL
-cmdpython -m pip install --upgrade pip
-pip install tensorflow-directml --extra-index-url https://pypi.org/simple/
-🔧 Solution 2: Jika masih error, coba specific version
-cmdpip install tensorflow-directml==1.15.8
-🐍 Solution 3: Create Conda Environment (Recommended)
-System Python kadang punya masalah dengan package dependencies. Lebih baik pakai conda environment:
-cmd# Install conda dulu jika belum ada (download Miniconda/Anaconda)
-# Atau coba dengan venv dulu:
+🧪 Test GPU Functionality
+Coba jalankan test ini:
+cmdpython -c "import tensorflow as tf; print('TF version:', tf.__version__); print('GPU devices:', tf.config.list_physical_devices('GPU')); print('DML devices:', tf.config.list_physical_devices('DML'))"
+🔧 Jika ada error, kita perlu clean installation:
+cmd# Uninstall semua TensorFlow packages
+pip uninstall tensorflow tensorflow-cpu tensorflow-intel tensorflow-directml-plugin -y
 
-# Buat virtual environment
-python -m venv tf-directml-env
+# Clean install with DirectML
+pip install tensorflow-cpu==2.10.0
+pip install tensorflow-directml-plugin
+📦 Install Dependencies yang Dibutuhkan:
+cmdpip install numpy pandas matplotlib seaborn scikit-learn jupyter
+🎯 Test Script untuk RX 6600 LE:
+Buat file test_gpu.py:
+pythonimport tensorflow as tf
+print(f"TensorFlow version: {tf.__version__}")
 
-# Activate environment
-tf-directml-env\Scripts\activate
+# Check GPU/DML devices
+gpu_devices = tf.config.list_physical_devices('GPU')
+dml_devices = tf.config.list_physical_devices('DML')
 
-# Install packages
-pip install --upgrade pip
-pip install tensorflow-directml
-🎯 Solution 4: Alternative - Use Regular TensorFlow First
-Kalau DirectML masih bermasalah, kita bisa mulai dengan CPU dulu:
-cmdpip install tensorflow
-pip install numpy pandas matplotlib seaborn scikit-learn jupyter
-Lalu jalankan notebooks dengan CPU, nanti kita optimasi untuk GPU.
-💡 Let's Try Solution 1 First:
-Copy-paste ini di PowerShell:
-cmdpython -m pip install --upgrade pip
-pip install tensorflow-directml --extra-index-url https://pypi.org/simple/
-Jika berhasil, test dengan:
-cmdpython -c "import tensorflow as tf; print('TF version:', tf.__version__); print('GPU available:', len(tf.config.list_physical_devices('GPU')) > 0)"
+print(f"GPU devices: {gpu_devices}")
+print(f"DML devices: {dml_devices}")
 
-Coba Solution 1 dulu dan kasih tau hasilnya! Jika masih error, kita lanjut dengan alternatif lain.
-Sementara itu, apakah Anda sudah punya Anaconda atau Miniconda installed? Itu akan memudahkan environment management untuk project ini.
-
-
-PS D:\research\2025_iris_taufik\MultimodalEmoLearn-CNN-LSTM> python -m pip install --upgrade pip
-Requirement already satisfied: pip in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (25.1.1)
-PS D:\research\2025_iris_taufik\MultimodalEmoLearn-CNN-LSTM> pip install tensorflow-directml --extra-index-url https://pypi.org/simple/
-Looking in indexes: https://pypi.org/simple, https://pypi.org/simple/
-ERROR: Could not find a version that satisfies the requirement tensorflow-directml (from versions: none)
-ERROR: No matching distribution found for tensorflow-directml
-
-PS D:\research\2025_iris_taufik\MultimodalEmoLearn-CNN-LSTM> pip install tensorflow-directml-plugin                   
-Collecting tensorflow-directml-plugin
-  Downloading tensorflow_directml_plugin-0.4.0.dev230202-cp310-cp310-win_amd64.whl.metadata (1.9 kB)
-Collecting tensorflow-cpu==2.10.0 (from tensorflow-directml-plugin)
-  Downloading tensorflow_cpu-2.10.0-cp310-cp310-win_amd64.whl.metadata (2.5 kB)
-Requirement already satisfied: grpcio>=1.8.6 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorflow-directml-plugin) (1.71.0)
-Requirement already satisfied: wheel>=0.26 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorflow-directml-plugin) (0.45.1)
-Collecting tensorflow-intel==2.10.0 (from tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading tensorflow_intel-2.10.0-cp310-cp310-win_amd64.whl.metadata (3.2 kB)
-Requirement already satisfied: absl-py>=1.0.0 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (2.2.2)
-Requirement already satisfied: astunparse>=1.6.0 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (1.6.3)
-Requirement already satisfied: flatbuffers>=2.0 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (25.2.10)
-Collecting gast<=0.4.0,>=0.2.1 (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading gast-0.4.0-py3-none-any.whl.metadata (1.1 kB)
-Requirement already satisfied: google-pasta>=0.1.1 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (0.2.0)
-Requirement already satisfied: h5py>=2.9.0 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (3.13.0)
-Collecting keras-preprocessing>=1.1.1 (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading Keras_Preprocessing-1.1.2-py2.py3-none-any.whl.metadata (1.9 kB)
-Requirement already satisfied: libclang>=13.0.0 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (18.1.1)
-Requirement already satisfied: numpy>=1.20 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (2.1.3)
-Requirement already satisfied: opt-einsum>=2.3.2 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (3.4.0)
-Requirement already satisfied: packaging in c:\users\fitra\appdata\roaming\python\python310\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (25.0)
-Collecting protobuf<3.20,>=3.9.2 (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading protobuf-3.19.6-cp310-cp310-win_amd64.whl.metadata (806 bytes)
-Requirement already satisfied: setuptools in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (65.5.0)
-Requirement already satisfied: six>=1.12.0 in c:\users\fitra\appdata\roaming\python\python310\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (1.17.0)
-Requirement already satisfied: termcolor>=1.1.0 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (3.1.0)
-Requirement already satisfied: typing-extensions>=3.6.6 in c:\users\fitra\appdata\roaming\python\python310\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (4.13.2)
-Requirement already satisfied: wrapt>=1.11.0 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (1.17.2)
-Requirement already satisfied: tensorflow-io-gcs-filesystem>=0.23.1 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (0.31.0)
-Collecting tensorboard<2.11,>=2.10 (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading tensorboard-2.10.1-py3-none-any.whl.metadata (1.9 kB)
-Collecting tensorflow-estimator<2.11,>=2.10.0 (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading tensorflow_estimator-2.10.0-py2.py3-none-any.whl.metadata (1.3 kB)
-Collecting keras<2.11,>=2.10.0 (from tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading keras-2.10.0-py2.py3-none-any.whl.metadata (1.3 kB)
-Collecting google-auth<3,>=1.6.3 (from tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading google_auth-2.40.2-py2.py3-none-any.whl.metadata (6.2 kB)
-Collecting google-auth-oauthlib<0.5,>=0.4.1 (from tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading google_auth_oauthlib-0.4.6-py2.py3-none-any.whl.metadata (2.7 kB)
-Requirement already satisfied: markdown>=2.6.8 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (3.8)
-Requirement already satisfied: requests<3,>=2.21.0 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (2.32.3)
-Collecting tensorboard-data-server<0.7.0,>=0.6.0 (from tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading tensorboard_data_server-0.6.1-py3-none-any.whl.metadata (1.1 kB)
-Collecting tensorboard-plugin-wit>=1.6.0 (from tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading tensorboard_plugin_wit-1.8.1-py3-none-any.whl.metadata (873 bytes)
-Requirement already satisfied: werkzeug>=1.0.1 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (3.1.3)
-Collecting cachetools<6.0,>=2.0.0 (from google-auth<3,>=1.6.3->tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading cachetools-5.5.2-py3-none-any.whl.metadata (5.4 kB)
-Collecting pyasn1-modules>=0.2.1 (from google-auth<3,>=1.6.3->tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
-Collecting rsa<5,>=3.1.4 (from google-auth<3,>=1.6.3->tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading rsa-4.9.1-py3-none-any.whl.metadata (5.6 kB)
-Collecting requests-oauthlib>=0.7.0 (from google-auth-oauthlib<0.5,>=0.4.1->tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading requests_oauthlib-2.0.0-py2.py3-none-any.whl.metadata (11 kB)
-Requirement already satisfied: charset-normalizer<4,>=2 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from requests<3,>=2.21.0->tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (3.4.2)
-Requirement already satisfied: idna<4,>=2.5 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from requests<3,>=2.21.0->tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (3.10)
-Requirement already satisfied: urllib3<3,>=1.21.1 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from requests<3,>=2.21.0->tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (2.4.0)
-Requirement already satisfied: certifi>=2017.4.17 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from requests<3,>=2.21.0->tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (2025.4.26)
-Collecting pyasn1>=0.1.3 (from rsa<5,>=3.1.4->google-auth<3,>=1.6.3->tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading pyasn1-0.6.1-py3-none-any.whl.metadata (8.4 kB)
-Collecting oauthlib>=3.0.0 (from requests-oauthlib>=0.7.0->google-auth-oauthlib<0.5,>=0.4.1->tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin)
-  Downloading oauthlib-3.2.2-py3-none-any.whl.metadata (7.5 kB)
-Requirement already satisfied: MarkupSafe>=2.1.1 in c:\users\fitra\appdata\local\programs\python\python310\lib\site-packages (from werkzeug>=1.0.1->tensorboard<2.11,>=2.10->tensorflow-intel==2.10.0->tensorflow-cpu==2.10.0->tensorflow-directml-plugin) (3.0.2)
-Downloading tensorflow_directml_plugin-0.4.0.dev230202-cp310-cp310-win_amd64.whl (9.0 MB)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.0/9.0 MB 11.0 MB/s eta 0:00:00
-Downloading tensorflow_cpu-2.10.0-cp310-cp310-win_amd64.whl (1.9 kB)
-Downloading tensorflow_intel-2.10.0-cp310-cp310-win_amd64.whl (262.7 MB)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 262.7/262.7 MB 12.2 MB/s eta 0:00:00
-Downloading gast-0.4.0-py3-none-any.whl (9.8 kB)
-Downloading keras-2.10.0-py2.py3-none-any.whl (1.7 MB)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 18.2 MB/s eta 0:00:00
-Downloading protobuf-3.19.6-cp310-cp310-win_amd64.whl (895 kB)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 895.7/895.7 kB 20.4 MB/s eta 0:00:00
-Downloading tensorboard-2.10.1-py3-none-any.whl (5.9 MB)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.9/5.9 MB 16.3 MB/s eta 0:00:00
-Downloading google_auth-2.40.2-py2.py3-none-any.whl (216 kB)
-Downloading cachetools-5.5.2-py3-none-any.whl (10 kB)
-Downloading google_auth_oauthlib-0.4.6-py2.py3-none-any.whl (18 kB)
-Downloading rsa-4.9.1-py3-none-any.whl (34 kB)
-Downloading tensorboard_data_server-0.6.1-py3-none-any.whl (2.4 kB)
-Downloading tensorflow_estimator-2.10.0-py2.py3-none-any.whl (438 kB)
-Downloading Keras_Preprocessing-1.1.2-py2.py3-none-any.whl (42 kB)
-Downloading pyasn1-0.6.1-py3-none-any.whl (83 kB)
-Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
-Downloading requests_oauthlib-2.0.0-py2.py3-none-any.whl (24 kB)
-Downloading oauthlib-3.2.2-py3-none-any.whl (151 kB)
-Downloading tensorboard_plugin_wit-1.8.1-py3-none-any.whl (781 kB)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 781.3/781.3 kB 8.2 MB/s eta 0:00:00
-Installing collected packages: tensorboard-plugin-wit, keras, tensorflow-estimator, tensorboard-data-server, pyasn1, protobuf, oauthlib, keras-preprocessing, gast, cachetools, rsa, requests-oauthlib, pyasn1-modules, google-auth, google-auth-oauthlib, tensorboard, tensorflow-intel, tensorflow-cpu, tensorflow-directml-plugin
-  Attempting uninstall: keras
-    Found existing installation: keras 3.10.0
-    Uninstalling keras-3.10.0:
-      Successfully uninstalled keras-3.10.0
-  Attempting uninstall: tensorboard-data-server
-    Found existing installation: tensorboard-data-server 0.7.2
-    Uninstalling tensorboard-data-server-0.7.2:
-      Successfully uninstalled tensorboard-data-server-0.7.2
-  Attempting uninstall: protobuf
-    Found existing installation: protobuf 5.29.4
-    Uninstalling protobuf-5.29.4:
-      Successfully uninstalled protobuf-5.29.4
-  Attempting uninstall: gast
-    Found existing installation: gast 0.6.0
-    Uninstalling gast-0.6.0:
-      Successfully uninstalled gast-0.6.0
-  Attempting uninstall: tensorboard
-    Found existing installation: tensorboard 2.19.0
-    Uninstalling tensorboard-2.19.0:
-      Successfully uninstalled tensorboard-2.19.0
-ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
-tensorflow 2.19.0 requires keras>=3.5.0, but you have keras 2.10.0 which is incompatible.
-tensorflow 2.19.0 requires protobuf!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<6.0.0dev,>=3.20.3, but you have protobuf 3.19.6 which is incompatible.
-tensorflow 2.19.0 requires tensorboard~=2.19.0, but you have tensorboard 2.10.1 which is incompatible.
-Successfully installed cachetools-5.5.2 gast-0.4.0 google-auth-2.40.2 google-auth-oauthlib-0.4.6 keras-2.10.0 keras-preprocessing-1.1.2 oauthlib-3.2.2 protobuf-3.19.6 pyasn1-0.6.1 pyasn1-modules-0.4.2 requests-oauthlib-2.0.0 rsa-4.9.1 tensorboard-2.10.1 tensorboard-data-server-0.6.1 tensorboard-plugin-wit-1.8.1 tensorflow-cpu-2.10.0 tensorflow-directml-plugin-0.4.0.dev230202 tensorflow-estimator-2.10.0 tensorflow-intel-2.10.0
+if gpu_devices or dml_devices:
+    print("✅ AMD GPU detected!")
+    
+    # Test simple computation on GPU
+    try:
+        with tf.device('/GPU:0'):
+            a = tf.constant([[1.0, 2.0], [3.0, 4.0]])
+            b = tf.constant([[2.0, 1.0], [1.0, 2.0]])
+            c = tf.matmul(a, b)
+            print("🚀 GPU computation test:")
+            print(c.numpy())
+    except Exception as e:
+        print(f"GPU test error: {e}")
+else:
+    print("⚠️ No GPU detected")
+Jalankan:
+cmdpython test_gpu.py
