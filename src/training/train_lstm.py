@@ -1,10 +1,10 @@
 # Load data landmark yang sudah dipersiapkan
-X_train_landmarks = np.load('D:/Preprocessing/LSTM_Data/X_train_landmarks.npy')
-y_train = np.load('D:/Preprocessing/LSTM_Data/y_train.npy')
-X_val_landmarks = np.load('D:/Preprocessing/LSTM_Data/X_val_landmarks.npy')
-y_val = np.load('D:/Preprocessing/LSTM_Data/y_val.npy')
-X_test_landmarks = np.load('D:/Preprocessing/LSTM_Data/X_test_landmarks.npy')
-y_test = np.load('D:/Preprocessing/LSTM_Data/y_test.npy')
+X_train_landmarks = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/landmarks/X_train_landmarks.npy')
+y_train = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/landmarks/y_train.npy')
+X_val_landmarks = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/landmarks/X_val_landmarks.npy')
+y_val = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/landmarks/y_val.npy')
+X_test_landmarks = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/landmarks/X_test_landmarks.npy')
+y_test = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/landmarks/y_test.npy')
 
 # Convert string labels ke numerical jika diperlukan
 if isinstance(y_train[0], str):
@@ -61,7 +61,7 @@ def build_landmark_model(input_shape, num_classes=7):
 
 # Buat callbacks
 checkpoint = ModelCheckpoint(
-    'D:/Models/landmark_model_best.h5',
+    'D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/landmark_model_best.h5',
     monitor='val_accuracy', 
     save_best_only=True, 
     mode='max', 
@@ -87,7 +87,7 @@ landmark_history = landmark_model.fit(
 )
 
 # Evaluasi model
-landmark_model = load_model('D:/Models/landmark_model_best.h5')  # Load model terbaik
+landmark_model = load_model('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/landmark_model_best.h5')  # Load model terbaik
 test_loss, test_acc = landmark_model.evaluate(X_test_landmarks, y_test_one_hot)
 print(f"Test accuracy: {test_acc}")
 
@@ -106,7 +106,7 @@ sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=target_names, yti
 plt.title('Confusion Matrix')
 plt.ylabel('True Label')
 plt.xlabel('Predicted Label')
-plt.savefig('D:/Models/landmark_confusion_matrix.png')
+plt.savefig('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/landmark_confusion_matrix.png')
 plt.close()
 
 # Plot training history
@@ -126,5 +126,5 @@ plt.title('Model Loss')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
 plt.legend(['Train', 'Validation'], loc='upper left')
-plt.savefig('D:/Models/landmark_training_history.png')
+plt.savefig('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/landmark_training_history.png')
 plt.close()
