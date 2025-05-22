@@ -15,8 +15,8 @@ def late_fusion_weighted(cnn_probs, landmark_probs, weight_cnn=0.6):
     return fused_probs
 
 # Load model terbaik
-cnn_model = load_model('D:/Models/cnn_model_best.h5')
-landmark_model = load_model('D:/Models/landmark_model_best.h5')
+cnn_model = load_model('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/cnn_model_best.h5')
+landmark_model = load_model('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/landmark_model_best.h5')
 
 # Prediksi dengan kedua model
 cnn_probs = cnn_model.predict(X_test_images)
@@ -55,7 +55,7 @@ sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=target_names, yti
 plt.title(f'Late Fusion Confusion Matrix (CNN Weight: {best_weight:.1f})')
 plt.ylabel('True Label')
 plt.xlabel('Predicted Label')
-plt.savefig('D:/Models/late_fusion_confusion_matrix.png')
+plt.savefig('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/late_fusion_confusion_matrix.png')
 plt.close()
 
 # Plot perbandingan akurasi
@@ -69,14 +69,14 @@ plt.xlabel('CNN Weight')
 plt.ylabel('Accuracy')
 plt.title('Late Fusion Performance with Different Weights')
 plt.legend()
-plt.savefig('D:/Models/late_fusion_weights.png')
+plt.savefig('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/late_fusion_weights.png')
 plt.close()
 
 # Simpan hasil sebagai model ensemble
 import pickle
-with open('D:/Models/late_fusion_ensemble.pkl', 'wb') as f:
+with open('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/late_fusion_ensemble.pkl', 'wb') as f:
     pickle.dump({
         'best_weight': best_weight,
-        'cnn_model_path': 'D:/Models/cnn_model_best.h5',
-        'landmark_model_path': 'D:/Models/landmark_model_best.h5'
+        'cnn_model_path': 'D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/cnn_model_best.h5',
+        'landmark_model_path': 'D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/landmark_model_best.h5'
     }, f)

@@ -1,15 +1,15 @@
 # Load data yang sudah dipersiapkan
-X_train_images = np.load('D:/Preprocessing/CNN_Data/X_train_images.npy')
-X_train_landmarks = np.load('D:/Preprocessing/LSTM_Data/X_train_landmarks.npy')
-y_train = np.load('D:/Preprocessing/CNN_Data/y_train_images.npy')
+X_train_images = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/images/X_train_images.npy')
+X_train_landmarks = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/landmarks/X_train_landmarks.npy')
+y_train = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/images/y_train_images.npy')
 
-X_val_images = np.load('D:/Preprocessing/CNN_Data/X_val_images.npy')
-X_val_landmarks = np.load('D:/Preprocessing/LSTM_Data/X_val_landmarks.npy')
-y_val = np.load('D:/Preprocessing/CNN_Data/y_val_images.npy')
+X_val_images = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/images/X_val_images.npy')
+X_val_landmarks = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/landmarks/X_val_landmarks.npy')
+y_val = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/images/y_val_images.npy')
 
-X_test_images = np.load('D:/Preprocessing/CNN_Data/X_test_images.npy')
-X_test_landmarks = np.load('D:/Preprocessing/LSTM_Data/X_test_landmarks.npy')
-y_test = np.load('D:/Preprocessing/CNN_Data/y_test_images.npy')
+X_test_images = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/images/X_test_images.npy')
+X_test_landmarks = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/landmarks/X_test_landmarks.npy')
+y_test = np.load('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/images/y_test_images.npy')
 
 # Convert string labels ke numerical jika diperlukan
 if isinstance(y_train[0], str):
@@ -97,7 +97,7 @@ def build_hybrid_fusion_model(input_shape_image=(224, 224, 3), input_shape_landm
 
 # Buat callbacks
 checkpoint = ModelCheckpoint(
-    'D:/Models/hybrid_fusion_model_best.h5',
+    'D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/hybrid_fusion_model_best.h5',
     monitor='val_accuracy', 
     save_best_only=True, 
     mode='max', 
@@ -128,7 +128,7 @@ hybrid_history = hybrid_model.fit(
 )
 
 # Evaluasi model
-hybrid_model = load_model('D:/Models/hybrid_fusion_model_best.h5')  # Load model terbaik
+hybrid_model = load_model('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/hybrid_fusion_model_best.h5')  # Load model terbaik
 test_loss, test_acc = hybrid_model.evaluate([X_test_images, X_test_landmarks], y_test_one_hot)
 print(f"Hybrid Fusion Test accuracy: {test_acc}")
 
@@ -147,7 +147,7 @@ sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=target_names, yti
 plt.title('Hybrid Fusion Confusion Matrix')
 plt.ylabel('True Label')
 plt.xlabel('Predicted Label')
-plt.savefig('D:/Models/hybrid_fusion_confusion_matrix.png')
+plt.savefig('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/hybrid_fusion_confusion_matrix.png')
 plt.close()
 
 # Plot training history
@@ -167,5 +167,5 @@ plt.title('Hybrid Fusion Model Loss')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
 plt.legend(['Train', 'Validation'], loc='upper left')
-plt.savefig('D:/Models/hybrid_fusion_training_history.png')
+plt.savefig('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/hybrid_fusion_training_history.png')
 plt.close()
