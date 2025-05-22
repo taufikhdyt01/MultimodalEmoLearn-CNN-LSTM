@@ -2,12 +2,12 @@
 models = ['CNN', 'Landmark', 'Late Fusion', 'Hybrid Fusion']
 
 # Load hasil evaluasi
-cnn_model = load_model('D:/Models/cnn_model_best.h5')
-landmark_model = load_model('D:/Models/landmark_model_best.h5')
-hybrid_model = load_model('D:/Models/hybrid_fusion_model_best.h5')
+cnn_model = load_model('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/cnn_model_best.h5')
+landmark_model = load_model('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/landmark_model_best.h5')
+hybrid_model = load_model('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/hybrid_fusion_model_best.h5')
 
 # Load weight late fusion terbaik
-with open('D:/Models/late_fusion_ensemble.pkl', 'rb') as f:
+with open('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/late_fusion_ensemble.pkl', 'rb') as f:
     late_fusion_data = pickle.load(f)
 best_weight = late_fusion_data['best_weight']
 
@@ -40,7 +40,7 @@ plt.ylabel('Accuracy')
 plt.title('Comparison of Model Accuracies')
 for i, acc in enumerate(accuracies):
     plt.text(i, acc + 0.01, f'{acc:.4f}', ha='center', fontweight='bold')
-plt.savefig('D:/Models/model_comparison.png')
+plt.savefig('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/model_comparison.png')
 plt.close()
 
 # Bandingkan per kelas emosi
@@ -69,7 +69,7 @@ ax.set_xticks(index + bar_width * 1.5)
 ax.set_xticklabels(target_names)
 ax.legend()
 plt.grid(axis='y', linestyle='--', alpha=0.7)
-plt.savefig('D:/Models/f1_score_comparison.png')
+plt.savefig('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/f1_score_comparison.png')
 plt.close()
 
 # Simpan hasil perbandingan
@@ -85,7 +85,7 @@ comparison_results = {
     }
 }
 
-with open('D:/Models/model_comparison_results.pkl', 'wb') as f:
+with open('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/model_comparison_results.pkl', 'wb') as f:
     pickle.dump(comparison_results, f)
 
 # Print ringkasan hasil

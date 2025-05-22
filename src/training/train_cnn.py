@@ -190,4 +190,4 @@ import pickle
 with open('D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/label_map.pkl', 'wb') as f:
     pickle.dump(label_map, f)
 
-print("Training and evaluation completed. Results saved to D:/Models/")
+print("Training and evaluation completed. Results saved to D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/models/")
