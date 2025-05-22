@@ -3,10 +3,12 @@
 ## 🐍 Step 1: Install Anaconda/Miniconda (jika belum ada)
 
 ### Download dan Install:
+
 - **Miniconda** (lighter): https://docs.conda.io/en/latest/miniconda.html
 - **Anaconda** (full): https://www.anaconda.com/products/distribution
 
 ### Verify Installation:
+
 ```cmd
 conda --version
 conda info
@@ -66,17 +68,17 @@ except ImportError as e:
 try:
     import tensorflow as tf
     print(f"TensorFlow: {tf.__version__}")
-    
+
     # Check GPU/DML devices
     gpu_devices = tf.config.list_physical_devices('GPU')
     dml_devices = tf.config.list_physical_devices('DML')
-    
+
     print(f"GPU devices: {len(gpu_devices)}")
     print(f"DML devices: {len(dml_devices)}")
-    
+
     if gpu_devices or dml_devices:
         print("✅ AMD RX 6600 LE detected!")
-        
+
         # Test GPU computation
         with tf.device('/GPU:0'):
             a = tf.constant([[1.0, 2.0], [3.0, 4.0]])
@@ -86,7 +88,7 @@ try:
             print(f"Result: {c.numpy()}")
     else:
         print("⚠️ No GPU detected")
-        
+
 except ImportError as e:
     print(f"TensorFlow error: {e}")
 
@@ -103,6 +105,7 @@ print("\n=== SETUP COMPLETE ===")
 ```
 
 Test dengan:
+
 ```cmd
 python test_setup.py
 ```
@@ -134,6 +137,7 @@ Pilih kernel **"Multimodal Emotion (GPU)"** saat membuka notebook.
 Setelah setup berhasil, Anda akan punya:
 
 ### Environment Info:
+
 ```
 Python: 3.9.x
 Environment: multimodal-emotion
@@ -143,6 +147,7 @@ GPU devices: 1 (RX 6600 LE)
 ```
 
 ### GPU Performance:
+
 - **3-5x faster** training vs CPU
 - **~6GB VRAM** available untuk models
 - **Batch sizes**: CNN=32, Landmark=64, Fusion=16
@@ -150,12 +155,14 @@ GPU devices: 1 (RX 6600 LE)
 ## 🐛 Troubleshooting
 
 ### Issue 1: Conda not found
+
 ```cmd
 # Add conda to PATH atau restart terminal
 # Atau buka Anaconda Prompt
 ```
 
 ### Issue 2: GPU not detected
+
 ```cmd
 # Update AMD drivers
 # Restart setelah driver install
@@ -164,6 +171,7 @@ pip show tensorflow-directml-plugin
 ```
 
 ### Issue 3: Kernel not showing in Jupyter
+
 ```cmd
 # List available kernels
 jupyter kernelspec list
@@ -179,7 +187,7 @@ python -m ipykernel install --user --name multimodal-emotion
 # Activate environment
 conda activate multimodal-emotion
 
-# Deactivate environment  
+# Deactivate environment
 conda deactivate
 
 # List environments
@@ -201,7 +209,7 @@ Jika menggunakan VS Code:
 
 1. Install **Python extension**
 2. **Ctrl+Shift+P** → "Python: Select Interpreter"
-3. Pilih interpreter dari environment: 
+3. Pilih interpreter dari environment:
    `~/anaconda3/envs/multimodal-emotion/python.exe`
 
 ## ✅ Verification Checklist
@@ -221,8 +229,8 @@ Setelah semua checklist ✅, Anda siap menjalankan notebooks dengan GPU accelera
 Python: 3.9.21 (main, Dec 11 2024, 16:35:24) [MSC v.1929 64 bit (AMD64)]
 Environment: multimodal-emotion
 NumPy: 1.23.5
-C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\requests\__init__.py:86: RequestsDependencyWarning: Unable to find acceptable character detection dependency (chardet or charset_normalizer).
-  warnings.warn(
+C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\requests\_\_init\_\_.py:86: RequestsDependencyWarning: Unable to find acceptable character detection dependency (chardet or charset_normalizer).
+warnings.warn(
 RuntimeError: CPU dispatcher tracer already initlized
 RuntimeError: CPU dispatcher tracer already initlized
 2025-05-22 11:14:04.863747: I tensorflow/c/logging.cc:34] Successfully opened dynamic library C:\Users\fitra\miniconda3\envs\multimodal-emotion\lib\site-packages\tensorflow-plugins/directml/directml.d6f03b303ac3c4f2eeb8ca631688c9757b361310.dll
@@ -237,7 +245,7 @@ TensorFlow: 2.10.0
 GPU devices: 2
 DML devices: 0
 ✅ AMD RX 6600 LE detected!
-2025-05-22 11:14:05.578424: I tensorflow/core/platform/cpu_feature_guard.cc:193] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+2025-05-22 11:14:05.578424: I tensorflow/core/platform/cpu_feature_guard.cc:193] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations: AVX AVX2
 To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
 2025-05-22 11:14:05.579294: I tensorflow/c/logging.cc:34] DirectML: creating device on adapter 0 (AMD Radeon RX 6600 LE)
 2025-05-22 11:14:05.641465: I tensorflow/c/logging.cc:34] Successfully opened dynamic library Kernel32.dll
@@ -249,7 +257,7 @@ To enable them in other operations, rebuild TensorFlow with the appropriate comp
 2025-05-22 11:14:05.689563: W tensorflow/core/common_runtime/pluggable_device/pluggable_device_bfc_allocator.cc:28] Overriding allow_growth setting because force_memory_growth was requested by the device.
 2025-05-22 11:14:05.689615: I tensorflow/core/common_runtime/pluggable_device/pluggable_device_factory.cc:272] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:1 with 30778 MB memory) -> physical PluggableDevice (device: 1, name: DML, pci bus id: <undefined>)
 🚀 GPU computation successful!
-Result: [[ 4.  5.]
+Result: [[4.  5.]
  [10. 11.]]
 RuntimeError: CPU dispatcher tracer already initlized
 ❌ pandas: Missing
@@ -261,3 +269,32 @@ RuntimeError: CPU dispatcher tracer already initlized
 ❌ sklearn: Missing
 
 === SETUP COMPLETE ===
+
+📦 Install Missing Packages:
+cmd# Install data science packages
+conda install pandas matplotlib seaborn scikit-learn -y
+
+# Install additional packages
+
+pip install pillow opencv-python tqdm ipykernel
+
+# Add Jupyter kernel
+
+python -m ipykernel install --user --name multimodal-emotion --display-name "Multimodal Emotion (Dual GPU)"
+🧪 Final Test:
+cmdpython -c "
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import sklearn
+import tensorflow as tf
+print('✅ All packages working!')
+print(f'GPUs: {len(tf.config.list_physical_devices(\"GPU\"))} detected')
+"
+🚀 Ready for Notebooks!
+cmd# Navigate to project
+cd D:\research\2025_iris_taufik\MultimodalEmoLearn-CNN-LSTM
+
+# Start Jupyter
+
+jupyter notebook
