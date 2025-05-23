@@ -1,23 +1,30 @@
-Preparing final balanced datasets...
-  LSTM: Using smote version
-  FCNN: Using smote version
----------------------------------------------------------------------------
-UnicodeEncodeError                        Traceback (most recent call last)
-Cell In[21], line 168
-    165     print("5. Experiment with different class weights if needed")
-    167 # Prepare final datasets
---> 168 final_dir = prepare_final_datasets(OUTPUT_DIR)
-    169 print_final_summary(final_dir)
-
-Cell In[21], line 90, in prepare_final_datasets(output_dir)
-     88 f.write("File Structure:\n")
-     89 f.write("  CNN_Data/\n")
----> 90 f.write("    ├── X_train_balanced.npy  # Augmented image data\n")
-     91 f.write("    ├── y_train_balanced.npy  # Corresponding labels\n")
-     92 f.write("    ├── X_val_balanced.npy    # Validation images\n")
-
-File ~\miniconda3\envs\multimodal-emotion\lib\encodings\cp1252.py:19, in IncrementalEncoder.encode(self, input, final)
-     18 def encode(self, input, final=False):
----> 19     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
-
-UnicodeEncodeError: 'charmap' codec can't encode characters in position 4-6: character maps to <undefined>
+Perbaikan di fungsi prepare_final_datasets:
+Ganti bagian ini:
+python# Create dataset info file
+info_file = os.path.join(final_dir, 'dataset_info.txt')
+with open(info_file, 'w') as f:
+Menjadi:
+python# Create dataset info file
+info_file = os.path.join(final_dir, 'dataset_info.txt')
+with open(info_file, 'w', encoding='utf-8') as f:
+Dan juga di fungsi generate_augmentation_report:
+Ganti:
+pythonwith open(report_path, 'w') as f:
+Menjadi:
+pythonwith open(report_path, 'w', encoding='utf-8') as f:
+Alternatif: Jika masih error, ganti karakter Unicode dengan ASCII:
+Ganti bagian tree structure dari:
+pythonf.write("    ├── X_train_balanced.npy  # Augmented image data\n")
+f.write("    ├── y_train_balanced.npy  # Corresponding labels\n")
+f.write("    ├── X_val_balanced.npy    # Validation images\n")
+f.write("    ├── y_val_balanced.npy    # Validation labels\n")
+f.write("    ├── X_test_balanced.npy   # Test images\n")
+f.write("    └── y_test_balanced.npy   # Test labels\n\n")
+Menjadi:
+pythonf.write("    |-- X_train_balanced.npy  # Augmented image data\n")
+f.write("    |-- y_train_balanced.npy  # Corresponding labels\n")
+f.write("    |-- X_val_balanced.npy    # Validation images\n")
+f.write("    |-- y_val_balanced.npy    # Validation labels\n")
+f.write("    |-- X_test_balanced.npy   # Test images\n")
+f.write("    +-- y_test_balanced.npy   # Test labels\n\n")
+Solusi paling simple: Tambahkan encoding='utf-8' ke semua operasi open() file untuk menulis.
