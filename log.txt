@@ -1,86 +1,10 @@
-Splitting dataset of 4329 records...
 ---------------------------------------------------------------------------
-ValueError                                Traceback (most recent call last)
-Cell In[7], line 74
-     72 # Split the dataset
-     73 if not labeled_df.empty:
----> 74     train_set, val_set, test_set = split_dataset_advanced(
-     75         labeled_df, 
-     76         FINAL_OUTPUT_DIR, 
-     77         train_size=TRAIN_SIZE,
-     78         val_size=VAL_SIZE,
-     79         test_size=TEST_SIZE,
-     80         random_state=RANDOM_STATE
-     81     )
-     82     print("\nDataset splitting completed!")
-     83 else:
+ModuleNotFoundError                       Traceback (most recent call last)
+Cell In[8], line 20
+     17 from sklearn.utils import resample
+     19 # SMOTE for landmark data
+---> 20 from imblearn.over_sampling import SMOTE, BorderlineSMOTE, ADASYN
+     21 from imblearn.combine import SMOTETomek
+     23 # Create output directories
 
-Cell In[7], line 22, in split_dataset_advanced(df, output_dir, train_size, val_size, test_size, stratify, random_state)
-     19 stratify_column = df['Dominant_Emotion'] if stratify else None
-     21 # Split into train and temp (val+test)
----> 22 train, temp = train_test_split(
-     23     df, 
-     24     train_size=train_size, 
-     25     random_state=random_state,
-     26     stratify=stratify_column
-     27 )
-     29 # Update stratify column for next split
-     30 if stratify:
-
-File ~\miniconda3\envs\multimodal-emotion\lib\site-packages\sklearn\utils\_param_validation.py:216, in validate_params.<locals>.decorator.<locals>.wrapper(*args, **kwargs)
-    210 try:
-    211     with config_context(
-    212         skip_parameter_validation=(
-    213             prefer_skip_nested_validation or global_skip_validation
-    214         )
-    215     ):
---> 216         return func(*args, **kwargs)
-    217 except InvalidParameterError as e:
-    218     # When the function is just a wrapper around an estimator, we allow
-    219     # the function to delegate validation to the estimator, but we replace
-    220     # the name of the estimator by the name of the function in the error
-    221     # message to avoid confusion.
-    222     msg = re.sub(
-    223         r"parameter of \w+ must be",
-    224         f"parameter of {func.__qualname__} must be",
-    225         str(e),
-    226     )
-
-File ~\miniconda3\envs\multimodal-emotion\lib\site-packages\sklearn\model_selection\_split.py:2872, in train_test_split(test_size, train_size, random_state, shuffle, stratify, *arrays)
-   2868         CVClass = ShuffleSplit
-   2870     cv = CVClass(test_size=n_test, train_size=n_train, random_state=random_state)
--> 2872     train, test = next(cv.split(X=arrays[0], y=stratify))
-   2874 train, test = ensure_common_namespace_device(arrays[0], train, test)
-   2876 return list(
-   2877     chain.from_iterable(
-   2878         (_safe_indexing(a, train), _safe_indexing(a, test)) for a in arrays
-   2879     )
-   2880 )
-
-File ~\miniconda3\envs\multimodal-emotion\lib\site-packages\sklearn\model_selection\_split.py:1909, in BaseShuffleSplit.split(self, X, y, groups)
-   1879 """Generate indices to split data into training and test set.
-   1880 
-   1881 Parameters
-   (...)
-   1906 to an integer.
-   1907 """
-   1908 X, y, groups = indexable(X, y, groups)
--> 1909 for train, test in self._iter_indices(X, y, groups):
-   1910     yield train, test
-
-File ~\miniconda3\envs\multimodal-emotion\lib\site-packages\sklearn\model_selection\_split.py:2318, in StratifiedShuffleSplit._iter_indices(self, X, y, groups)
-   2316 class_counts = np.bincount(y_indices)
-   2317 if np.min(class_counts) < 2:
--> 2318     raise ValueError(
-   2319         "The least populated class in y has only 1"
-   2320         " member, which is too few. The minimum"
-   2321         " number of groups for any class cannot"
-   2322         " be less than 2."
-   2323     )
-   2325 if n_train < n_classes:
-   2326     raise ValueError(
-   2327         "The train_size = %d should be greater or "
-   2328         "equal to the number of classes = %d" % (n_train, n_classes)
-   2329     )
-
-ValueError: The least populated class in y has only 1 member, which is too few. The minimum number of groups for any class cannot be less than 2.
+ModuleNotFoundError: No module named 'imblearn'
