@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timedelta
 
 # Path ke video OBS (GANTI DENGAN PATH VIDEO ANDA)
-video_path = 'D:\research\2025_iris_taufik\MultimodalEmoLearn-CNN-LSTM\data\raw\Sample 5\2025-05-21 14-38-50.mkv'
+video_path = 'D:/research/2025_iris_taufik/MultimodalEmoLearn-CNN-LSTM/data/raw/Sample 5/2025-05-21 14-38-50.mkv'
 
 # Buat direktori output
 output_dir = 'output'
@@ -17,7 +17,7 @@ os.makedirs(temp_dir, exist_ok=True)
 
 # Waktu mulai video dan waktu mulai ekstraksi frame
 video_start_time = '14:38:50'  # Waktu video OBS mulai
-frame_start_time = '11:24:53'  # Waktu frame pertama diambil
+frame_start_time = '14:39:49'  # Waktu frame pertama diambil
 
 # Konversi ke datetime object
 video_start_datetime = datetime.strptime(video_start_time, '%H:%M:%S')
