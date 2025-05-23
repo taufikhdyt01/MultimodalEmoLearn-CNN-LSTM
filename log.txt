@@ -1,17 +1,41 @@
----------------------------------------------------------------------------
-KeyError                                  Traceback (most recent call last)
-Cell In[32], line 201
-    198     print(f"\nAugmentation report saved to: {report_path}")
-    200 # Run evaluation
---> 201 results = evaluate_augmentation_results(OUTPUT_DIR)
-    202 create_comparison_visualizations(results, OUTPUT_DIR)
-    203 generate_augmentation_report(results, OUTPUT_DIR)
-
-Cell In[32], line 23, in evaluate_augmentation_results(output_dir)
-     21 y = np.load(file_path)
-     22 dist = Counter(y)
----> 23 results[name]['CNN'] = dist
-     25 print(f"  {name} CNN distribution:")
-     26 total = len(y)
-
-KeyError: 'Mixed'
+Perbaikan di fungsi evaluate_augmentation_results:
+Ganti bagian ini:
+pythonresults = {
+    'Original': {},
+    'Augmented': {},
+    'Enhanced': {}
+}
+Menjadi:
+pythonresults = {
+    'Original': {},
+    'Augmented': {},
+    'Enhanced': {},
+    'Mixed': {},
+    'SMOTE': {}
+}
+Dan juga tambahkan pengecekan untuk memastikan key exists:
+Ganti bagian ini:
+pythonfor name, file_path in cnn_files.items():
+    if os.path.exists(file_path):
+        y = np.load(file_path)
+        dist = Counter(y)
+        results[name]['CNN'] = dist
+Menjadi:
+pythonfor name, file_path in cnn_files.items():
+    if os.path.exists(file_path):
+        y = np.load(file_path)
+        dist = Counter(y)
+        if name not in results:
+            results[name] = {}
+        results[name]['CNN'] = dist
+Dan untuk bagian LSTM/FCNN, ganti:
+pythonif data_type not in results[name]:
+    results[name][data_type] = {}
+results[name][data_type] = dist
+Menjadi:
+pythonif name not in results:
+    results[name] = {}
+if data_type not in results[name]:
+    results[name][data_type] = {}
+results[name][data_type] = dist
+Ini akan memastikan semua keys yang diperlukan ter-inisialisasi dengan benar.
