@@ -438,5 +438,6 @@ Kalau hasilnya impressive, bisa:
 
 *Bonus (di luar daftar awal):*
 - [x] **Early Fusion on benchmarks** — notebook `66_early_fusion_benchmarks.ipynb` ✅ dijalankan oleh Fikri Sandi di VPS (commit `100cd95`), 16 experiments selesai. Temuan: EF universal kompetitif di benchmark (selisih 0.03-0.11 dari best Intermediate TL), kecuali JAFFE TL collapse (dataset terlalu kecil).
+- [x] **Cross-dataset Early Fusion → Primer** — notebook `68_crossdataset_early_fusion.ipynb` ✅ inference-only, 16 runs selesai (commit `ff4a322`). Temuan: EF hanya menang di 2/8 combo (RAF-DB 4c +0.042, KDEF 4c +0.025). Hipotesis "heatmap domain-invariant" tidak terbukti — 6 combo lain kalah, CK+ 4c bahkan catastrophic (-0.189).
 
-**Last updated:** 2026-04-19 (nb 66 Early Fusion benchmarks selesai run di VPS + nb 71 Soft Label Training siap jalan)
+**Last updated:** 2026-04-19 (nb 66 + nb 68 Early Fusion cross-dataset selesai + nb 71 Soft Label siap jalan)

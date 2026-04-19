@@ -1793,7 +1793,9 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 
 ### Skema 2 — Cross-Dataset (Train di Benchmark → Test di Primer)
 
-6 model (CNN, FCNN, Intermediate, CNN TL, Intermediate TL, Late Fusion) — Late Fusion TL belum dijalankan karena butuh checkpoint FCNN+CNN_TL yang cocok setiap combo.
+9 model: CNN, FCNN, Intermediate, CNN TL, Intermediate TL, Late Fusion (nb 63) + **Early Fusion, Early Fusion TL (nb 68)** + **Late Fusion TL (nb 69 — inference-only reuse checkpoint nb 65)**.
+
+Note untuk Late Fusion TL: grid search weight `w` dilakukan di Primer val (strategi default, tersimpan sebagai `Late_Fusion_TL_B1`). Variant `Late_Fusion_TL_B1_srcval` pakai source val (pure zero-shot, tersimpan untuk analisis ablation).
 
 #### CK+ → Primer (7-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1804,6 +1806,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | CNN TL | 0.163 | 0.670 | 0.701 | 0.670 |
 | Intermediate TL | 0.103 | 0.152 | 0.238 | 0.152 |
 | Late Fusion | 0.160 | 0.529 | 0.580 | 0.529 |
+| Early Fusion | 0.125 | 0.686 | 0.638 | 0.686 |
+| Early Fusion TL | 0.179 | 0.705 | 0.676 | 0.705 |
 
 #### CK+ → Primer (4-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1814,6 +1818,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | CNN TL | 0.258 | 0.386 | 0.527 | 0.386 |
 | Intermediate TL | 0.202 | 0.271 | 0.381 | 0.271 |
 | Late Fusion | 0.245 | 0.489 | 0.556 | 0.489 |
+| Early Fusion | 0.207 | 0.577 | 0.582 | 0.577 |
+| Early Fusion TL | 0.101 | 0.194 | 0.288 | 0.194 |
 
 #### JAFFE → Primer (7-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1824,6 +1830,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | CNN TL | 0.015 | 0.054 | 0.006 | 0.054 |
 | Intermediate TL | 0.023 | 0.028 | 0.045 | 0.028 |
 | **Late Fusion** | **0.040** ⭐ | 0.081 | 0.054 | 0.081 |
+| Early Fusion | 0.026 | 0.032 | 0.026 | 0.032 |
+| Early Fusion TL | 0.001 | 0.002 | 0.000 | 0.002 |
 
 #### JAFFE → Primer (4-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1834,6 +1842,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | CNN TL | 0.004 | 0.009 | 0.000 | 0.009 |
 | **Intermediate TL** | **0.093** ⭐ | 0.160 | 0.073 | 0.160 |
 | Late Fusion | 0.007 | 0.010 | 0.002 | 0.010 |
+| Early Fusion | 0.004 | 0.009 | 0.000 | 0.009 |
+| Early Fusion TL | 0.004 | 0.009 | 0.000 | 0.009 |
 
 #### RAF-DB → Primer (7-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1844,16 +1854,20 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | CNN TL | 0.175 | 0.545 | 0.611 | 0.545 |
 | Intermediate TL | 0.180 | 0.479 | 0.562 | 0.479 |
 | Late Fusion | 0.091 | 0.166 | 0.212 | 0.166 |
+| Early Fusion | 0.142 | 0.365 | 0.476 | 0.365 |
+| Early Fusion TL | 0.157 | 0.685 | 0.663 | 0.685 |
 
 #### RAF-DB → Primer (4-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
 |-------|:--------:|:--------:|:-----------:|:--------:|
 | CNN | 0.056 | 0.026 | 0.026 | 0.026 |
 | FCNN | 0.264 | 0.487 | 0.553 | 0.487 |
-| **Intermediate** | **0.269** ⭐ | 0.551 | 0.594 | 0.551 |
+| Intermediate | 0.269 | 0.551 | 0.594 | 0.551 |
 | CNN TL | 0.206 | 0.256 | 0.357 | 0.256 |
 | Intermediate TL | 0.179 | 0.306 | 0.363 | 0.306 |
 | Late Fusion | 0.170 | 0.137 | 0.147 | 0.137 |
+| Early Fusion | 0.227 | 0.404 | 0.485 | 0.404 |
+| **Early Fusion TL** | **0.311** ⭐ | 0.477 | 0.575 | 0.477 |
 
 #### KDEF → Primer (7-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1864,16 +1878,20 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | **CNN TL** | **0.038** ⭐ | 0.053 | 0.036 | 0.053 |
 | Intermediate TL | 0.034 | 0.056 | 0.023 | 0.056 |
 | Late Fusion | 0.015 | 0.008 | 0.005 | 0.008 |
+| Early Fusion | 0.007 | 0.010 | 0.011 | 0.010 |
+| Early Fusion TL | 0.029 | 0.054 | 0.097 | 0.054 |
 
 #### KDEF → Primer (4-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
 |-------|:--------:|:--------:|:-----------:|:--------:|
-| **CNN** | **0.079** ⭐ | 0.067 | 0.078 | 0.067 |
+| CNN | 0.079 | 0.067 | 0.078 | 0.067 |
 | FCNN | 0.004 | 0.009 | 0.000 | 0.009 |
 | Intermediate | 0.037 | 0.020 | 0.021 | 0.020 |
 | CNN TL | 0.068 | 0.045 | 0.023 | 0.045 |
 | Intermediate TL | 0.076 | 0.054 | 0.030 | 0.054 |
 | Late Fusion | 0.004 | 0.009 | 0.000 | 0.009 |
+| Early Fusion | 0.039 | 0.040 | 0.023 | 0.040 |
+| **Early Fusion TL** | **0.104** ⭐ | 0.101 | 0.152 | 0.101 |
 
 ---
 
@@ -1885,11 +1903,15 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 - **Late Fusion TL** (baru): kompetitif di RAF-DB/KDEF/Primer, tapi kolaps di CK+ 7c (0.835 vs 0.913) dan JAFFE 7c (0.146)
 - **Primer paling challenging**: best Primer 4c = 0.482 (Intermediate TL), sedangkan RAF-DB 4c = 0.836, KDEF 4c = 0.923, CK+ 4c = 0.837
 
-**Skema 2 — semua catastrophic:**
-- Best cross: CK+ 4c → Primer pakai CNN B1 = **0.396** (satu-satunya yang tembus > 0.30)
-- RAF-DB 4c → Primer dengan Intermediate = 0.269 (runner-up)
-- JAFFE → Primer total collapse (<10% acc untuk semua model di 4c)
-- KDEF → Primer catastrophic (<8% acc untuk 7c, <9% untuk 4c)
+**Skema 2 — semua catastrophic, Early Fusion sebagian besar tidak membantu:**
+- Best overall cross: **CK+ 4c → Primer pakai CNN B1 = 0.396** (satu-satunya yang tembus > 0.30)
+- **RAF-DB 4c → Primer: Early Fusion TL = 0.311** ⭐ (beat Intermediate 0.269, +0.042) — satu-satunya combo di mana EF membantu transfer
+- **KDEF 4c → Primer: Early Fusion TL = 0.104** (beat CNN 0.079, +0.025) — marginal
+- JAFFE → Primer total collapse (<10% acc) — Early Fusion tidak bantu (JAFFE 4c EF collapse ke 0.004)
+- KDEF 7c → Primer catastrophic (<6% acc semua model termasuk EF)
+
+**Temuan 40 (revised): Early Fusion hanya bantu 2/8 combo cross-dataset**
+> Hipotesis bahwa heatmap landmark lebih domain-invariant **tidak fully terbukti**. EF menang di RAF-DB 4c (+0.042) dan KDEF 4c (+0.025), tapi kalah di 6 combo lain (termasuk CK+ 4c -0.189 → EF B1 catastrophic). Implikasi: heatmap generic (Gaussian blob) + kernel channel ke-4 random init masih overfit ke source dataset. Untuk transfer robust, mungkin butuh pretrained channel-4 atau shared backbone across modality.
 - **Pola**: FCNN / Intermediate (landmark-heavy) paling robust untuk cross-domain
 
 **Justifikasi untuk tesis & paper:**

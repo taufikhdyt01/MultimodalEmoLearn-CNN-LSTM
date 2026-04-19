@@ -1562,7 +1562,69 @@ git push
 
 ---
 
-## 26. Soft Label Training (Eksplorasi Liliana-inspired)
+## 26. Cross-Dataset Late Fusion TL (Skema 2 Extension) — Inference Only
+
+Melengkapi Skema 2 dengan Late Fusion TL yang terlewat di nb 63. **Inference-only** — reuse `CNN_TL_B1` + `FCNN_B1` checkpoint dari nb 65 (Skema 1 self-train-test).
+
+### Prerequisite
+
+- Checkpoint `CNN_TL_B1` + `FCNN_B1` per source (sudah ada dari nb 65)
+- Primer conf60 val + test (sudah ada)
+
+### Step: Jalankan notebook 69
+
+```bash
+cd ~/MultimodalEmoLearn
+git pull origin master
+conda activate emotrain
+
+jupyter nbconvert --to notebook --execute notebooks/69_crossdataset_late_fusion_tl.ipynb \
+    --output 69_crossdataset_late_fusion_tl_executed.ipynb \
+    --output-dir notebooks/results/ \
+    --ExecutePreprocessor.timeout=1800
+```
+
+### Konfigurasi
+
+4 source × 2 class × 2 tuning strategy = **16 evaluations** (8 source-class combos × 2 strategi w):
+
+- **Strategi A** — tune `w` di **Primer val** (579 imgs) → saved as `Late_Fusion_TL_B1`
+- **Strategi B** — tune `w` di **source val** (zero-shot target-agnostic) → saved as `Late_Fusion_TL_B1_srcval`
+
+Grid search: w ∈ [0.00, 0.05, ..., 1.00], pilih max Macro F1. **Estimasi ~5-10 menit** (inference only).
+
+### Output
+
+```
+models/benchmark/crossdataset/
+├── cross_{source}_{num}c.json   (+ Late_Fusion_TL_B1, Late_Fusion_TL_B1_srcval)
+└── all_cross_results.json       (combined, updated)
+
+notebooks/results/69_crossdataset_late_fusion_tl_executed.ipynb
+```
+
+### Interpretasi 2 Strategi
+
+- **Strategi A (Primer val tune)**: optimistic — simulasi scenario dengan akses sedikit target data untuk adaptasi
+- **Strategi B (source val tune)**: pure zero-shot — paling fair untuk klaim "trained on X, tested on Primer tanpa akses target"
+- Gap A - B mengukur seberapa besar benefit dari target-side tuning
+
+Biasanya A ≥ B (target info bantu). Kalau B → A kecil, artinya `w` optimal generalize across domain.
+
+### Commit hasil
+
+```bash
+cd ~/MultimodalEmoLearn
+git add models/benchmark/crossdataset/cross_*.json \
+        models/benchmark/crossdataset/all_cross_results.json \
+        notebooks/results/69_*
+git commit -m "Add cross-dataset Late Fusion TL → Primer results (nb 69)"
+git push
+```
+
+---
+
+## 27. Soft Label Training (Eksplorasi Liliana-inspired)
 
 Eksperimen Soft Label Training — target distribusi Face API confidence, bukan hard one-hot. Sumber inspirasi: Liliana et al. (2019) "Fuzzy Emotion" + Mo et al. (2020) HAE-Net konsep *natural emotions are inherently ambiguous*.
 
@@ -1649,7 +1711,7 @@ git push
 
 ---
 
-## 27. Troubleshooting
+## 28. Troubleshooting
 
 ### CUDA Out of Memory untuk RAF-DB (nb 60, 63)
 
