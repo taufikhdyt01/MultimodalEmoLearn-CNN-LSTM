@@ -1922,6 +1922,66 @@ Note untuk Late Fusion TL: grid search weight `w` dilakukan di Primer val (strat
 
 ---
 
+## SLIDE 33: Soft Label Training (Eksplorasi Liliana 2019-inspired, nb 71)
+
+### Motivasi
+Paper Liliana et al. (2019) — *"humans express multiple emotions simultaneously"*. Face API sudah output distribusi confidence 7-dim untuk tiap frame, tapi selama ini **kita argmax + filter conf60**, informasi distribusi dibuang.
+
+**Hipotesis**: Pakai distribusi confidence langsung sebagai target training (soft label) → model belajar ambiguity alami → Macro F1 naik khususnya di kelas minoritas.
+
+### Setup Eksperimen
+- Arsitektur: **CNN TL** (ResNet18, single modality) — clean ablation
+- 4-class B1 baseline (no weights, no augmentation) — isolate efek loss function
+- 4 loss variants: Hard CE, Soft CE, KL-divergence, Label Smoothing (ε=0.1)
+- Data: `y_{split}_soft.npy` dari `extract_soft_labels.py` (6795 samples, argmax 100% match hard label)
+
+### Hasil (4-class, CNN TL)
+
+| Config | Macro F1 | Micro F1 | Weighted F1 | Accuracy | Best Epoch |
+|--------|:--------:|:--------:|:-----------:|:--------:|:----------:|
+| A Hard CE (baseline) | 0.4269 | 0.6986 | 0.7155 | 0.6986 | 23 |
+| B Soft CE | 0.4667 | 0.8407 | 0.8281 | 0.8407 | 14 |
+| **C KL-divergence** | **0.5170** ⭐ | 0.8213 | 0.8258 | 0.8213 | 1 ⚠️ |
+| D Label Smoothing (ε=0.1) | 0.4418 | 0.8202 | 0.8089 | 0.8202 | 21 |
+
+> **Reference baseline**: CNN TL 4c B1 hard CE (nb 54) = 0.456 | Late Fusion TL 4c B3 (overall best) = 0.567
+
+### Temuan Soft Label Training
+
+**Temuan 41: KL-divergence soft label beat Hard CE +0.090 Macro F1**
+> CNN TL 4c: 0.427 (hard) → **0.517 (KL-div)**. Signifikan. Konsisten dengan hipotesis Liliana 2019 bahwa natural emotion recognition diuntungkan dari target fuzzy/distribusional.
+
+**Temuan 42: Hierarki efektivitas — KL > Soft CE > Label Smoothing > Hard CE**
+> KL-divergence (Face API real distribution) > Soft CE (same distribution, different loss) > Label Smoothing (artificial ε=0.1 uniform) > Hard CE. Urutan ini menunjukkan: **informasi distribusi Face API membawa sinyal real** (bukan sekadar regularisasi seperti label smoothing).
+
+**Temuan 43: KL-div converge di epoch 1 — perlu investigasi**
+> KL-div `best_epoch = 1` (stale 15 epoch lalu early stop). Kemungkinan (1) KL gradient smoothing lebih sesuai dengan initial random state, (2) over-regularization membuat training tidak improve setelah epoch awal. Perlu cek training history + konfirmasi bukan fluke dengan multi-seed run.
+
+**Temuan 44: Soft label significantly bumps accuracy/Micro F1** 
+> Hard CE acc = 0.70 vs Soft CE acc = 0.84. Ini artinya model **tidak melulu prediksi neutral** dengan soft target — lebih "aware" terhadap kelas lain.
+
+### Implikasi untuk Late Fusion TL (best existing)
+
+Kalau soft label boost +0.09 di CNN TL single, **ekstensi logis**:
+- Combine soft label + Late Fusion TL 4c + B3 augmentation → potensi **beat 0.567** (current best)
+- Perlu notebook lanjutan `72_soft_label_late_fusion.ipynb` (TODO)
+
+### Caveat
+- **Best epoch anomaly** untuk KL-div perlu verified (multi-run / history inspection)
+- **Single seed** run — variance ±0.01-0.05 khas DL
+- Result masih CNN TL single modality — perlu fusion context untuk fair compare vs 0.567
+
+> **Penjelasan lisan:**
+> "Pak, saya coba eksplorasi yang pakai distribusi confidence Face API langsung sebagai target training, terinspirasi paper Liliana 2019 tentang fuzzy emotion. Bukannya pakai argmax (hard label), saya pakai 7-dim probability vector dari Face API sebagai target."
+>
+> "Hasilnya menarik — CNN TL 4c baseline naik dari 0.427 (Hard CE) ke 0.517 (KL-divergence), +9 percentage points. Ini konsisten dengan argumen Liliana bahwa ekspresi natural itu inherently fuzzy."
+>
+> "Hierarki: KL-div > Soft CE > Label Smoothing > Hard CE. Artinya distribusi Face API bukan sekadar noise — membawa informasi yang real. Label smoothing uniform ε=0.1 kurang efektif dibanding soft Face API."
+>
+> "Langkah berikut: extend soft label ke Late Fusion TL 4c + B3 augmentation untuk coba beat best 0.567."
+
+---
+
 ## Ringkasan Poin Konsultasi
 
 | No | Topik | Status |

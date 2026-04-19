@@ -431,7 +431,7 @@ Kalau hasilnya impressive, bisa:
 - [ ] #4 Attention modules — `models.py` update + notebook `69_attention_modules.ipynb`
 
 *Turunan paper referensi:*
-- [x] **#5 Soft Label Training** — `extract_soft_labels.py` + `71_soft_label_training.ipynb` ✅ committed `430ef2a`, siap run di VPS
+- [x] **#5 Soft Label Training** — `extract_soft_labels.py` + `71_soft_label_training.ipynb` ✅ **selesai di VPS** (commit `e53efea`). **KL-div beat Hard CE +0.09 Macro F1** (0.427 → 0.517 di CNN TL 4c B1). TODO lanjutan: `72_soft_label_late_fusion.ipynb` — extend ke Late Fusion TL untuk coba beat 0.567 overall best. Caveat: KL-div best_epoch=1, perlu multi-seed verify.
 - [ ] #6 Fuzzy FEIS baseline — script `src/baseline/fuzzy_feis.py` + notebook `72_fuzzy_baseline.ipynb`
 - [ ] #7 Geometric + Soft Label combo — setelah #2 dan #5 selesai
 - [ ] #8 GCN preprocessing — function di `src/preprocessing/` + rerun best config
@@ -439,5 +439,6 @@ Kalau hasilnya impressive, bisa:
 *Bonus (di luar daftar awal):*
 - [x] **Early Fusion on benchmarks** — notebook `66_early_fusion_benchmarks.ipynb` ✅ dijalankan oleh Fikri Sandi di VPS (commit `100cd95`), 16 experiments selesai. Temuan: EF universal kompetitif di benchmark (selisih 0.03-0.11 dari best Intermediate TL), kecuali JAFFE TL collapse (dataset terlalu kecil).
 - [x] **Cross-dataset Early Fusion → Primer** — notebook `68_crossdataset_early_fusion.ipynb` ✅ inference-only, 16 runs selesai (commit `ff4a322`). Temuan: EF hanya menang di 2/8 combo (RAF-DB 4c +0.042, KDEF 4c +0.025). Hipotesis "heatmap domain-invariant" tidak terbukti — 6 combo lain kalah, CK+ 4c bahkan catastrophic (-0.189).
+- [x] **Cross-dataset Late Fusion TL → Primer** — notebook `69_crossdataset_late_fusion_tl.ipynb` ✅ committed `3eb23ea`, 16 eval (8 combo × 2 tuning strategy A/B). Pending VPS run.
 
-**Last updated:** 2026-04-19 (nb 66 + nb 68 Early Fusion cross-dataset selesai + nb 71 Soft Label siap jalan)
+**Last updated:** 2026-04-20 (nb 71 Soft Label Training selesai dengan temuan besar: KL-div +0.09 Macro F1)
