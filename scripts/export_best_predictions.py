@@ -128,11 +128,16 @@ def export(num_classes, scenario, emotions,
     tc = batched_softmax(cnn, tc_loader)
     tf = batched_softmax(fcnn, tf_loader)
 
-    # Grid search w pada val
-    best_w, best_val_f1 = grid_search_w(vc, vf, y_val)
-    print(f'  Best w(CNN_TL) = {best_w:.2f}  val Macro F1 = {best_val_f1:.4f}')
+    # Grid search w pada val (proper out-of-sample)
+    best_w_val, val_f1 = grid_search_w(vc, vf, y_val)
+    print(f'  [val-tuned] w(CNN_TL) = {best_w_val:.2f}  val Macro F1 = {val_f1:.4f}')
 
-    # Evaluate pada test
+    # Grid search w pada TEST (match original nb 55 — has test leakage, for compatibility)
+    best_w_test, test_f1_optimistic = grid_search_w(tc, tf, y_test)
+    print(f'  [test-tuned] w(CNN_TL) = {best_w_test:.2f}  test Macro F1 = {test_f1_optimistic:.4f} (OPTIMISTIC)')
+
+    # Default: pakai val-tuned (proper)
+    best_w = best_w_val
     test_preds = (best_w * tc + (1 - best_w) * tf).argmax(axis=1)
     acc = accuracy_score(y_test, test_preds)
     macro_f1 = f1_score(y_test, test_preds, average='macro', zero_division=0)
@@ -143,6 +148,16 @@ def export(num_classes, scenario, emotions,
     report = classification_report(
         y_test, test_preds, labels=list(range(num_classes)),
         target_names=emotions, zero_division=0, output_dict=True)
+
+    # Juga hitung test-tuned predictions untuk CM alternative (match paper numbers)
+    test_preds_optimistic = (best_w_test * tc + (1 - best_w_test) * tf).argmax(axis=1)
+    cm_optimistic = confusion_matrix(y_test, test_preds_optimistic,
+                                      labels=list(range(num_classes)))
+    report_optimistic = classification_report(
+        y_test, test_preds_optimistic, labels=list(range(num_classes)),
+        target_names=emotions, zero_division=0, output_dict=True)
+    acc_opt = accuracy_score(y_test, test_preds_optimistic)
+    wf1_opt = f1_score(y_test, test_preds_optimistic, average='weighted', zero_division=0)
 
     print(f'  Test Macro F1 = {macro_f1:.4f}  Acc = {acc:.4f}')
     print(f'\n  Confusion Matrix:')
@@ -155,8 +170,9 @@ def export(num_classes, scenario, emotions,
         'num_classes': num_classes,
         'scenario': scenario,
         'emotions': emotions,
-        'best_cnn_tl_weight': best_w,
-        'val_macro_f1': float(best_val_f1),
+        # Default: val-tuned w (proper out-of-sample evaluation)
+        'best_cnn_tl_weight': best_w_val,
+        'val_macro_f1': float(val_f1),
         'test_metrics': {
             'accuracy': float(acc),
             'macro_f1': float(macro_f1),
@@ -167,6 +183,20 @@ def export(num_classes, scenario, emotions,
         'y_pred': test_preds.tolist(),
         'confusion_matrix': cm.tolist(),
         'classification_report': report,
+        # Also save test-tuned variant (match original paper numbers, has leakage)
+        'test_tuned': {
+            'best_cnn_tl_weight': best_w_test,
+            'note': 'Original notebook grid-searched w on test set (data leakage). '
+                    'Reported for compatibility with stored results JSON.',
+            'test_metrics': {
+                'accuracy': float(acc_opt),
+                'macro_f1': float(test_f1_optimistic),
+                'weighted_f1': float(wf1_opt),
+            },
+            'y_pred': test_preds_optimistic.tolist(),
+            'confusion_matrix': cm_optimistic.tolist(),
+            'classification_report': report_optimistic,
+        },
         'checkpoints': {
             'cnn_tl': str(cnn_ckpt.relative_to(PROJECT_ROOT)),
             'fcnn': str(fcnn_ckpt.relative_to(PROJECT_ROOT)),

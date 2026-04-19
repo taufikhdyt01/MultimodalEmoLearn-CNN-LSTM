@@ -88,6 +88,9 @@ def main():
     ap.add_argument('--normalize', choices=['raw', 'row', 'col'], default='raw',
                     help='Normalize per row (recall), per col (precision), or raw counts')
     ap.add_argument('--no-pdf', action='store_true')
+    ap.add_argument('--test-tuned', action='store_true',
+                    help='Pakai grid-search w di test (match paper numbers, has leakage). '
+                         'Default: val-tuned (proper out-of-sample).')
     args = ap.parse_args()
 
     FIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -96,21 +99,34 @@ def main():
     p7 = load_predictions(PRED_DIR / 'best_7c_late_fusion_tl_b1.json')
     p4 = load_predictions(PRED_DIR / 'best_4c_late_fusion_tl_b3.json')
 
+    def pick(p):
+        """Return (cm, metrics, w) based on --test-tuned flag.
+        Fallback to default (val-tuned) if test_tuned section missing (old export)."""
+        if args.test_tuned and 'test_tuned' in p:
+            t = p['test_tuned']
+            return t['confusion_matrix'], t['test_metrics'], t['best_cnn_tl_weight']
+        return p['confusion_matrix'], p['test_metrics'], p['best_cnn_tl_weight']
+
+    cm7, m7, w7 = pick(p7)
+    cm4, m4, w4 = pick(p4)
+
+    tune_label = '(test-tuned w — paper-compat)' if args.test_tuned else '(val-tuned w — proper)'
+
     # Figure: 2 panels side-by-side
     fig, axes = plt.subplots(1, 2, figsize=(7.16, 3.6),
                               gridspec_kw={'width_ratios': [1.3, 1]})
 
-    m7 = p7['test_metrics']
     title_7 = (f"(a) 7-Class — Late Fusion TL B1\n"
-               f"Macro F1={m7['macro_f1']:.3f}  Acc={m7['accuracy']:.3f}")
-    im7 = plot_cm(axes[0], p7['confusion_matrix'], p7['emotions'],
+               f"Macro F1={m7['macro_f1']:.3f}  Acc={m7['accuracy']:.3f}  w={w7:.2f}")
+    im7 = plot_cm(axes[0], cm7, p7['emotions'],
                   title_7, normalize=None if args.normalize == 'raw' else args.normalize)
 
-    m4 = p4['test_metrics']
     title_4 = (f"(b) 4-Class — Late Fusion TL B3 (best)\n"
-               f"Macro F1={m4['macro_f1']:.3f}  Acc={m4['accuracy']:.3f}")
-    im4 = plot_cm(axes[1], p4['confusion_matrix'], p4['emotions'],
+               f"Macro F1={m4['macro_f1']:.3f}  Acc={m4['accuracy']:.3f}  w={w4:.2f}")
+    im4 = plot_cm(axes[1], cm4, p4['emotions'],
                   title_4, normalize=None if args.normalize == 'raw' else args.normalize)
+
+    fig.suptitle(f'Confusion Matrix {tune_label}', fontsize=9, y=1.01)
 
     # Colorbar shared (only on right panel untuk compactness)
     cbar_label = 'Count' if args.normalize == 'raw' else 'Proportion'
@@ -119,6 +135,8 @@ def main():
     plt.tight_layout()
 
     suffix = '' if args.normalize == 'raw' else f'_{args.normalize}norm'
+    if args.test_tuned:
+        suffix += '_testtuned'
     png_path = FIG_DIR / f'confusion_matrix{suffix}.png'
     plt.savefig(png_path, dpi=args.dpi, bbox_inches='tight', facecolor='white')
     print(f'Saved: {png_path}')
