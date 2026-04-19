@@ -1711,7 +1711,78 @@ git push
 
 ---
 
-## 28. Troubleshooting
+## 28. Soft Label Extended ke Late Fusion TL (Target: beat 0.567)
+
+Lanjutan nb 71 — extend soft label yang menang di CNN TL (+0.09 Macro F1) ke arsitektur best overall (Late Fusion TL 4c B3 hard = 0.567).
+
+### Prerequisite
+
+Sama dengan nb 71 (soft labels sudah di-commit via `y_*_soft.npy`).
+
+### Step: Jalankan notebook 72
+
+```bash
+tmux new -s softlf
+conda activate emotrain
+cd ~/MultimodalEmoLearn
+git pull origin master
+
+jupyter nbconvert --to notebook --execute notebooks/72_soft_label_late_fusion_tl.ipynb \
+    --output 72_soft_label_late_fusion_tl_executed.ipynb \
+    --output-dir notebooks/results/ \
+    --ExecutePreprocessor.timeout=7200
+```
+
+### Konfigurasi
+
+2 variants × 2 branches = 4 trainings baru + inference + grid search:
+
+| Config | CNN_TL Loss | FCNN Loss | Note |
+|--------|-------------|-----------|------|
+| A_KL_div | KL-div soft | KL-div soft | winning loss dari nb 71 |
+| B_soft_CE | Soft CE | Soft CE | runner-up dari nb 71 |
+
+Fusion: weighted softmax averaging, grid search `w` di Primer val, eval di Primer test.
+
+### Estimasi
+
+- CNN TL training (KL-div / Soft CE): ~15-20 menit/run
+- FCNN training (KL-div / Soft CE): ~10-15 menit/run
+- **Total: ~60-70 menit** (2 config × 2 branch × ~15 min + inference fast)
+
+### Target
+
+- Baseline Late Fusion TL 4c B1 hard: 0.513
+- **Current best: Late Fusion TL 4c B3 hard = 0.567** ⭐
+- Optimis: soft label KL-div di fusion → potensi **beat 0.567** tanpa perlu B3 augmentation
+
+### Output
+
+```
+models/frontonly_conf60/soft_label/4c/LF_TL_KL_div/
+├── cnn_tl.pth
+└── fcnn.pth
+models/frontonly_conf60/soft_label/4c/LF_TL_soft_CE/
+├── cnn_tl.pth
+└── fcnn.pth
+models/frontonly_conf60/soft_label/soft_lf_tl_4c_results.json
+
+notebooks/results/72_soft_label_late_fusion_tl_executed.ipynb
+```
+
+### Commit hasil
+
+```bash
+cd ~/MultimodalEmoLearn
+git add models/frontonly_conf60/soft_label/ \
+        notebooks/results/72_*
+git commit -m "Add Soft Label Late Fusion TL results (nb 72)"
+git push
+```
+
+---
+
+## 29. Troubleshooting
 
 ### CUDA Out of Memory untuk RAF-DB (nb 60, 63)
 

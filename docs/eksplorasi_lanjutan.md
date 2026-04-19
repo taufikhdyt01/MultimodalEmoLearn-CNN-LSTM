@@ -431,7 +431,8 @@ Kalau hasilnya impressive, bisa:
 - [ ] #4 Attention modules — `models.py` update + notebook `69_attention_modules.ipynb`
 
 *Turunan paper referensi:*
-- [x] **#5 Soft Label Training** — `extract_soft_labels.py` + `71_soft_label_training.ipynb` ✅ **selesai di VPS** (commit `e53efea`). **KL-div beat Hard CE +0.09 Macro F1** (0.427 → 0.517 di CNN TL 4c B1). TODO lanjutan: `72_soft_label_late_fusion.ipynb` — extend ke Late Fusion TL untuk coba beat 0.567 overall best. Caveat: KL-div best_epoch=1, perlu multi-seed verify.
+- [x] **#5 Soft Label Training** — `extract_soft_labels.py` + `71_soft_label_training.ipynb` ✅ **selesai di VPS** (commit `e53efea`). **KL-div beat Hard CE +0.09 Macro F1** (0.427 → 0.517 di CNN TL 4c B1). Caveat: KL-div best_epoch=1, perlu multi-seed verify.
+- [x] **#5b Soft Label → Late Fusion TL** — `72_soft_label_late_fusion_tl.ipynb` ✅ committed, **pending VPS run** (~60-70 min). Target: **beat Late Fusion TL 4c B3 hard = 0.567** dengan KL-div soft pada kedua branch (CNN TL + FCNN).
 - [ ] #6 Fuzzy FEIS baseline — script `src/baseline/fuzzy_feis.py` + notebook `72_fuzzy_baseline.ipynb`
 - [ ] #7 Geometric + Soft Label combo — setelah #2 dan #5 selesai
 - [ ] #8 GCN preprocessing — function di `src/preprocessing/` + rerun best config
