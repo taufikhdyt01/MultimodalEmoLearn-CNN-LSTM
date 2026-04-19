@@ -1506,7 +1506,7 @@ Model FCNN menghasilkan Macro F1 **0.158** (7-class) dan **0.361** (4-class). Fi
 ## SLIDE 30: Tahap 6 — Early Fusion (Arahan Dosen)
 
 ### Motivasi
-Dosen meminta implementasi **Early Fusion** di mana landmark "ditempel" ke gambar. Pendekatan yang dipilih: **HAE-Net style** (Wu et al., MMM 2020) — landmark dikonversi ke **Gaussian heatmap 224×224** dan di-concat sebagai channel ke-4 citra RGB. Pembeda dengan Intermediate Fusion: fusi terjadi di **level input (0%)**, bukan setelah feature extraction.
+Dosen meminta implementasi **Early Fusion** di mana landmark "ditempel" ke gambar. Pendekatan yang dipilih: **HAE-Net style** (Mo et al., MMM 2020) — landmark dikonversi ke **Gaussian heatmap 224×224** dan di-concat sebagai channel ke-4 citra RGB. Pembeda dengan Intermediate Fusion: fusi terjadi di **level input (0%)**, bukan setelah feature extraction.
 
 ### Arsitektur Early Fusion
 - **Input**: Image 224×224×3 + Heatmap 224×224×1 → 224×224×**4**
@@ -1566,7 +1566,7 @@ Dosen meminta implementasi **Early Fusion** di mana landmark "ditempel" ke gamba
 > Tidak ada single strategy yang dominan di semua setting — pemilihan arsitektur bergantung konteks task.
 
 > **Penjelasan lisan:**
-> "Pak, saya sudah implementasikan Early Fusion sesuai arahan. Pendekatan yang saya pakai adalah menjadikan landmark sebagai heatmap Gaussian 224×224, lalu di-concat sebagai channel ke-4 ke citra RGB. Referensi: HAE-Net (Wu et al., MMM 2020)."
+> "Pak, saya sudah implementasikan Early Fusion sesuai arahan. Pendekatan yang saya pakai adalah menjadikan landmark sebagai heatmap Gaussian 224×224, lalu di-concat sebagai channel ke-4 ke citra RGB. Referensi: HAE-Net (Mo et al., MMM 2020 — Tsinghua University)."
 >
 > "Hasilnya menarik — Early Fusion TL B3 jadi best di 7-class (0.333), melampaui Intermediate dan Late Fusion. Tapi di 4-class, Early Fusion kalah dari Late Fusion (0.471 vs 0.567). Jadi ranking fusion strategy ternyata berbeda tergantung jumlah kelas."
 >

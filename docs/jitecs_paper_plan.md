@@ -135,7 +135,7 @@ Distribusi **total korpus** (conf60, 7-class, n=6,795):
 - ResNet18 pretrained ImageNet (1000-class)
 - Fine-tune seluruh network, learning rate kecil (5×10⁻⁵)
 - Early Fusion TL: first `Conv2d` dimodifikasi dari 3→4 channel. Weight RGB di-copy, weight heatmap di-init dari mean(RGB).
-- Referensi Early Fusion: Wu et al. (MMM 2020) — HAE-Net.
+- Referensi Early Fusion: Mo, S., Yang, W., Wang, G., & Liao, Q. (2020) — HAE-Net, MMM 2020 LNCS 11961 pp. 278-289, Tsinghua University.
 
 ---
 
@@ -309,7 +309,7 @@ Untuk referensi penulisan Section 4 (Results) dan Section 5 (Discussion).
 - Zhang et al. (2022) — Late Fusion CK+/JAFFE
 
 ### Multimodal Fusion (Image + Landmark)
-- **Wu et al. (2020) — HAE-Net: Emotion Recognition with Facial Landmark Heatmaps** ⭐ (Early Fusion reference)
+- **Mo, S., Yang, W., Wang, G., Liao, Q. (2020) — Emotion Recognition with Facial Landmark Heatmaps (HAE-Net), MMM 2020, LNCS 11961, pp. 278-289** ⭐ (Early Fusion reference)
 - Chen et al. (2024) — β-skeleton + CNN hybrid
 - Zhang et al. (2024) — GhostNet Multimodal
 
@@ -540,7 +540,7 @@ Input: Facial image 224×224×3    Landmark 68 points (136-dim)
 ### 2.2 Multimodal Fusion (Image + Landmark)
 - Strategi umum: early (input level) vs intermediate (feature) vs late (decision)
 - Paper anchor:
-  - **Wu et al. (MMM 2020) — HAE-Net** (REFERENSI WAJIB untuk Early Fusion claim — paper ini mendasari desain Early Fusion channel-concat kami, meski hasil kami menunjukkan pendekatan ini kurang optimal di natural programming data)
+  - **Mo, S. et al. (MMM 2020) — HAE-Net** (REFERENSI WAJIB untuk Early Fusion claim — paper ini mendasari desain Early Fusion channel-concat kami, meski hasil kami menunjukkan pendekatan ini kurang optimal di natural programming data). Full cite: Mo, S., Yang, W., Wang, G., & Liao, Q. (2020). Emotion Recognition with Facial Landmark Heatmaps. In MMM 2020, LNCS 11961, pp. 278-289. Springer.
   - Boulahia et al. (2021) — fusion strategies taxonomy
   - Chen et al. (2024) — β-skeleton + CNN
 

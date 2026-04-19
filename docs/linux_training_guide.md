@@ -1207,7 +1207,7 @@ Sesuai arahan dosen, tambah **Early Fusion** yang melengkapi spektrum arsitektur
 | Intermediate | 50% (feature) | CNN + FCNN features concat di hidden layer |
 | Late | 95% (decision) | Softmax averaging 2 model terpisah |
 
-**Referensi**: Wu et al. (MMM 2020) — *Emotion Recognition with Facial Landmark Heatmaps* (HAE-Net).
+**Referensi**: Mo, S., Yang, W., Wang, G., & Liao, Q. (2020) — *Emotion Recognition with Facial Landmark Heatmaps* (HAE-Net), MMM 2020, LNCS 11961, pp. 278-289, Springer.
 
 ### Step 1: Pull kode terbaru di VPS
 

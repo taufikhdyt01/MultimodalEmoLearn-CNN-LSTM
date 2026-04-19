@@ -107,7 +107,7 @@ class EmotionEarlyFusion(nn.Module):
     Input: 4-channel tensor (R, G, B, landmark_heatmap) 224x224.
     Arsitektur sama dengan EmotionCNN, hanya first Conv2d menerima 4 channel.
 
-    Referensi: HAE-Net (Wu et al., 2020) — landmark heatmap sebagai additional channel.
+    Referensi: HAE-Net (Mo et al., MMM 2020) — landmark heatmap sebagai additional channel.
     """
 
     def __init__(self, num_classes=7):

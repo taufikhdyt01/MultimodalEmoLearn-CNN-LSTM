@@ -133,7 +133,7 @@ para(mot.text_frame,
      '• Dosen meminta Early Fusion: landmark "ditempel" ke gambar',
      sz=8.5, color=COLOR_TEXT)
 para(mot.text_frame,
-     '• Pendekatan: HAE-Net (Wu et al., MMM 2020) — landmark → Gaussian heatmap 224×224 → concat sebagai channel ke-4 citra RGB',
+     '• Pendekatan: HAE-Net (Mo et al., MMM 2020 — Tsinghua) — landmark → Gaussian heatmap 224×224 → concat sebagai channel ke-4 citra RGB',
      sz=8.5, color=COLOR_TEXT)
 para(mot.text_frame,
      '• Fusi terjadi di level input (0%), bukan feature level (Intermediate) atau decision level (Late)',
