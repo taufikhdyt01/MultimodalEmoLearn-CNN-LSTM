@@ -1808,6 +1808,7 @@ Note untuk Late Fusion TL: grid search weight `w` dilakukan di Primer val (strat
 | Late Fusion | 0.160 | 0.529 | 0.580 | 0.529 |
 | Early Fusion | 0.125 | 0.686 | 0.638 | 0.686 |
 | Early Fusion TL | 0.179 | 0.705 | 0.676 | 0.705 |
+| Late Fusion TL | 0.247 | 0.703 | 0.726 | 0.703 |
 
 #### CK+ → Primer (4-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1820,6 +1821,7 @@ Note untuk Late Fusion TL: grid search weight `w` dilakukan di Primer val (strat
 | Late Fusion | 0.245 | 0.489 | 0.556 | 0.489 |
 | Early Fusion | 0.207 | 0.577 | 0.582 | 0.577 |
 | Early Fusion TL | 0.101 | 0.194 | 0.288 | 0.194 |
+| Late Fusion TL | 0.141 | 0.182 | 0.281 | 0.182 |
 
 #### JAFFE → Primer (7-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1832,6 +1834,7 @@ Note untuk Late Fusion TL: grid search weight `w` dilakukan di Primer val (strat
 | **Late Fusion** | **0.040** ⭐ | 0.081 | 0.054 | 0.081 |
 | Early Fusion | 0.026 | 0.032 | 0.026 | 0.032 |
 | Early Fusion TL | 0.001 | 0.002 | 0.000 | 0.002 |
+| Late Fusion TL | 0.050 | 0.118 | 0.192 | 0.118 |
 
 #### JAFFE → Primer (4-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1844,6 +1847,7 @@ Note untuk Late Fusion TL: grid search weight `w` dilakukan di Primer val (strat
 | Late Fusion | 0.007 | 0.010 | 0.002 | 0.010 |
 | Early Fusion | 0.004 | 0.009 | 0.000 | 0.009 |
 | Early Fusion TL | 0.004 | 0.009 | 0.000 | 0.009 |
+| Late Fusion TL | 0.015 | 0.013 | 0.009 | 0.013 |
 
 #### RAF-DB → Primer (7-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1856,6 +1860,7 @@ Note untuk Late Fusion TL: grid search weight `w` dilakukan di Primer val (strat
 | Late Fusion | 0.091 | 0.166 | 0.212 | 0.166 |
 | Early Fusion | 0.142 | 0.365 | 0.476 | 0.365 |
 | Early Fusion TL | 0.157 | 0.685 | 0.663 | 0.685 |
+| Late Fusion TL | 0.153 | 0.483 | 0.575 | 0.483 |
 
 #### RAF-DB → Primer (4-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1868,6 +1873,7 @@ Note untuk Late Fusion TL: grid search weight `w` dilakukan di Primer val (strat
 | Late Fusion | 0.170 | 0.137 | 0.147 | 0.137 |
 | Early Fusion | 0.227 | 0.404 | 0.485 | 0.404 |
 | **Early Fusion TL** | **0.311** ⭐ | 0.477 | 0.575 | 0.477 |
+| Late Fusion TL | 0.212 | 0.459 | 0.517 | 0.459 |
 
 #### KDEF → Primer (7-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1880,6 +1886,7 @@ Note untuk Late Fusion TL: grid search weight `w` dilakukan di Primer val (strat
 | Late Fusion | 0.015 | 0.008 | 0.005 | 0.008 |
 | Early Fusion | 0.007 | 0.010 | 0.011 | 0.010 |
 | Early Fusion TL | 0.029 | 0.054 | 0.097 | 0.054 |
+| Late Fusion TL | 0.055 | 0.078 | 0.063 | 0.078 |
 
 #### KDEF → Primer (4-class)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1892,6 +1899,9 @@ Note untuk Late Fusion TL: grid search weight `w` dilakukan di Primer val (strat
 | Late Fusion | 0.004 | 0.009 | 0.000 | 0.009 |
 | Early Fusion | 0.039 | 0.040 | 0.023 | 0.040 |
 | **Early Fusion TL** | **0.104** ⭐ | 0.101 | 0.152 | 0.101 |
+| Late Fusion TL | 0.017 | 0.011 | 0.003 | 0.011 |
+
+> **Note Late Fusion TL**: nilai di atas pakai strategi A (grid `w` di Primer val). Strategi B (pure zero-shot, tune di source val) hasil sangat mirip (±0.01 Macro F1) di kebanyakan combo → weight `w` robust across domain. Disimpan terpisah sebagai `Late_Fusion_TL_B1_srcval` di JSON.
 
 ---
 
@@ -1903,14 +1913,16 @@ Note untuk Late Fusion TL: grid search weight `w` dilakukan di Primer val (strat
 - **Late Fusion TL** (baru): kompetitif di RAF-DB/KDEF/Primer, tapi kolaps di CK+ 7c (0.835 vs 0.913) dan JAFFE 7c (0.146)
 - **Primer paling challenging**: best Primer 4c = 0.482 (Intermediate TL), sedangkan RAF-DB 4c = 0.836, KDEF 4c = 0.923, CK+ 4c = 0.837
 
-**Skema 2 — semua catastrophic, Early Fusion sebagian besar tidak membantu:**
+**Skema 2 — semua catastrophic; Early Fusion & Late Fusion TL sebagian besar tidak membantu:**
 - Best overall cross: **CK+ 4c → Primer pakai CNN B1 = 0.396** (satu-satunya yang tembus > 0.30)
 - **RAF-DB 4c → Primer: Early Fusion TL = 0.311** ⭐ (beat Intermediate 0.269, +0.042) — satu-satunya combo di mana EF membantu transfer
 - **KDEF 4c → Primer: Early Fusion TL = 0.104** (beat CNN 0.079, +0.025) — marginal
-- JAFFE → Primer total collapse (<10% acc) — Early Fusion tidak bantu (JAFFE 4c EF collapse ke 0.004)
-- KDEF 7c → Primer catastrophic (<6% acc semua model termasuk EF)
+- **CK+ 7c → Primer: Late Fusion TL = 0.247** beat non-fusion FCNN (0.194, +0.053) — Late Fusion TL satu-satunya menang di CK+ 7c
+- **RAF-DB 4c → Primer: Late Fusion TL = 0.212** kalah dari EF TL 0.311 — EF tetap juara di combo ini
+- JAFFE → Primer total collapse (<10% acc) — EF/LF TL tidak bantu
+- KDEF 7c → Primer catastrophic (<6% acc semua model)
 
-**Temuan 40 (revised): Early Fusion hanya bantu 2/8 combo cross-dataset**
+**Temuan 40 (revised): Fusion advanced (EF + LF TL) hanya bantu 3/8 combo cross-dataset**
 > Hipotesis bahwa heatmap landmark lebih domain-invariant **tidak fully terbukti**. EF menang di RAF-DB 4c (+0.042) dan KDEF 4c (+0.025), tapi kalah di 6 combo lain (termasuk CK+ 4c -0.189 → EF B1 catastrophic). Implikasi: heatmap generic (Gaussian blob) + kernel channel ke-4 random init masih overfit ke source dataset. Untuk transfer robust, mungkin butuh pretrained channel-4 atau shared backbone across modality.
 - **Pola**: FCNN / Intermediate (landmark-heavy) paling robust untuk cross-domain
 
