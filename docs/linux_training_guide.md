@@ -1500,7 +1500,90 @@ git push
 
 ---
 
-## 25. Troubleshooting
+## 25. Soft Label Training (Eksplorasi Liliana-inspired)
+
+Eksperimen Soft Label Training — target distribusi Face API confidence, bukan hard one-hot. Sumber inspirasi: Liliana et al. (2019) "Fuzzy Emotion" + Mo et al. (2020) HAE-Net konsep *natural emotions are inherently ambiguous*.
+
+### Prerequisite: Extract Soft Labels
+
+```bash
+cd ~/MultimodalEmoLearn
+git pull origin master
+conda activate emotrain
+
+# Extract y_soft_{train,val,test}.npy (fast, ~30 detik — tanpa image reload)
+python scripts/extract_soft_labels.py
+```
+
+Output: `data/dataset_frontonly_conf60/y_{train,val,test}_soft.npy` shape (N, 7), sum=1 per sampel.
+
+**Validasi otomatis:** script cek argmax(soft) == y_hard existing. Kalau 100% match → OK.
+
+### Step: Jalankan notebook 71
+
+```bash
+tmux new -s softlabel
+conda activate emotrain
+cd ~/MultimodalEmoLearn
+
+jupyter nbconvert --to notebook --execute notebooks/71_soft_label_training.ipynb \
+    --output 71_soft_label_training_executed.ipynb \
+    --output-dir notebooks/results/ \
+    --ExecutePreprocessor.timeout=7200
+```
+
+### Konfigurasi
+
+4 config × 4-class × CNN TL B1 baseline = **4 runs** (isolate efek loss function saja):
+
+| Config | Loss | Target |
+|--------|------|--------|
+| A (baseline) | Hard Cross-Entropy | one-hot |
+| B | Soft Cross-Entropy | Face API distribution |
+| C | KL-divergence | Face API distribution |
+| D | Label Smoothing CE (ε=0.1) | smoothed one-hot |
+
+### Estimasi waktu
+
+- CNN TL 4c 50 epochs (early stop ~25-35 epochs): ~8-12 menit per config
+- Total: ~30-50 menit
+
+### Output
+
+```
+models/frontonly_conf60/soft_label/
+├── 4c/
+│   ├── A_hard_CE/model.pth
+│   ├── B_soft_CE/model.pth
+│   ├── C_KL_div/model.pth
+│   └── D_label_smooth/model.pth
+└── soft_label_4c_results.json
+
+notebooks/results/71_soft_label_training_executed.ipynb
+```
+
+### Interpretasi Hasil
+
+- **B/C > A**: soft target membantu → extend ke Late Fusion TL (target beat 0.567)
+- **A ≈ B ≈ C**: Face API confidence tidak add info → tahan, tidak lanjut
+- **D > A tapi B/C < A**: label smoothing generic membantu, soft Face API noisy
+- **Per-class analysis** — cek apakah F1 sad/negative improve (key test untuk ambiguity hypothesis)
+
+### Commit hasil
+
+```bash
+cd ~/MultimodalEmoLearn
+git add data/dataset_frontonly_conf60/y_*_soft.npy \
+        data/dataset_frontonly_conf60/dataset_info.json \
+        models/frontonly_conf60/soft_label/ \
+        notebooks/results/71_*
+git commit -m "Add Soft Label Training results (nb 71)"
+git push
+```
+
+---
+
+## 26. Troubleshooting
 
 ### CUDA Out of Memory untuk RAF-DB (nb 60, 63)
 

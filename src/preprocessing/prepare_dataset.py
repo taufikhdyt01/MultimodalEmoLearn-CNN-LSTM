@@ -339,24 +339,36 @@ def split_by_user(samples, split_ratio, seed):
 
 
 def build_arrays(samples, desc=""):
-    """Convert list of samples ke numpy arrays."""
+    """Convert list of samples ke numpy arrays.
+
+    Returns: (images, landmarks, labels, soft_labels)
+    - labels: hard labels (argmax) shape (N,)
+    - soft_labels: full Face API confidence distribution shape (N, 7)
+      Preserved untuk eksperimen soft label training (Liliana 2019 style).
+    """
     n = len(samples)
     if n == 0:
-        return np.array([]), np.array([]), np.array([])
+        return np.array([]), np.array([]), np.array([]), np.array([])
 
     images = np.zeros((n, IMG_SIZE, IMG_SIZE, 3), dtype=np.float32)
     landmarks = np.zeros((n, 136), dtype=np.float32)
     labels = np.zeros(n, dtype=np.int32)
+    soft_labels = np.zeros((n, len(EMOTIONS)), dtype=np.float32)
 
     for i, (uid, face_path, lm_path, scores) in enumerate(samples):
         images[i] = load_image(face_path)
         landmarks[i] = load_landmark(lm_path)
         labels[i] = get_dominant_emotion(scores)[0]
+        # Preserve the full 7-dim confidence vector; renormalize to sum=1
+        # in case Face API scores don't exactly sum to 1 (floating point error)
+        s = np.asarray(scores, dtype=np.float32)
+        total = s.sum()
+        soft_labels[i] = s / total if total > 0 else s
 
         if (i + 1) % 500 == 0 or (i + 1) == n:
             print(f"    {desc}: {i + 1}/{n}")
 
-    return images, landmarks, labels
+    return images, landmarks, labels, soft_labels
 
 
 def main():
@@ -420,21 +432,24 @@ def main():
 
     # 5. Build numpy arrays
     print(f"\n[5/5] Building numpy arrays...")
-    X_train_img, X_train_lm, y_train = build_arrays(train, "Train")
-    X_val_img, X_val_lm, y_val = build_arrays(val, "Val")
-    X_test_img, X_test_lm, y_test = build_arrays(test, "Test")
+    X_train_img, X_train_lm, y_train, y_train_soft = build_arrays(train, "Train")
+    X_val_img, X_val_lm, y_val, y_val_soft = build_arrays(val, "Val")
+    X_test_img, X_test_lm, y_test, y_test_soft = build_arrays(test, "Test")
 
     # Save
     print(f"\n  Saving to {output}/...")
     np.save(output / "X_train_images.npy", X_train_img)
     np.save(output / "X_train_landmarks.npy", X_train_lm)
     np.save(output / "y_train.npy", y_train)
+    np.save(output / "y_train_soft.npy", y_train_soft)
     np.save(output / "X_val_images.npy", X_val_img)
     np.save(output / "X_val_landmarks.npy", X_val_lm)
     np.save(output / "y_val.npy", y_val)
+    np.save(output / "y_val_soft.npy", y_val_soft)
     np.save(output / "X_test_images.npy", X_test_img)
     np.save(output / "X_test_landmarks.npy", X_test_lm)
     np.save(output / "y_test.npy", y_test)
+    np.save(output / "y_test_soft.npy", y_test_soft)
 
     # Save label map
     with open(output / "label_map.json", "w") as f:
