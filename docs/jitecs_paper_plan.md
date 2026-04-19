@@ -287,9 +287,10 @@ Untuk referensi penulisan Section 4 (Results) dan Section 5 (Discussion).
 ### Gambar (Figures)
 - **Fig 1**: Architecture diagram (5 varian fusion strategies, visualizing fusion points)
 - **Fig 2**: Dataset sample images (front-facing programming sessions) — contoh per kelas emosi
-- **Fig 3**: Landmark heatmap generation illustration (untuk Early Fusion)
-- **Fig 4**: Macro F1 bar chart — 5 arsitektur × 2 kelas (best scenario per model)
-- **Fig 5**: Confusion matrix best model (Late Fusion TL 4c B3)
+- **Fig 3**: **Class distribution histogram** — side-by-side 7-class vs 4-class bar chart (log scale), highlighting imbalance ratio 1:1138 (7c) vs 1:61 (4c). ✅ **Ready at `docs/figures/class_distribution.{pdf,png}`** (script: `scripts/make_class_distribution_figure.py`). Justifies macro-F1 as primary metric.
+- **Fig 4**: Landmark heatmap generation illustration (untuk Early Fusion)
+- **Fig 5**: Macro F1 bar chart — 5 arsitektur × 2 kelas (best scenario per model)
+- **Fig 6**: Confusion matrix best model (Late Fusion TL 4c B3)
 
 ### Tabel (Tables)
 - **Tab 1**: Dataset distribution (7-class vs 4-class, train/val/test)
