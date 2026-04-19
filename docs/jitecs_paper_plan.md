@@ -412,16 +412,17 @@ Mayoritas kesalahan adalah **over-prediction ke neutral** (kelas mayoritas). Con
 
 ### 5.2 Fusion Strategy Comparison (RQ2)
 - **Ranking di primer conf60 (4c best)**: Late Fusion TL (0.567) > Intermediate TL (0.521) > CNN TL single (0.507) > Early Fusion TL (0.471)
-- **Ranking di primer conf60 (7c best)**: Late Fusion TL (0.301) > Intermediate TL (0.292) > Early Fusion TL (0.333 — outlier, hanya muncul di B3) > CNN single (0.277)
-- **Insight**: **Late Fusion** unggul karena:
+- **Ranking di primer conf60 (7c best)**: Early Fusion TL B3 (0.333) > Late Fusion TL (0.301) > Intermediate TL (0.292) > CNN single (0.277)
+- **Insight**: **Late Fusion** unggul di 4-class karena:
   - Kedua modality dilatih independent → lebih robust terhadap noise dari salah satu modality
   - Weighted softmax averaging lebih fleksibel (tunable weight di val)
 - **Intermediate Fusion** sedikit di bawah karena joint learning rentan overfit di dataset kecil
-- **Early Fusion** (HAE-Net style channel concat): **underperforms** fusion lain di 4-class. Hipotesis:
+- **Early Fusion** (HAE-Net style channel concat): **underperforms di 4-class tapi menang di 7-class (dengan B3 augmented)**. Hipotesis:
   - Heatmap sparse Gaussian (mostly zeros) tidak memberi informasi kuat di layer awal
   - Kernel conv layer pertama harus simultaneously belajar RGB features DAN heatmap patterns dengan satu set bobot → kompromi representasi
   - Weight init 4th channel dari mean(RGB) suboptimal untuk heatmap yang berbeda karakteristik dari citra
-- **Implikasi**: Untuk dataset kecil dengan landmark sparse, fusion di level feature/decision lebih cocok daripada di level input.
+- **Supporting evidence — Early Fusion di benchmarks (out of paper scope, tapi mendukung narasi)**: Eksperimen tambahan (nb 66, 16 runs) di CK+/JAFFE/RAF-DB/KDEF menunjukkan Early Fusion **universal kompetitif**: selisih 0.03-0.11 dari best Intermediate TL (kecuali JAFFE TL collapse karena dataset kecil 213 images). Gap di Primer 4c (-0.10) **sebanding** dengan gap di benchmark → underperformance Early Fusion **bukan artifact natural data**, melainkan keterbatasan inherent dari channel-level fusion ketika landmark info sparse.
+- **Implikasi**: Pilihan fusion strategy optimal bergantung (1) granularitas kelas, (2) ukuran data augmented untuk B3. Fusion di level feature (Intermediate) / decision (Late) umumnya lebih robust, tapi Early Fusion bisa unggul di skenario high-granularity dengan data augmented.
 
 ### 5.3 Transfer Learning Effectiveness (RQ3)
 - **Fakta**: TL variant konsisten unggul dari scratch (contoh: Late Fusion TL 0.567 vs Late Fusion scratch 0.503, +0.064)

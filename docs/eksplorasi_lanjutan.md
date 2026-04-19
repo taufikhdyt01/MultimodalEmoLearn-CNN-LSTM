@@ -422,8 +422,6 @@ Kalau hasilnya impressive, bisa:
 
 ## Status
 
-*Belum ada eksplorasi yang dijalankan. Menunggu prioritas user & compute slot.*
-
 **Progress tracking:**
 
 *Arahan utama:*
@@ -433,9 +431,12 @@ Kalau hasilnya impressive, bisa:
 - [ ] #4 Attention modules — `models.py` update + notebook `69_attention_modules.ipynb`
 
 *Turunan paper referensi:*
-- [ ] #5 Soft Label Training — notebook `71_soft_label_training.ipynb` + preprocess confidence → soft target
+- [x] **#5 Soft Label Training** — `extract_soft_labels.py` + `71_soft_label_training.ipynb` ✅ committed `430ef2a`, siap run di VPS
 - [ ] #6 Fuzzy FEIS baseline — script `src/baseline/fuzzy_feis.py` + notebook `72_fuzzy_baseline.ipynb`
 - [ ] #7 Geometric + Soft Label combo — setelah #2 dan #5 selesai
 - [ ] #8 GCN preprocessing — function di `src/preprocessing/` + rerun best config
 
-**Last updated:** 2026-04-19 (konsultasi dengan dosen + 2 paper referensi dibaca + eksplorasi turunan)
+*Bonus (di luar daftar awal):*
+- [x] **Early Fusion on benchmarks** — notebook `66_early_fusion_benchmarks.ipynb` ✅ dijalankan oleh Fikri Sandi di VPS (commit `100cd95`), 16 experiments selesai. Temuan: EF universal kompetitif di benchmark (selisih 0.03-0.11 dari best Intermediate TL), kecuali JAFFE TL collapse (dataset terlalu kecil).
+
+**Last updated:** 2026-04-19 (nb 66 Early Fusion benchmarks selesai run di VPS + nb 71 Soft Label Training siap jalan)

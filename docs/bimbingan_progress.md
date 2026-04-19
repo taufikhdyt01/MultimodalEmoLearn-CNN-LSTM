@@ -1565,12 +1565,32 @@ Dosen meminta implementasi **Early Fusion** di mana landmark "ditempel" ke gamba
 >
 > Tidak ada single strategy yang dominan di semua setting — pemilihan arsitektur bergantung konteks task.
 
+### Hasil Early Fusion di Benchmark Dataset (nb 66)
+
+Menjalankan Early Fusion yang sama di 4 benchmark dataset untuk validasi apakah underperformance di Primer spesifik data natural atau universal. **16 experiments** (B1 scratch + TL × 4 dataset × 2 class). Angka lengkap sudah terintegrasi ke tabel **Skema 1 di SLIDE 32** (ditambah 2 row `Early Fusion` dan `Early Fusion TL` di setiap tabel).
+
+**Temuan 36: Early Fusion universal kompetitif di benchmark (kecuali JAFFE)**
+> Di RAF-DB/KDEF/CK+ 4c: Early Fusion TL selisih cuma 0.03-0.11 dari best Intermediate TL. Gap di Primer 4c (0.471 vs 0.521) kira-kira sama dengan gap di benchmark → Early Fusion channel-concat memang **sedikit di bawah** Intermediate/Late Fusion secara universal, bukan masalah data natural per-se.
+
+**Temuan 37: JAFFE TL collapse (Macro F1 0.041 di 7c)**
+> JAFFE hanya 213 images, terlalu kecil untuk fine-tune ResNet18 dengan first Conv2d modifikasi 3→4 channel. Scratch variant justru 0.286 (7c). **Implikasi**: Early Fusion TL butuh dataset training minimal ~600+ samples untuk converge sehat.
+
+**Temuan 38: RAF-DB 7c — scratch > TL di Early Fusion (0.710 > 0.693)**
+> Anomali: untuk RAF-DB 7c (11,565 training), scratch Early Fusion bahkan sedikit mengungguli TL variant. Hipotesis: large dataset + heatmap channel info, model scratch bisa belajar representasi task-specific tanpa bias ImageNet.
+
+**Temuan 39: TL boost terbesar di CK+ (+0.28 s/d +0.32 Macro F1)**
+> CK+ 7c: 0.446 → 0.762 (+0.316). CK+ 4c: 0.507 → 0.795 (+0.288). Dataset posed lab dengan ekspresi peak → pretrained visual features sangat transferable. Bandingkan dengan Primer: +0.10 saja.
+
 > **Penjelasan lisan:**
 > "Pak, saya sudah implementasikan Early Fusion sesuai arahan. Pendekatan yang saya pakai adalah menjadikan landmark sebagai heatmap Gaussian 224×224, lalu di-concat sebagai channel ke-4 ke citra RGB. Referensi: HAE-Net (Mo et al., MMM 2020 — Tsinghua University)."
 >
-> "Hasilnya menarik — Early Fusion TL B3 jadi best di 7-class (0.333), melampaui Intermediate dan Late Fusion. Tapi di 4-class, Early Fusion kalah dari Late Fusion (0.471 vs 0.567). Jadi ranking fusion strategy ternyata berbeda tergantung jumlah kelas."
+> "Di Primer, Early Fusion TL B3 jadi best di 7-class (0.333), melampaui Intermediate dan Late Fusion. Tapi di 4-class, Early Fusion kalah dari Late Fusion (0.471 vs 0.567)."
 >
-> "Total eksperimen conf60 sekarang 54 config (5 arsitektur × B1/B2/B3 × scratch/TL × 7c/4c). Best overall tetap Late Fusion TL 4c B3 = 0.567."
+> "Saya juga extend Early Fusion ke 4 benchmark dataset (nb 66, 16 experiments). Hasilnya Early Fusion universal kompetitif — selisih 0.03-0.11 dari best Intermediate TL di RAF-DB/KDEF/CK+ 4c. Ini **membantah hipotesis** bahwa Early Fusion underperform karena natural data — ternyata memang sedikit di bawah Intermediate/Late secara universal."
+>
+> "Temuan unik: TL collapse di JAFFE (0.041 untuk 7c) karena dataset terlalu kecil (213 images) — first Conv 3→4 channel butuh data lebih banyak untuk converge."
+>
+> "Total eksperimen conf60 sekarang 54 config + 16 benchmark Early Fusion. Best overall Primer tetap Late Fusion TL 4c B3 = 0.567."
 
 ---
 
@@ -1633,7 +1653,9 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 
 ---
 
-### Skema 1 — Self Train-Test (7 Model × 4 Metrik)
+### Skema 1 — Self Train-Test (9 Model × 4 Metrik)
+
+*Termasuk 2 row terakhir per tabel: `Early Fusion` (scratch B1) dan `Early Fusion TL` (B1) dari nb 66 — melengkapi spektrum 5 fusion strategy (CNN/FCNN single + Early/Intermediate/Late fusion × scratch/TL).*
 
 #### CK+ 7-class
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1645,6 +1667,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | Intermediate TL | 0.833 | 0.881 | 0.886 | 0.881 |
 | Late Fusion | 0.498 | 0.780 | 0.694 | 0.780 |
 | Late Fusion TL | 0.835 | 0.881 | 0.890 | 0.881 |
+| Early Fusion | 0.446 | 0.695 | 0.665 | 0.695 |
+| Early Fusion TL | 0.762 | 0.847 | 0.847 | 0.847 |
 
 #### CK+ 4-class
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1656,6 +1680,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | **Intermediate TL** | **0.837** ⭐ | 0.903 | 0.902 | 0.903 |
 | Late Fusion | 0.592 | 0.758 | 0.740 | 0.758 |
 | Late Fusion TL | 0.604 | 0.806 | 0.803 | 0.806 |
+| Early Fusion | 0.507 | 0.694 | 0.667 | 0.694 |
+| Early Fusion TL | 0.795 | 0.871 | 0.872 | 0.871 |
 
 #### JAFFE 7-class
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1667,6 +1693,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | Intermediate TL | 0.447 | 0.450 | 0.420 | 0.450 |
 | **Late Fusion** | **0.545** ⭐ | 0.600 | 0.522 | 0.600 |
 | Late Fusion TL | 0.146 | 0.200 | 0.120 | 0.200 |
+| Early Fusion | 0.286 | 0.350 | 0.267 | 0.350 |
+| Early Fusion TL | 0.041 | 0.150 | 0.043 | 0.150 |
 
 #### JAFFE 4-class
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1678,6 +1706,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | Intermediate TL | 0.375 | 0.650 | 0.558 | 0.650 |
 | Late Fusion | 0.396 | 0.650 | 0.552 | 0.650 |
 | **Late Fusion TL** | **0.492** ⭐ | 0.650 | 0.615 | 0.650 |
+| Early Fusion | 0.177 | 0.550 | 0.390 | 0.550 |
+| Early Fusion TL | 0.352 | 0.600 | 0.507 | 0.600 |
 
 #### RAF-DB 7-class
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1689,6 +1719,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | **Intermediate TL** | **0.744** ⭐ | 0.833 | 0.832 | 0.833 |
 | Late Fusion | 0.719 | 0.809 | 0.805 | 0.809 |
 | Late Fusion TL | 0.735 | 0.829 | 0.823 | 0.829 |
+| Early Fusion | 0.710 | 0.808 | 0.804 | 0.808 |
+| Early Fusion TL | 0.693 | 0.790 | 0.786 | 0.790 |
 
 #### RAF-DB 4-class
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1700,6 +1732,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | **Intermediate TL** | **0.836** ⭐ | 0.853 | 0.855 | 0.853 |
 | Late Fusion | 0.819 | 0.842 | 0.841 | 0.842 |
 | Late Fusion TL | 0.832 | 0.849 | 0.850 | 0.849 |
+| Early Fusion | 0.792 | 0.818 | 0.819 | 0.818 |
+| Early Fusion TL | 0.799 | 0.823 | 0.823 | 0.823 |
 
 #### KDEF 7-class
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1711,6 +1745,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | **Intermediate TL** | **0.843** ⭐ | 0.843 | 0.843 | 0.843 |
 | Late Fusion | 0.776 | 0.777 | 0.775 | 0.777 |
 | Late Fusion TL | 0.836 | 0.834 | 0.836 | 0.834 |
+| Early Fusion | 0.667 | 0.674 | 0.663 | 0.674 |
+| Early Fusion TL | 0.799 | 0.795 | 0.797 | 0.795 |
 
 #### KDEF 4-class
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1722,6 +1758,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | **Intermediate TL** | **0.923** ⭐ | 0.929 | 0.929 | 0.929 |
 | Late Fusion | 0.859 | 0.890 | 0.888 | 0.890 |
 | Late Fusion TL | 0.920 | 0.932 | 0.930 | 0.932 |
+| Early Fusion | 0.693 | 0.763 | 0.764 | 0.763 |
+| Early Fusion TL | 0.816 | 0.855 | 0.854 | 0.855 |
 
 #### Primer 7-class (conf60, B1 baseline — dari nb 62/65)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1733,6 +1771,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | **Intermediate TL** | **0.292** ⭐ | 0.808 | 0.819 | 0.808 |
 | Late Fusion | 0.244 | 0.778 | 0.777 | 0.778 |
 | Late Fusion TL | 0.285 | 0.827 | 0.828 | 0.827 |
+| Early Fusion | 0.246 | 0.794 | 0.786 | 0.794 |
+| Early Fusion TL | 0.253 | 0.713 | 0.722 | 0.713 |
 
 #### Primer 4-class (conf60, B1 baseline — dari nb 62/65)
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1744,6 +1784,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | **Intermediate TL** | **0.482** ⭐ | 0.780 | 0.790 | 0.780 |
 | Late Fusion | 0.460 | 0.763 | 0.779 | 0.763 |
 | Late Fusion TL | 0.472 | 0.777 | 0.779 | 0.777 |
+| Early Fusion | 0.457 | 0.822 | 0.816 | 0.822 |
+| Early Fusion TL | 0.471 | 0.770 | 0.770 | 0.770 |
 
 > **Catatan Primer**: Tabel di atas B1 (baseline) saja, untuk perbandingan apple-to-apple dengan benchmark publik. Best Primer keseluruhan (B3 + TL + augmentation) = **Late Fusion TL 4c B3 = 0.567**.
 

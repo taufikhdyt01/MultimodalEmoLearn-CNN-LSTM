@@ -1500,24 +1500,90 @@ git push
 
 ---
 
-## 25. Soft Label Training (Eksplorasi Liliana-inspired)
+## 25. Cross-Dataset Early Fusion (Skema 2 Extension) — Inference Only
 
-Eksperimen Soft Label Training — target distribusi Face API confidence, bukan hard one-hot. Sumber inspirasi: Liliana et al. (2019) "Fuzzy Emotion" + Mo et al. (2020) HAE-Net konsep *natural emotions are inherently ambiguous*.
+Melengkapi Skema 2 cross-dataset dengan Early Fusion yang sebelumnya terlewat di nb 63. **Inference-only** (reuse checkpoint nb 66) — tidak training baru.
 
-### Prerequisite: Extract Soft Labels
+### Prerequisite
+
+1. Checkpoint Early Fusion dari nb 66 sudah ada di VPS ✓ (sudah di-commit `100cd95`)
+2. Heatmap Primer conf60 test: `data/dataset_frontonly_conf60/X_test_heatmaps.npy` (sudah ada)
+
+### Step: Jalankan notebook 68
 
 ```bash
 cd ~/MultimodalEmoLearn
 git pull origin master
 conda activate emotrain
 
-# Extract y_soft_{train,val,test}.npy (fast, ~30 detik — tanpa image reload)
-python scripts/extract_soft_labels.py
+jupyter nbconvert --to notebook --execute notebooks/68_crossdataset_early_fusion.ipynb \
+    --output 68_crossdataset_early_fusion_executed.ipynb \
+    --output-dir notebooks/results/ \
+    --ExecutePreprocessor.timeout=1800
 ```
 
-Output: `data/dataset_frontonly_conf60/y_{train,val,test}_soft.npy` shape (N, 7), sum=1 per sampel.
+### Konfigurasi
 
-**Validasi otomatis:** script cek argmax(soft) == y_hard existing. Kalau 100% match → OK.
+4 source (CK+/JAFFE/RAF-DB/KDEF) × 2 class (7c/4c) × 2 backbone (EF scratch + EF TL) = **16 inference runs** (target: Primer conf60 test 929 images).
+
+**Estimasi: ~5-10 menit total** (inference GPU only, no training).
+
+### Output
+
+```
+models/benchmark/crossdataset/
+├── cross_ckplus_7c.json    (+ EarlyFusion_B1, EarlyFusion_TL_B1)
+├── cross_ckplus_4c.json    (+ ...)
+├── cross_jaffe_7c.json     (+ ...)
+├── cross_jaffe_4c.json     (+ ...)
+├── cross_rafdb_7c.json     (+ ...)
+├── cross_rafdb_4c.json     (+ ...)
+├── cross_kdef_7c.json      (+ ...)
+├── cross_kdef_4c.json      (+ ...)
+└── all_cross_results.json  (combined, updated)
+
+notebooks/results/68_crossdataset_early_fusion_executed.ipynb
+```
+
+### Hipotesis
+
+Heatmap landmark = **geometric info** yang lebih domain-invariant dibanding RGB → Early Fusion **mungkin unggul** untuk cross-dataset transfer ke Primer vs CNN single-modality. Namun konsekuensinya, kalau hasil buruk → heatmap generic (Gaussian blob) tidak cukup bantu untuk transfer.
+
+### Commit hasil
+
+```bash
+cd ~/MultimodalEmoLearn
+git add models/benchmark/crossdataset/cross_*.json \
+        models/benchmark/crossdataset/all_cross_results.json \
+        notebooks/results/68_*
+git commit -m "Add cross-dataset Early Fusion → Primer results (nb 68)"
+git push
+```
+
+---
+
+## 26. Soft Label Training (Eksplorasi Liliana-inspired)
+
+Eksperimen Soft Label Training — target distribusi Face API confidence, bukan hard one-hot. Sumber inspirasi: Liliana et al. (2019) "Fuzzy Emotion" + Mo et al. (2020) HAE-Net konsep *natural emotions are inherently ambiguous*.
+
+### Prerequisite: Soft Labels Files
+
+**Penting:** `scripts/extract_soft_labels.py` butuh `data/processed_new/` yang **tidak tersedia di VPS** (hanya ada di Windows PC). Solusi: file `y_*_soft.npy` sudah di-extract di local + **di-commit ke repo** (total ~190KB, kecil).
+
+```bash
+cd ~/MultimodalEmoLearn
+git pull origin master
+conda activate emotrain
+
+# Cek file tersedia:
+ls -lh data/dataset_frontonly_conf60/y_*_soft.npy
+# Expected:
+#   y_test_soft.npy    ~26K
+#   y_train_soft.npy   ~145K
+#   y_val_soft.npy     ~16K
+```
+
+Kalau belum ada → `git pull` aja, file sudah di-track. Tidak perlu run `extract_soft_labels.py` di VPS (script tsb cuma untuk regenerasi di laptop local).
 
 ### Step: Jalankan notebook 71
 
@@ -1583,7 +1649,7 @@ git push
 
 ---
 
-## 26. Troubleshooting
+## 27. Troubleshooting
 
 ### CUDA Out of Memory untuk RAF-DB (nb 60, 63)
 

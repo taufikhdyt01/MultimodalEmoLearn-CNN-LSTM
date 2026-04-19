@@ -13,6 +13,10 @@ Usage:
     python scripts/extract_soft_labels.py --dataset-dir data/dataset_frontonly_conf60
     python scripts/extract_soft_labels.py --min-confidence 0.60
 
+CATATAN: Script ini butuh data/processed/ + data/processed_new/ (ada
+hanya di laptop local, TIDAK di VPS). Hasil y_*_soft.npy di-commit ke
+repo supaya VPS bisa langsung pakai tanpa run script ini.
+
 Validation:
     Script cek bahwa argmax(y_soft) == y (existing hard label).
     Kalau tidak match, ada mismatch order/split → error.
