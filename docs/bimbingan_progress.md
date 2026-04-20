@@ -1657,10 +1657,10 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 
 *Termasuk 2 row terakhir per tabel: `Early Fusion` (scratch B1) dan `Early Fusion TL` (B1) dari nb 66 — melengkapi spektrum 5 fusion strategy (CNN/FCNN single + Early/Intermediate/Late fusion × scratch/TL).*
 
-> **⚠️ Catatan methodology — Late Fusion weight tuning**:
-> - **Primer conf60** (nb 62/65): `w` di-tune di **val set** (proper). Angka di bawah sudah corrected via `rerun_late_fusion_proper.py`.
-> - **RAF-DB, KDEF** (nb 60/61): `w` val-tuned. OK.
-> - **CK+ dan JAFFE** (nb 36/37, B1): `w` di-tune di **test set** (leakage). Re-run menunggu CNN_B1+FCNN_B1 di-retrain (checkpoint terhapus saat VPS cleanup). Angka CK+/JAFFE Late Fusion masih **test-tuned (inflated)** — akan di-update setelah `retrain_ckplus_jaffe_b1.py` selesai dijalankan.
+> **Catatan methodology — Late Fusion weight tuning (semua val-tuned proper per Apr 2026)**:
+> - **Primer conf60** (nb 62/65): `w` val-tuned via `rerun_late_fusion_proper.py`.
+> - **RAF-DB, KDEF** (nb 60/61): sudah val-tuned native di notebook.
+> - **CK+ dan JAFFE** (nb 36/37, B1): sebelumnya test-tuned; di-retrain + re-evaluate via `retrain_ckplus_jaffe_b1.py` + `rerun_late_fusion_proper.py`. Tabel di bawah angka baru (val-tuned). Drop paling signifikan: JAFFE 7c Late Fusion 0.545 → 0.314 (−0.23). Best JAFFE 7c bergeser ke **CNN TL (0.464)**.
 
 #### CK+ 7-class
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
@@ -1670,7 +1670,7 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | Intermediate | 0.316 | 0.695 | 0.585 | 0.695 |
 | **CNN TL** | **0.913** ⭐ | 0.949 | 0.946 | 0.949 |
 | Intermediate TL | 0.833 | 0.881 | 0.886 | 0.881 |
-| Late Fusion | 0.498 | 0.780 | 0.694 | 0.780 |
+| Late Fusion | 0.494 | 0.780 | 0.691 | 0.780 |
 | Late Fusion TL | 0.835 | 0.881 | 0.890 | 0.881 |
 | Early Fusion | 0.446 | 0.695 | 0.665 | 0.695 |
 | Early Fusion TL | 0.762 | 0.847 | 0.847 | 0.847 |
@@ -1683,7 +1683,7 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | Intermediate | 0.567 | 0.758 | 0.740 | 0.758 |
 | CNN TL | 0.675 | 0.903 | 0.890 | 0.903 |
 | **Intermediate TL** | **0.837** ⭐ | 0.903 | 0.902 | 0.903 |
-| Late Fusion | 0.592 | 0.758 | 0.740 | 0.758 |
+| Late Fusion | 0.537 | 0.694 | 0.681 | 0.694 |
 | Late Fusion TL | 0.604 | 0.806 | 0.803 | 0.806 |
 | Early Fusion | 0.507 | 0.694 | 0.667 | 0.694 |
 | Early Fusion TL | 0.795 | 0.871 | 0.872 | 0.871 |
@@ -1694,9 +1694,9 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | CNN | 0.304 | 0.450 | 0.319 | 0.450 |
 | FCNN | 0.209 | 0.250 | 0.169 | 0.250 |
 | Intermediate | 0.037 | 0.150 | 0.039 | 0.150 |
-| CNN TL | 0.464 | 0.500 | 0.437 | 0.500 |
+| **CNN TL** | **0.464** ⭐ | 0.500 | 0.437 | 0.500 |
 | Intermediate TL | 0.447 | 0.450 | 0.420 | 0.450 |
-| **Late Fusion** | **0.545** ⭐ | 0.600 | 0.522 | 0.600 |
+| Late Fusion | 0.314 | 0.400 | 0.290 | 0.400 |
 | Late Fusion TL | 0.146 | 0.200 | 0.120 | 0.200 |
 | Early Fusion | 0.286 | 0.350 | 0.267 | 0.350 |
 | Early Fusion TL | 0.041 | 0.150 | 0.043 | 0.150 |
@@ -1709,7 +1709,7 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | Intermediate | 0.177 | 0.550 | 0.390 | 0.550 |
 | CNN TL | 0.329 | 0.500 | 0.476 | 0.500 |
 | Intermediate TL | 0.375 | 0.650 | 0.558 | 0.650 |
-| Late Fusion | 0.396 | 0.650 | 0.552 | 0.650 |
+| Late Fusion | 0.492 | 0.650 | 0.615 | 0.650 |
 | **Late Fusion TL** | **0.492** ⭐ | 0.650 | 0.615 | 0.650 |
 | Early Fusion | 0.177 | 0.550 | 0.390 | 0.550 |
 | Early Fusion TL | 0.352 | 0.600 | 0.507 | 0.600 |
@@ -1914,7 +1914,7 @@ Note untuk Late Fusion TL: grid search weight `w` dilakukan di Primer val (strat
 
 **Skema 1 — pola lintas dataset:**
 - **Best model umumnya Intermediate TL** (CK+ 4c, RAF-DB 7c/4c, KDEF 7c/4c, Primer 7c/4c)
-- **Kecuali**: CK+ 7c best CNN TL (0.913); JAFFE best Late Fusion / Late Fusion TL (dataset kecil)
+- **Kecuali**: CK+ 7c best CNN TL (0.913); JAFFE 7c best **CNN TL (0.464)** (post val-tuned rerun — Late Fusion turun dari 0.545 test-tuned ke 0.314); JAFFE 4c best Late Fusion TL (0.492)
 - **Late Fusion TL** (baru): kompetitif di RAF-DB/KDEF/Primer, tapi kolaps di CK+ 7c (0.835 vs 0.913) dan JAFFE 7c (0.146)
 - **Primer paling challenging**: best Primer 4c = 0.482 (Intermediate TL), sedangkan RAF-DB 4c = 0.836, KDEF 4c = 0.923, CK+ 4c = 0.837
 

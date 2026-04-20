@@ -264,9 +264,9 @@ Untuk referensi penulisan Section 4 (Results) dan Section 5 (Discussion).
 
 | Section | Finding |
 |---------|---------|
-| **Fusion strategies** | Late Fusion TL > Intermediate TL > **Early Fusion TL** > Single-modal |
+| **Fusion strategies** | Intermediate TL (0.521) > Late Fusion TL B2 (0.470) ≈ B3 (0.466) > **Early Fusion TL** (0.471) > Single-modal (val-tuned 4c) |
 | **TL effect** | TL +0.05-0.10 Macro F1 konsisten di semua arch |
-| **Class granularity** | 4-class F1 ≈ 2× lebih tinggi dari 7-class (0.567 vs 0.292) |
+| **Class granularity** | 4-class F1 ≈ 1.6× lebih tinggi dari 7-class (0.521 vs 0.333) |
 | **Imbalance handling** | B3 (aug) > B2 (weights) > B1 (baseline) di Late/Intermediate TL; Early Fusion tidak mengikuti pola ini |
 
 ### Early Fusion Best Configs
@@ -279,7 +279,7 @@ Untuk referensi penulisan Section 4 (Results) dan Section 5 (Discussion).
 
 **Temuan Early Fusion**:
 - Early Fusion TL 7c B3 (0.333) **melampaui** Intermediate TL B3 (0.292) di 7-class — heatmap channel + augmentation + TL bekerja sinergis
-- Namun Early Fusion 4c gagal tembus 0.50 (best 0.471), di bawah Intermediate TL 4c B3 (0.521) dan Late Fusion TL 4c B3 (0.567)
+- Namun Early Fusion 4c gagal tembus 0.50 (best 0.471), di bawah Intermediate TL 4c B3 (0.521) — val-tuned. Late Fusion TL 4c best val-tuned = 0.470 (B2)
 - B1 baseline Early Fusion punya **accuracy tinggi** (0.822 di 4c) tapi macro F1 rendah → model prediksi mayoritas
 - B2 (class weights) **paling jelek** di Early Fusion (acc drop ~30% dari B1) — channel concat sensitif terhadap re-weighting
 
@@ -293,7 +293,7 @@ Untuk referensi penulisan Section 4 (Results) dan Section 5 (Discussion).
 - **Fig 3**: **Class distribution histogram** — side-by-side 7-class vs 4-class bar chart (log scale), highlighting imbalance ratio 1:1138 (7c) vs 1:61 (4c). ✅ **Ready at `docs/figures/class_distribution.{pdf,png}`** (script: `scripts/make_class_distribution_figure.py`). Justifies macro-F1 as primary metric.
 - **Fig 4**: Landmark heatmap generation illustration (untuk Early Fusion)
 - **Fig 5**: Macro F1 bar chart — 5 arsitektur × 2 kelas (best scenario per model)
-- **Fig 6**: Confusion matrix best model (Late Fusion TL 4c B3)
+- **Fig 6**: Confusion matrix best model (Intermediate TL 4c B3 + Early Fusion TL 7c B3)
 
 ### Tabel (Tables)
 - **Tab 1**: Dataset distribution (7-class vs 4-class, train/val/test)
@@ -378,23 +378,17 @@ Augmentasi diterapkan hanya pada **training set kelas minoritas** sampai distrib
 
 ## 11. Per-Class Analysis (Section 4.5) — Data Extraction
 
-Per-class metrics untuk **best model (Late Fusion TL 4c B3, Macro F1 = 0.567)** perlu di-extract dari notebook executed (atau re-evaluate dengan classification_report).
+Per-class metrics untuk **best model (Intermediate TL 4c B3, Macro F1 = 0.521, val-tuned)** sudah di-export via `scripts/export_new_best_predictions.py`. File: `models/frontonly_conf60/predictions/best_4c_intermediate_tl_b3.json`.
 
-### Cara Extract di VPS
-```python
-# Di notebook baru di VPS:
-from sklearn.metrics import classification_report
-from training.models import EmotionCNNTransfer, EmotionFCNN
-# Load checkpoint Late Fusion TL 4c B3 (CNN_TL + FCNN)
-# Run inference on test set, average softmax dengan best_cnn_weight
-# Print classification_report(y_test, y_pred, target_names=emotions)
-```
+### Per-Class F1 (Intermediate TL 4c B3, val-tuned)
+| Class | Precision | Recall | F1 | Support |
+|-------|:---------:|:------:|:--:|:-------:|
+| neutral | 0.935 | 0.839 | **0.884** | 688 |
+| happy | 0.668 | 0.880 | **0.759** | 183 |
+| sad | 0.382 | 0.520 | **0.441** | 50 |
+| negative | 0.000 | 0.000 | **0.000** | 8 |
 
-### Expected Pattern (berdasarkan distribusi 4-class test set)
-- **Neutral** (support ~816): F1 tinggi ~0.85+ (dominan, mudah)
-- **Happy** (support ~57): F1 sedang-tinggi ~0.55-0.70 (ekspresi jelas)
-- **Sad** (support ~40): F1 sedang ~0.30-0.45 (sering ambigu dengan neutral)
-- **Negative** (support ~16, gabungan angry/fearful/disgusted/surprised): F1 rendah ~0.20-0.35 (minoritas + heterogen)
+**Observasi:** Accuracy=0.822, Weighted F1=0.828, Macro F1=0.521. Class `negative` (n=8) total gagal — Macro F1 naik karena neutral/happy kuat, bukan karena minoritas teratasi. Perlu disclose di Section 4.5.
 
 ### Confusion Matrix — Expected Pattern
 Mayoritas kesalahan adalah **over-prediction ke neutral** (kelas mayoritas). Contoh:
@@ -404,10 +398,36 @@ Mayoritas kesalahan adalah **over-prediction ke neutral** (kelas mayoritas). Con
 
 ---
 
+## 11b. Late Fusion Weight `w` Grid-Search (Appendix / Reproducibility)
+
+Val-tuned `w ∈ [0.00, 0.05, ..., 1.00]` via Primer val split. `w` = bobot stream CNN; bobot FCNN = `1 − w`.
+
+### Primer conf60 — 12 konfigurasi
+| Config | Scratch `w` / F1 | TL `w` / F1 |
+|--------|:---------------:|:-----------:|
+| 7c B1 | 0.20 / 0.270 | 0.15 / 0.238 |
+| 7c B2 | 0.05 / 0.248 | 0.05 / 0.249 |
+| 7c B3 | 0.00 / 0.222 | 0.05 / 0.232 |
+| 4c B1 | 0.30 / 0.474 | 0.00 / 0.422 |
+| 4c B2 | 0.15 / 0.479 | 0.15 / 0.470 |
+| 4c B3 | 0.00 / 0.421 | 0.10 / 0.466 |
+
+### Benchmark CK+/JAFFE — 4 konfigurasi (B1 baseline, val-tuned post-retrain Apr 2026)
+| Dataset | `w` | Macro F1 |
+|---------|:---:|:--------:|
+| CK+ 7c | 0.00 | 0.494 |
+| CK+ 4c | 0.00 | 0.537 |
+| JAFFE 7c | 0.40 | 0.314 |
+| JAFFE 4c | 0.00 | 0.492 |
+
+**Pattern:** 14/16 konfigurasi memilih `w ≤ 0.20` → FCNN/landmark stream dominan di weighted softmax. Supports observation bahwa landmark geometry lebih diskriminatif dari visual texture di setting natural (Primer) dan benchmark small-scale (JAFFE/CK+).
+
+---
+
 ## 12. Discussion Key Talking Points (Section 5)
 
 ### 5.1 Multimodal Fusion vs Single-Modality (RQ1)
-- **Fakta**: Best fusion (Late Fusion TL 4c B3 = 0.567) > Best single-modal (CNN TL 4c B3 = 0.507 atau FCNN 4c B2 = 0.459)
+- **Fakta**: Best fusion (Intermediate TL 4c B3 = 0.521, val-tuned) > Best single-modal (CNN TL 4c B3 = 0.507, FCNN 4c B2 = 0.459)
 - **Insight**: Fusi image + landmark memberikan gain konsisten karena:
   - Image CNN: capture texture, color, context visual
   - Landmark FCNN: capture pose geometrik (eyebrow position, mouth opening, dll)
@@ -415,12 +435,12 @@ Mayoritas kesalahan adalah **over-prediction ke neutral** (kelas mayoritas). Con
 - **Note kontra**: Tidak semua fusion menang — Intermediate Fusion scratch kalah dari CNN scratch di 7-class (0.261 vs 0.277)
 
 ### 5.2 Fusion Strategy Comparison (RQ2)
-- **Ranking di primer conf60 (4c best)**: Late Fusion TL (0.567) > Intermediate TL (0.521) > CNN TL single (0.507) > Early Fusion TL (0.471)
-- **Ranking di primer conf60 (7c best)**: Early Fusion TL B3 (0.333) > Late Fusion TL (0.301) > Intermediate TL (0.292) > CNN single (0.277)
-- **Insight**: **Late Fusion** unggul di 4-class karena:
-  - Kedua modality dilatih independent → lebih robust terhadap noise dari salah satu modality
-  - Weighted softmax averaging lebih fleksibel (tunable weight di val)
-- **Intermediate Fusion** sedikit di bawah karena joint learning rentan overfit di dataset kecil
+- **Ranking di primer conf60 (4c best, val-tuned)**: Intermediate TL (0.521) > CNN TL single (0.507) > Late Fusion scratch B2 (0.479) ≈ Early Fusion TL (0.471) > Late Fusion TL B2 (0.470) ≈ B3 (0.466)
+- **Ranking di primer conf60 (7c best, val-tuned)**: Early Fusion TL B3 (0.333) > Intermediate TL (0.292) > Late Fusion scratch B1 (0.270) > CNN single (0.277) > Late Fusion TL B2 (0.249)
+- **Insight**: **Intermediate Fusion TL** juara di 4-class karena:
+  - Feature-level joint learning optimal saat data augmented (B3) cukup untuk mencegah overfit
+  - Concat 256d (CNN) + 128d (FCNN) → 384d memungkinkan fusion head belajar cross-modal interaction
+- **Late Fusion** turun setelah val-tuning proper — `w` yang di-tune pakai val set (bukan test) cenderung memilih `w ≈ 0` (landmark-dominant) di Primer → kehilangan komplementaritas CNN stream
 - **Early Fusion** (HAE-Net style channel concat): **underperforms di 4-class tapi menang di 7-class (dengan B3 augmented)**. Hipotesis:
   - Heatmap sparse Gaussian (mostly zeros) tidak memberi informasi kuat di layer awal
   - Kernel conv layer pertama harus simultaneously belajar RGB features DAN heatmap patterns dengan satu set bobot → kompromi representasi
@@ -429,7 +449,7 @@ Mayoritas kesalahan adalah **over-prediction ke neutral** (kelas mayoritas). Con
 - **Implikasi**: Pilihan fusion strategy optimal bergantung (1) granularitas kelas, (2) ukuran data augmented untuk B3. Fusion di level feature (Intermediate) / decision (Late) umumnya lebih robust, tapi Early Fusion bisa unggul di skenario high-granularity dengan data augmented.
 
 ### 5.3 Transfer Learning Effectiveness (RQ3)
-- **Fakta**: TL variant konsisten unggul dari scratch (contoh: Late Fusion TL 0.567 vs Late Fusion scratch 0.503, +0.064)
+- **Fakta**: TL variant konsisten unggul dari scratch di Intermediate/Early Fusion (contoh: Intermediate TL B3 0.521 vs Intermediate scratch B3 0.394, +0.127). Di Late Fusion val-tuned, gain TL marginal (0.470 vs 0.479 di B2) karena `w ≈ 0` sudah pilih FCNN-only.
 - **Insight**: ResNet18 pretrained ImageNet memberikan visual feature representation yang matang, crucial untuk dataset kecil (6,795 sampel)
 - **Efek kombinasi TL + imbalance handling**: TL + B3 (augmentation) memberikan gain lebih tinggi dibanding TL + B1 → TL melengkapi augmentation, tidak replace
 
@@ -442,7 +462,7 @@ Mayoritas kesalahan adalah **over-prediction ke neutral** (kelas mayoritas). Con
 - **4-class remap subjective** — cara menggabungkan minoritas ke "negative" bisa diargumentasikan
 
 ### 5.5 Implications for Learning Analytics
-- Model dengan Macro F1 ~0.57 masih **preliminary** untuk deployment real-time
+- Model dengan Macro F1 ~0.52 masih **preliminary** untuk deployment real-time
 - Bisa dipakai untuk **aggregate-level analytics** (misal: trend emosi per-session), bukan per-frame decision
 - Potensi integrasi ke LMS untuk adaptive feedback, tutor intervention, atau konten rekomendasi
 - Perlu validasi lebih lanjut dengan human annotation + larger dataset
@@ -457,7 +477,7 @@ Abstract ideal (150-250 kata), harus mencakup:
 - [ ] **Motivation/gap** (1 kalimat): existing FER fokus lab-posed, bukan natural
 - [ ] **Proposed approach** (2-3 kalimat): 5 arsitektur × multimodal fusion × transfer learning
 - [ ] **Dataset** (1 kalimat): 6,795 samples, 37 mahasiswa, sesi pemrograman, confidence ≥60%
-- [ ] **Key result** (1-2 kalimat): Late Fusion TL 4-class B3 achieves Macro F1 = 0.567
+- [ ] **Key result** (1-2 kalimat): Intermediate Fusion TL 4-class B3 achieves Macro F1 = 0.521 (val-tuned proper); Early Fusion TL 7-class B3 achieves 0.333
 - [ ] **Key insight** (1 kalimat): Multimodal fusion + transfer learning outperforms single-modal baselines
 - [ ] **Implications** (1 kalimat): Advances affective learning analytics tools for programming education
 
@@ -493,7 +513,7 @@ Paragraf-per-paragraf (tanpa subsection formal, sesuai struktur):
 **Paragraph 4 — Kontribusi**
 - (1) Dataset baru 6,795 sampel natural programming sessions (37 subjek)
 - (2) Studi komparatif sistematis 5 arsitektur fusion × TL (54 configs)
-- (3) Analisis empirik bahwa multimodal + TL + imbalance handling mencapai Macro F1 0.567
+- (3) Analisis empirik bahwa multimodal + TL + imbalance handling mencapai Macro F1 0.521 (4c Intermediate TL B3) / 0.333 (7c Early Fusion TL B3), val-tuned proper
 
 **Paragraph 5 — Struktur Paper**
 Singkat: "Section 2 reviews... Section 3 describes... Section 4 presents... Section 5 discusses... Section 6 concludes..."
