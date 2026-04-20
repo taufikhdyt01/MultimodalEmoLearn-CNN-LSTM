@@ -95,23 +95,12 @@ def main():
     ax1.set_xticks(x7)
     ax1.set_xticklabels(EMOTIONS_7, rotation=30, ha='right', fontsize=9)
     ax1.set_ylabel('Number of Samples (log scale)', fontsize=9)
-    ax1.set_title('(a) 7-Class Distribution', fontsize=10)
+    ax1.set_title('(a) 7-Class', fontsize=10)
     ax1.grid(axis='y', color=COLOR_GRID, linestyle='--', linewidth=0.5, alpha=0.7)
     ax1.set_axisbelow(True)
     ax1.set_ylim(1, max(counts_7) * 3)
 
-    # Annotation arrow menyoroti minority extreme (fearful)
-    idx_min = int(np.argmin(counts_7))
-    # Naikin tinggi y annotation supaya tidak overlap bar lain
-    y_annot = max(counts_7) / 2  # tengah-tinggi axis
-    ax1.annotate(f'Severe rare: only {counts_7[idx_min]} samples\n(imbalance ratio 1:{int(ratio_7)})',
-                 xy=(idx_min, counts_7[idx_min]),
-                 xytext=(idx_min - 2.5, y_annot),
-                 fontsize=7, color=COLOR_MINOR_BG, weight='bold',
-                 bbox=dict(boxstyle='round,pad=0.3', fc='white',
-                           ec=COLOR_MINOR_BG, lw=0.6),
-                 arrowprops=dict(arrowstyle='->', color=COLOR_MINOR_BG, lw=0.9,
-                                 connectionstyle='arc3,rad=0.2'))
+    # (Annotation narrative moved to LaTeX figure caption)
 
     # ── Right: 4-class ──
     ax2 = axes[1]
@@ -122,17 +111,12 @@ def main():
     ax2.set_xticks(x4)
     ax2.set_xticklabels(EMOTIONS_4, rotation=0, fontsize=9)
     ax2.set_ylabel('Number of Samples (log scale)', fontsize=9)
-    ax2.set_title('(b) 4-Class Distribution (remap)', fontsize=10)
+    ax2.set_title('(b) 4-Class (remap)', fontsize=10)
     ax2.grid(axis='y', color=COLOR_GRID, linestyle='--', linewidth=0.5, alpha=0.7)
     ax2.set_axisbelow(True)
     ax2.set_ylim(1, max(counts_4) * 3)
 
-    # Annotation ratio di subplot (b)
-    ax2.text(0.5, 0.88, f'Ratio 1:{int(ratio_4)}\n(improved from 1:{int(ratio_7)})',
-             transform=ax2.transAxes, fontsize=8, color=COLOR_MINOR,
-             ha='center', weight='bold',
-             bbox=dict(boxstyle='round,pad=0.3', fc='white',
-                       ec=COLOR_MINOR, lw=0.6))
+    # (Ratio note moved to LaTeX figure caption)
 
     # Legend for color coding (sekali saja, di atas figure)
     from matplotlib.patches import Patch
@@ -141,13 +125,12 @@ def main():
         Patch(facecolor=COLOR_MINOR, edgecolor='black', label='Minority (1–5%)'),
         Patch(facecolor=COLOR_MINOR_BG, edgecolor='black', label='Severe minority (<1%)'),
     ]
-    fig.legend(handles=legend_handles, loc='upper center',
+    fig.legend(handles=legend_handles, loc='lower center',
                ncol=3, fontsize=8, frameon=False,
-               bbox_to_anchor=(0.5, 1.02))
+               bbox_to_anchor=(0.5, -0.02))
 
-    fig.suptitle(f'Primer Dataset conf60 — {total:,} samples (37 subjects)',
-                 fontsize=10, y=1.08)
-    plt.tight_layout()
+    # (Suptitle moved to LaTeX figure caption)
+    plt.tight_layout(rect=[0, 0.05, 1, 1])
 
     out_dir = PROJECT_ROOT / 'docs' / 'figures'
     out_dir.mkdir(parents=True, exist_ok=True)

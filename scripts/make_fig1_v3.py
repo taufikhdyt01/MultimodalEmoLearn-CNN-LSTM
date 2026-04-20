@@ -1,5 +1,5 @@
 """
-Generate fig1_architecture_v3.html: compact 5-column taxonomy layout.
+Generate architecture_v3.html: compact 5-column taxonomy layout.
 
 Layout: 5 columns side-by-side, each = 1 architecture (vertical flow).
 Width: ~7.16 in (IEEE 2-column span), height: ~4-5 in.
@@ -15,7 +15,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-OUT_PATH = PROJECT_ROOT / 'docs' / 'fig1_architecture_v3.html'
+OUT_PATH = PROJECT_ROOT / 'docs' / 'architecture_v3.html'
 
 SAMPLE_IDX = 967   # surprised (matches pipeline figure)
 OUT_SIZE = 160

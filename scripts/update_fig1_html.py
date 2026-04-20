@@ -16,7 +16,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-HTML_PATH = PROJECT_ROOT / 'docs' / 'fig1_architecture_v2.html'
+HTML_PATH = PROJECT_ROOT / 'docs' / 'architecture_v2.html'
 
 SAMPLE_IDX = 967   # surprised — konsisten dengan pipeline figure
 OUT_SIZE = 160     # larger thumbnail for clear real image (ratio 2x SVG viewBox)

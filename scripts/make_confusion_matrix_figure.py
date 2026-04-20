@@ -130,23 +130,15 @@ def main():
     fig, axes = plt.subplots(1, 2, figsize=(7.16, 3.6),
                               gridspec_kw={'width_ratios': [1.3, 1]})
 
-    arch7 = p7.get('architecture', 'Late Fusion TL B1')
-    sc7 = p7.get('scenario', 'b1').upper()
-    w7_str = f'  w={w7:.2f}' if w7 is not None else ''
-    title_7 = (f"(a) 7-Class — {arch7} {sc7}\n"
-               f"Macro F1={m7['macro_f1']:.3f}  Acc={m7['accuracy']:.3f}{w7_str}")
+    # Paper-ready titles: only subplot identifier (a/b) + class count
+    # Architecture name + metrics go to LaTeX caption
+    title_7 = '(a) 7-Class'
     im7 = plot_cm(axes[0], cm7, p7['emotions'],
                   title_7, normalize=None if args.normalize == 'raw' else args.normalize)
 
-    arch4 = p4.get('architecture', 'Late Fusion TL B3')
-    sc4 = p4.get('scenario', 'b3').upper()
-    w4_str = f'  w={w4:.2f}' if w4 is not None else ''
-    title_4 = (f"(b) 4-Class — {arch4} {sc4} (best)\n"
-               f"Macro F1={m4['macro_f1']:.3f}  Acc={m4['accuracy']:.3f}{w4_str}")
+    title_4 = '(b) 4-Class'
     im4 = plot_cm(axes[1], cm4, p4['emotions'],
                   title_4, normalize=None if args.normalize == 'raw' else args.normalize)
-
-    fig.suptitle(f'Confusion Matrix {tune_label}', fontsize=9, y=1.01)
 
     # Colorbar shared (only on right panel untuk compactness)
     cbar_label = 'Count' if args.normalize == 'raw' else 'Proportion'
