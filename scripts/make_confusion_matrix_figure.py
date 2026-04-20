@@ -167,21 +167,19 @@ def main():
         print(f'Saved: {pdf_path}')
 
     # Ringkas summary
-    print(f'\n7-class ({p7["tag"]}):')
-    print(f'  w(CNN_TL) = {p7["best_cnn_tl_weight"]:.2f}  Macro F1 = {m7["macro_f1"]:.4f}')
-    print(f'  Per-class F1:')
-    for emo in p7['emotions']:
-        if emo in p7['classification_report']:
-            r = p7['classification_report'][emo]
-            print(f'    {emo:>10}: P={r["precision"]:.3f}  R={r["recall"]:.3f}  F1={r["f1-score"]:.3f}  support={int(r["support"])}')
+    def print_summary(p, m, w, label):
+        print(f'\n{label} ({p["tag"]}):')
+        w_line = f'w(CNN_TL) = {w:.2f}  ' if w is not None else ''
+        print(f'  {w_line}Macro F1 = {m["macro_f1"]:.4f}')
+        print(f'  Per-class F1:')
+        for emo in p['emotions']:
+            if emo in p['classification_report']:
+                r = p['classification_report'][emo]
+                print(f'    {emo:>10}: P={r["precision"]:.3f}  R={r["recall"]:.3f}  '
+                      f'F1={r["f1-score"]:.3f}  support={int(r["support"])}')
 
-    print(f'\n4-class ({p4["tag"]}):')
-    print(f'  w(CNN_TL) = {p4["best_cnn_tl_weight"]:.2f}  Macro F1 = {m4["macro_f1"]:.4f}')
-    print(f'  Per-class F1:')
-    for emo in p4['emotions']:
-        if emo in p4['classification_report']:
-            r = p4['classification_report'][emo]
-            print(f'    {emo:>10}: P={r["precision"]:.3f}  R={r["recall"]:.3f}  F1={r["f1-score"]:.3f}  support={int(r["support"])}')
+    print_summary(p7, m7, w7, '7-class')
+    print_summary(p4, m4, w4, '4-class')
 
 
 if __name__ == '__main__':
