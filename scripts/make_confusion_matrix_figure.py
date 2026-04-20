@@ -5,9 +5,12 @@ Side-by-side 7-class dan 4-class confusion matrix dari best config:
   - 7-class: Late Fusion TL B1 (Macro F1 = 0.301)
   - 4-class: Late Fusion TL B3 (Macro F1 = 0.567) — best overall
 
-Input: hasil dari `scripts/export_best_predictions.py` (run di VPS):
-  models/frontonly_conf60/predictions/best_7c_late_fusion_tl_b1.json
-  models/frontonly_conf60/predictions/best_4c_late_fusion_tl_b3.json
+Input: hasil dari `scripts/export_new_best_predictions.py` (run di VPS):
+  models/frontonly_conf60/predictions/best_7c_early_fusion_tl_b3.json
+  models/frontonly_conf60/predictions/best_4c_intermediate_tl_b3.json
+
+(Legacy: best_7c_late_fusion_tl_b1.json / best_4c_late_fusion_tl_b3.json
+ juga masih didukung via --legacy flag, untuk compat paper draft lama.)
 
 Output:
   docs/figures/confusion_matrix.pdf   (IEEE paper)
@@ -89,40 +92,57 @@ def main():
                     help='Normalize per row (recall), per col (precision), or raw counts')
     ap.add_argument('--no-pdf', action='store_true')
     ap.add_argument('--test-tuned', action='store_true',
-                    help='Pakai grid-search w di test (match paper numbers, has leakage). '
+                    help='(Legacy Late Fusion only) Pakai grid-search w di test. '
                          'Default: val-tuned (proper out-of-sample).')
+    ap.add_argument('--legacy', action='store_true',
+                    help='Pakai Late Fusion predictions lama (pre val-tuning fix).')
     args = ap.parse_args()
 
     FIG_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Load predictions
-    p7 = load_predictions(PRED_DIR / 'best_7c_late_fusion_tl_b1.json')
-    p4 = load_predictions(PRED_DIR / 'best_4c_late_fusion_tl_b3.json')
+    # Load predictions — default pakai NEW best (Intermediate TL 4c + Early Fusion TL 7c)
+    if args.legacy:
+        p7 = load_predictions(PRED_DIR / 'best_7c_late_fusion_tl_b1.json')
+        p4 = load_predictions(PRED_DIR / 'best_4c_late_fusion_tl_b3.json')
+    else:
+        p7 = load_predictions(PRED_DIR / 'best_7c_early_fusion_tl_b3.json')
+        p4 = load_predictions(PRED_DIR / 'best_4c_intermediate_tl_b3.json')
 
     def pick(p):
-        """Return (cm, metrics, w) based on --test-tuned flag.
-        Fallback to default (val-tuned) if test_tuned section missing (old export)."""
+        """Return (cm, metrics, w_or_none).
+        - New models (Intermediate/Early Fusion): no fusion weight, w=None
+        - Legacy Late Fusion: has best_cnn_tl_weight + optional test_tuned variant
+        """
         if args.test_tuned and 'test_tuned' in p:
             t = p['test_tuned']
-            return t['confusion_matrix'], t['test_metrics'], t['best_cnn_tl_weight']
-        return p['confusion_matrix'], p['test_metrics'], p['best_cnn_tl_weight']
+            return t['confusion_matrix'], t['test_metrics'], t.get('best_cnn_tl_weight')
+        return p['confusion_matrix'], p['test_metrics'], p.get('best_cnn_tl_weight')
 
     cm7, m7, w7 = pick(p7)
     cm4, m4, w4 = pick(p4)
 
-    tune_label = '(test-tuned w — paper-compat)' if args.test_tuned else '(val-tuned w — proper)'
+    if args.legacy:
+        tune_label = '(test-tuned w — paper-compat)' if args.test_tuned else '(val-tuned w — proper)'
+    else:
+        tune_label = '(val-tuned proper — new best models)'
 
     # Figure: 2 panels side-by-side
     fig, axes = plt.subplots(1, 2, figsize=(7.16, 3.6),
                               gridspec_kw={'width_ratios': [1.3, 1]})
 
-    title_7 = (f"(a) 7-Class — Late Fusion TL B1\n"
-               f"Macro F1={m7['macro_f1']:.3f}  Acc={m7['accuracy']:.3f}  w={w7:.2f}")
+    arch7 = p7.get('architecture', 'Late Fusion TL B1')
+    sc7 = p7.get('scenario', 'b1').upper()
+    w7_str = f'  w={w7:.2f}' if w7 is not None else ''
+    title_7 = (f"(a) 7-Class — {arch7} {sc7}\n"
+               f"Macro F1={m7['macro_f1']:.3f}  Acc={m7['accuracy']:.3f}{w7_str}")
     im7 = plot_cm(axes[0], cm7, p7['emotions'],
                   title_7, normalize=None if args.normalize == 'raw' else args.normalize)
 
-    title_4 = (f"(b) 4-Class — Late Fusion TL B3 (best)\n"
-               f"Macro F1={m4['macro_f1']:.3f}  Acc={m4['accuracy']:.3f}  w={w4:.2f}")
+    arch4 = p4.get('architecture', 'Late Fusion TL B3')
+    sc4 = p4.get('scenario', 'b3').upper()
+    w4_str = f'  w={w4:.2f}' if w4 is not None else ''
+    title_4 = (f"(b) 4-Class — {arch4} {sc4} (best)\n"
+               f"Macro F1={m4['macro_f1']:.3f}  Acc={m4['accuracy']:.3f}{w4_str}")
     im4 = plot_cm(axes[1], cm4, p4['emotions'],
                   title_4, normalize=None if args.normalize == 'raw' else args.normalize)
 
