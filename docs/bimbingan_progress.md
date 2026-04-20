@@ -1657,6 +1657,11 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 
 *Termasuk 2 row terakhir per tabel: `Early Fusion` (scratch B1) dan `Early Fusion TL` (B1) dari nb 66 — melengkapi spektrum 5 fusion strategy (CNN/FCNN single + Early/Intermediate/Late fusion × scratch/TL).*
 
+> **⚠️ Catatan methodology — Late Fusion weight tuning**:
+> - **Primer conf60** (nb 62/65): `w` di-tune di **val set** (proper). Angka di bawah sudah corrected via `rerun_late_fusion_proper.py`.
+> - **RAF-DB, KDEF** (nb 60/61): `w` val-tuned. OK.
+> - **CK+ dan JAFFE** (nb 36/37, B1): `w` di-tune di **test set** (leakage). Re-run menunggu CNN_B1+FCNN_B1 di-retrain (checkpoint terhapus saat VPS cleanup). Angka CK+/JAFFE Late Fusion masih **test-tuned (inflated)** — akan di-update setelah `retrain_ckplus_jaffe_b1.py` selesai dijalankan.
+
 #### CK+ 7-class
 | Model | Macro F1 | Micro F1 | Weighted F1 | Accuracy |
 |-------|:--------:|:--------:|:-----------:|:--------:|
@@ -1769,8 +1774,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | Intermediate | 0.260 | 0.799 | 0.793 | 0.799 |
 | CNN TL | 0.281 | 0.819 | 0.814 | 0.819 |
 | **Intermediate TL** | **0.292** ⭐ | 0.808 | 0.819 | 0.808 |
-| Late Fusion | 0.244 | 0.778 | 0.777 | 0.778 |
-| Late Fusion TL | 0.285 | 0.827 | 0.828 | 0.827 |
+| Late Fusion | 0.270 | 0.816 | 0.812 | 0.816 |
+| Late Fusion TL | 0.238 | 0.790 | 0.784 | 0.790 |
 | Early Fusion | 0.246 | 0.794 | 0.786 | 0.794 |
 | Early Fusion TL | 0.253 | 0.713 | 0.722 | 0.713 |
 
@@ -1782,8 +1787,8 @@ Slide 24 (CK+/JAFFE) lama hanya Macro F1. Slide 24B belum lengkap Late Fusion TL
 | Intermediate | 0.444 | 0.727 | 0.753 | 0.727 |
 | CNN TL | 0.378 | 0.721 | 0.682 | 0.721 |
 | **Intermediate TL** | **0.482** ⭐ | 0.780 | 0.790 | 0.780 |
-| Late Fusion | 0.460 | 0.763 | 0.779 | 0.763 |
-| Late Fusion TL | 0.472 | 0.777 | 0.779 | 0.777 |
+| Late Fusion | 0.474 | 0.807 | 0.815 | 0.807 |
+| Late Fusion TL | 0.422 | 0.695 | 0.722 | 0.695 |
 | Early Fusion | 0.457 | 0.822 | 0.816 | 0.822 |
 | Early Fusion TL | 0.471 | 0.770 | 0.770 | 0.770 |
 

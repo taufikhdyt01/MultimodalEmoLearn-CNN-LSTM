@@ -29,7 +29,7 @@
 - Problem statement (FER di konteks programming natural)
 - Method summary (5 arsitektur × fusion × transfer learning)
 - Data description (6,795 samples dari 37 mahasiswa, conf60)
-- Best result (Late Fusion TL 4c B3 = Macro F1 0.567)
+- Best result (Intermediate TL 4c B3 = Macro F1 0.521, val-tuned proper)
 - Key insight
 
 **1. Introduction**
@@ -195,21 +195,21 @@ Untuk referensi penulisan Section 4 (Results) dan Section 5 (Discussion).
 | Intermediate | B1 | 0.261 | 0.791 | 0.792 |
 | Intermediate | B2 | 0.247 | 0.784 | 0.779 |
 | Intermediate | B3 | 0.229 | 0.754 | 0.775 |
-| Late Fusion | B1 | 0.288 | 0.835 | 0.839 |
-| Late Fusion | B2 | 0.266 | 0.802 | 0.807 |
-| Late Fusion | B3 | 0.260 | 0.813 | 0.826 |
+| Late Fusion | B1 | 0.270 | 0.812 | 0.816 |
+| Late Fusion | B2 | 0.248 | 0.778 | 0.777 |
+| Late Fusion | B3 | 0.222 | 0.758 | 0.740 |
 | CNN TL | B1 | 0.273 | 0.782 | 0.793 |
 | CNN TL | B2 | 0.243 | 0.746 | 0.750 |
 | CNN TL | B3 | 0.241 | 0.797 | 0.807 |
+| **Early Fusion TL** | **B3** | **0.333** ⭐ | 0.773 | 0.753 |
 | Early Fusion TL | B1 | 0.253 | 0.722 | 0.713 |
 | Early Fusion TL | B2 | 0.247 | 0.663 | 0.636 |
-| Early Fusion TL | B3 | 0.333 | 0.773 | 0.753 |
 | Intermediate TL | B1 | 0.277 | 0.800 | 0.792 |
 | Intermediate TL | B2 | 0.283 | 0.825 | 0.825 |
-| Intermediate TL | B3 | **0.292** | 0.826 | 0.825 |
-| **Late Fusion TL** | **B1** | **0.301** ⭐ | 0.827 | 0.830 |
-| Late Fusion TL | B2 | 0.264 | 0.808 | 0.819 |
-| Late Fusion TL | B3 | 0.260 | **0.836** | **0.849** |
+| Intermediate TL | B3 | 0.292 | 0.826 | 0.825 |
+| Late Fusion TL | B1 | 0.238 | 0.784 | 0.790 |
+| Late Fusion TL | B2 | 0.249 | 0.781 | 0.781 |
+| Late Fusion TL | B3 | 0.232 | 0.780 | 0.762 |
 
 ### 4-Class — All Metrics
 
@@ -227,9 +227,9 @@ Untuk referensi penulisan Section 4 (Results) dan Section 5 (Discussion).
 | Intermediate | B1 | 0.445 | 0.788 | 0.788 |
 | Intermediate | B2 | 0.416 | 0.779 | 0.783 |
 | Intermediate | B3 | 0.382 | 0.761 | 0.790 |
-| Late Fusion | B1 | 0.482 | 0.822 | 0.821 |
-| Late Fusion | B2 | 0.503 | 0.830 | 0.825 |
-| Late Fusion | B3 | 0.463 | 0.800 | 0.798 |
+| Late Fusion | B1 | 0.474 | 0.815 | 0.807 |
+| Late Fusion | B2 | 0.479 | 0.808 | 0.789 |
+| Late Fusion | B3 | 0.421 | 0.739 | 0.702 |
 | CNN TL | B1 | 0.456 | 0.760 | 0.747 |
 | CNN TL | B2 | 0.447 | 0.748 | 0.742 |
 | CNN TL | B3 | 0.507 | 0.807 | 0.799 |
@@ -238,24 +238,27 @@ Untuk referensi penulisan Section 4 (Results) dan Section 5 (Discussion).
 | Early Fusion TL | B3 | 0.433 | 0.709 | 0.678 |
 | Intermediate TL | B1 | 0.489 | 0.810 | 0.800 |
 | Intermediate TL | B2 | 0.508 | 0.829 | 0.825 |
-| Intermediate TL | B3 | 0.521 | 0.828 | 0.822 |
-| Late Fusion TL | B1 | 0.513 | 0.812 | 0.802 |
-| Late Fusion TL | B2 | 0.519 | 0.824 | 0.818 |
-| **Late Fusion TL** | **B3** | **0.567** ⭐ | 0.821 | 0.812 |
+| **Intermediate TL** | **B3** | **0.521** ⭐ | 0.828 | 0.822 |
+| Late Fusion TL | B1 | 0.422 | 0.722 | 0.695 |
+| Late Fusion TL | B2 | 0.470 | 0.796 | 0.775 |
+| Late Fusion TL | B3 | 0.466 | 0.780 | 0.757 |
 
 ---
 
 ## 7. Best Results (Untuk Abstract & Discussion)
 
-### Overall Best: Late Fusion TL 4-class B3 = Macro F1 0.567
+### Overall Best: Intermediate TL 4-class B3 = Macro F1 0.521
+
+⚠️ **Revisi**: angka Late Fusion di-update ke **val-tuned `w`** (grid search di Primer val, bukan di test — fix test-set leakage di nb 45/49/52/55). Best overall **bergeser dari Late Fusion TL B3 (0.567, test-tuned) ke Intermediate TL B3 (0.521, val-tuned proper)**.
 
 | Model | Scenario | Kelas | Macro F1 | Note |
 |-------|----------|:-----:|:--------:|------|
-| **Late Fusion TL** | **B3** | **4** | **0.567** | ⭐ Best overall |
-| Intermediate TL | B3 | 4 | 0.521 | |
-| Late Fusion TL | B2 | 4 | 0.519 | |
+| **Intermediate TL** | **B3** | **4** | **0.521** | ⭐ Best overall (val-tuned) |
+| Intermediate TL | B2 | 4 | 0.508 | |
 | CNN TL | B3 | 4 | 0.507 | |
-| Late Fusion TL | B1 | 4 | 0.513 | |
+| Intermediate TL | B1 | 4 | 0.489 | |
+| Late Fusion | B2 | 4 | 0.479 | Late Fusion scratch, val-tuned |
+| Late Fusion TL | B2 | 4 | 0.470 | val-tuned |
 
 ### Best per Section
 
