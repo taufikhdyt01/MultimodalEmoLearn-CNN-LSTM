@@ -88,7 +88,7 @@ def main():
         ('   → Bandingkan vs DL: apakah rule-based lebih robust di natural data?', 9, False),
     ])
 
-    # [3] Kolom kanan — Pitaloka 2017 + Selvaraju 2017
+    # [3] Kolom kanan — Pitaloka 2017 (GradCAM dipindah karena itu arahan dosen, bukan paper turunan)
     set_text_preserve(shapes[3].text_frame, [
         ('Pitaloka et al. (2017)', 11, True),
         ('"Enhancing CNN with Preprocessing Stage in Automatic Emotion Recognition"', 8.5, False),
@@ -97,14 +97,14 @@ def main():
         ('   → Paper menunjukkan Global Contrast Normalization > min-max', 9, False),
         ('   → Ablation: {min-max, GCN, HistEq} × CNN TL best baseline', 9, False),
         ('   → Quick win: 0.5-1 hari, terukur langsung vs baseline 0.521', 9, False),
-        ('', 6, False),
-        ('Selvaraju et al. (2017) — Grad-CAM', 11, True),
-        ('"Visual Explanations from Deep Networks via Gradient-based Localization"', 8.5, False),
-        ('', 3, False),
-        ('(F) GradCAM Visualization  🔄 IN-PROGRESS', 9.5, True),
-        ('   → Qualitative analysis: fokus model per kelas (eye/mouth/brow)', 9, False),
-        ('   → nb 73 scaffolded; run di VPS → docs/figures/gradcam/*.png', 9, False),
-        ('   → Supporting figure untuk BAB Discussion tesis', 9, False),
+        ('', 8, False),
+        ('Catatan — Pemilihan Paper Referensi:', 10, True),
+        ('• Liliana 2019 dipilih karena paper dosen pembimbing (first author)', 9, False),
+        ('  — novelty tesis = direct extension work beliau', 9, False),
+        ('• Pitaloka 2017 dipilih karena ablation preprocessing', 9, False),
+        ('  — quick win, sesuai pipeline saat ini', 9, False),
+        ('• Total 5 eksperimen paper-grounded (A-E), semua sejalan', 9, False),
+        ('  dengan novelty tesis + paper JITeCS.', 9, False),
     ])
 
     # [4] Summary prioritas
@@ -113,12 +113,13 @@ def main():
         ('', 3, False),
         ('• Liliana family (A-D): direct extension paper dosen → novelty tertinggi untuk tesis + potensi paper follow-up', 9.5, False),
         ('• Pitaloka (E): ablation terukur, quick win — memperkuat preprocessing choice di paper JITeCS', 9.5, False),
-        ('• Selvaraju (F): visual explanation — complementary untuk BAB Discussion, tidak push SOTA', 9.5, False),
+        ('', 3, False),
+        ('Catatan: GradCAM (arahan dosen, terpisah) sudah in-progress via nb 73 untuk qualitative analysis BAB Discussion — bukan push SOTA.', 9, False),
     ])
 
     # [5] Status banner
     set_text_preserve(shapes[5].text_frame, [
-        ('Status per Apr 2026: A DONE (nb 71/72) + nb 78 queued  |  F in-progress (nb 73)  |  B/C/D/E belum dimulai  |  Detail: docs/eksplorasi_lanjutan.md', 9, True)
+        ('Status per Apr 2026: A DONE (nb 71/72) + nb 78 queued  |  B/C/D/E belum dimulai  |  Detail: docs/eksplorasi_lanjutan.md', 9, True)
     ])
 
     prs.save(PPTX)
