@@ -1782,9 +1782,14 @@ git push
 
 ---
 
-## 28b. nb 78 — Soft Label Training on Intermediate TL (Target: beat 0.521 val-tuned)
+## 28b. nb 78 — Soft Label Training on Intermediate TL (Re-run konsisten)
 
-Soft label hasil nb 71 (CNN TL + KL-div = 0.517) dan nb 72 (Late Fusion TL + soft gagal transfer = 0.437) → coba ke **Intermediate Fusion TL** (arsitektur juara val-tuned, feature-level joint training — paling kompatibel dengan soft target).
+**Hyperparam align dengan nb 71** (EPOCHS=50, LR_TL=5e-5) supaya lintas arsitektur (CNN single vs Intermediate fusion) comparable. Previous run dengan EPOCHS=80/LR=1e-4 menunjukkan best_epoch anomaly (2-5, konvergen sangat awal) — indikasi LR terlalu besar untuk Intermediate Fusion.
+
+**Scope re-run (metodologi konsisten):**
+- nb 71 (CNN TL): re-run juga untuk regenerate JSON dengan `val_macro_f1` ter-log (code sudah support)
+- nb 78: re-run dengan LR=5e-5, EPOCHS=50
+- nb 72 (Late Fusion): **tidak di-rerun** — arsitektur bukan juara, decision-level fusion secara struktural tidak kompatibel dengan soft label (gain "hilang" di weighted softmax averaging)
 
 ### Prasyarat data
 
