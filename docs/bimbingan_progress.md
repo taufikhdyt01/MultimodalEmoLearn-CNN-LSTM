@@ -2051,6 +2051,92 @@ Observasi awal **menarik**: image branch dalam Intermediate Fusion tampak fokus 
 
 ---
 
+## SLIDE 35: Space Alignment (arahan dosen #2, nb 75)
+
+### Motivasi
+Evaluasi apakah feature space image (CNN TL 256-d) dan landmark (FCNN 128-d) **sejajar** di latent space. Motivasi: kalau alignment rendah, Intermediate Fusion (concat) suboptimal. Kalau alignment tinggi, Intermediate Fusion justified secara empiris.
+
+### Setup
+- Checkpoint: CNN TL 4c B1 (256-d) + FCNN 4c B2 (128-d), extract features di Primer test set (929 sampel)
+- 4 metode analisis (no training, analytical only):
+  1. **CCA** (Canonical Correlation Analysis) — linear alignment top-k components
+  2. **t-SNE** joint embedding — cek same-class cluster per stream
+  3. **Per-class paired cosine similarity** (CCA-aligned space)
+  4. **Cross-modal retrieval** top-k accuracy (image → paired landmark)
+
+### Hasil Quantitative (strong alignment — positive result)
+
+**CCA correlations:**
+- top-5 mean = **0.978**
+- top-10 mean = 0.967
+- top-20 all > 0.89 (konsisten tinggi di 20 komponen)
+
+**Per-class paired cosine (CCA-aligned):**
+
+| Class | n | Mean ± std |
+|---|:---:|:---:|
+| neutral | 688 | 0.937 ± 0.041 |
+| happy | 183 | 0.941 ± 0.037 |
+| sad | 50 | 0.951 ± 0.046 |
+| negative | 8 | 0.947 ± 0.030 |
+| **overall** | 929 | **0.939** |
+
+**Cross-modal retrieval** (image feature → nearest landmark feature, n=929):
+
+| Top-k | Accuracy | Random baseline |
+|---|:---:|:---:|
+| top-1 | 0.670 | 0.001 |
+| top-5 | **0.953** | 0.005 |
+| top-10 | 0.995 | 0.011 |
+| top-20 | 1.000 | 0.022 |
+
+### Temuan
+
+**T45: Alignment CNN-FCNN sangat kuat** (CCA top-5 = 0.978, far above 0.5 threshold)
+Image dan landmark stream belajar representasi yang **nyaris co-linear** di latent space — walaupun input modality berbeda (pixel RGB 224×224 vs koordinat 136-d), model memetakan ke joint semantic space.
+
+**T46: Alignment konsisten lintas kelas**
+Per-class cosine 0.937-0.951 (termasuk minoritas `negative` n=8). Alignment bukan artifact kelas mayoritas saja — model belajar mapping yang seragam.
+
+**T47: Cross-modal retrieval top-5 = 95.3%** (vs random baseline 0.54%)
+Evidence kuat: feature image "tahu" paired landmark-nya. Streams **bukan independent**, meskipun modality berbeda — strong coupling semantic.
+
+**T48: Justifikasi empiris untuk Intermediate Fusion**
+Alignment tinggi mendukung pilihan concat fusion (Intermediate) — representasi yang aligned bisa di-compose secara linear di fusion head. Konsisten dengan observasi Intermediate TL juara val-tuned 4c (0.521) > Late Fusion TL (0.466).
+
+### Output Files
+
+```
+docs/figures/space_alignment/
+├── cca_correlations.png       (bar chart top-20 CCA correlations)
+├── tsne_per_stream.png        (joint t-SNE 2D, split CNN vs FCNN)
+└── retrieval_topk.png         (retrieval accuracy @ top-1/5/10/20/50)
+
+models/frontonly_conf60/space_alignment/alignment_metrics.json
+notebooks/results/75_space_alignment_executed.ipynb
+```
+
+### Status: Finding valid (methodology-clean)
+
+Berbeda dari soft label (negative + single-seed fragile) dan GradCAM (observational kecil), **Space Alignment analisis adalah positive result yang methodology-clean**:
+- Analytical (no training → no seed variance issue)
+- Seluruh test set (n=929) — populasi lengkap, bukan sampling
+- Multiple metrik konvergen (CCA + cosine + retrieval semua konsisten tinggi)
+- Baseline comparison eksplisit (random retrieval)
+
+**Siap dimasukkan ke paper/tesis** sebagai empirical justification fusion strategy di Section Discussion. Figure CCA + retrieval bisa jadi Fig. X paper.
+
+> **Penjelasan lisan:**
+> "Pak, saya sudah jalankan Space Alignment analysis (arahan #2) di test set Primer (929 sampel). Hasilnya menarik: CNN TL dan FCNN meskipun input modality sangat berbeda, belajar representasi yang sangat aligned di latent space."
+>
+> "Quantitative: CCA top-5 = 0.978 (well above 0.5 threshold), per-class paired cosine 0.94, cross-modal retrieval top-5 = 95.3% vs random baseline 0.54%."
+>
+> "Interpretasi: alignment tinggi ini justifikasi empiris untuk Intermediate Fusion — konsisten dengan observasi Intermediate TL juara val-tuned (0.521) di 4-class. Streams bukan independent, mereka semantically paired walaupun modality berbeda."
+>
+> "Ini beda dari soft label atau GradCAM — analisis ini methodology-clean (no seed variance, seluruh test set). Saya usulkan dimasukkan ke paper sebagai empirical justification di Section Discussion fusion strategy."
+
+---
+
 ## Ringkasan Poin Konsultasi
 
 | No | Topik | Status |
