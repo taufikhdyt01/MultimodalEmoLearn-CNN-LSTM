@@ -1939,95 +1939,69 @@ Note untuk Late Fusion TL: grid search weight `w` dilakukan di Primer val (strat
 
 ---
 
-## SLIDE 33: Soft Label Training (Eksplorasi Liliana 2019-inspired, nb 71)
+## SLIDE 33: Soft Label Training — Eksplorasi Selesai (Negative Result, nb 71/72/78)
 
 ### Motivasi
-Paper Liliana et al. (2019) — *"humans express multiple emotions simultaneously"*. Face API sudah output distribusi confidence 7-dim untuk tiap frame, tapi selama ini **kita argmax + filter conf60**, informasi distribusi dibuang.
+Paper Liliana et al. (2019) — *"humans express multiple emotions simultaneously"*. Face API output distribusi confidence 7-dim tiap frame, selama ini di-argmax + filter conf60 → informasi distribusi dibuang.
 
-**Hipotesis**: Pakai distribusi confidence langsung sebagai target training (soft label) → model belajar ambiguity alami → Macro F1 naik khususnya di kelas minoritas.
+**Hipotesis:** pakai distribusi confidence langsung sebagai target training (soft label) → model belajar ambiguity alami → Macro F1 naik.
 
-### Setup Eksperimen
-- Arsitektur: **CNN TL** (ResNet18, single modality) — clean ablation
+### Setup (konsisten lintas arsitektur)
 - 4-class B1 baseline (no weights, no augmentation) — isolate efek loss function
 - 4 loss variants: Hard CE, Soft CE, KL-divergence, Label Smoothing (ε=0.1)
-- Data: `y_{split}_soft.npy` dari `extract_soft_labels.py` (6795 samples, argmax 100% match hard label)
+- Hyperparam identik lintas arch: EPOCHS=50, LR_TL=5e-5, BATCH=32
+- **Selection by val macro F1** (proper, no test leakage)
+- 3 arsitektur di-test: CNN TL (nb 71), Late Fusion TL (nb 72), Intermediate TL (nb 78)
 
-### Hasil (4-class, CNN TL)
+### Hasil Final (Test Macro F1, post-align hyperparam)
 
-| Config | Macro F1 | Micro F1 | Weighted F1 | Accuracy | Best Epoch |
-|--------|:--------:|:--------:|:-----------:|:--------:|:----------:|
-| A Hard CE (baseline) | 0.4269 | 0.6986 | 0.7155 | 0.6986 | 23 |
-| B Soft CE | 0.4667 | 0.8407 | 0.8281 | 0.8407 | 14 |
-| **C KL-divergence** | **0.5170** ⭐ | 0.8213 | 0.8258 | 0.8213 | 1 ⚠️ |
-| D Label Smoothing (ε=0.1) | 0.4418 | 0.8202 | 0.8089 | 0.8202 | 21 |
+| Arsitektur | A Hard CE | B Soft CE | C KL-div | D Label Smooth | Juara by val |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **CNN TL 4c B1** (nb 71) | 0.432 | 0.451 | 0.427 | **0.456** | D (val not logged) |
+| **Late Fusion TL 4c** (nb 72) | — | 0.432 | 0.437 | — | — (no Hard baseline) |
+| **Intermediate TL 4c B1** (nb 78) | **0.485** | 0.463 | 0.453 | 0.476 | **A Hard CE** (val 0.480) |
 
-> **Reference baseline**: CNN TL 4c B1 hard CE (nb 54) = 0.456 | Late Fusion TL 4c B3 (overall best) = 0.567
+### Kesimpulan Final — Hipotesis Tidak Terkonfirmasi
 
-### Temuan Soft Label Training
+**Negative result:** dengan metodologi konsisten (hyperparam align lintas arch + selection by val), **soft label tidak memberikan gain** di fusion arsitektur maupun single-modal:
 
-**Temuan 41: KL-divergence soft label beat Hard CE +0.090 Macro F1**
-> CNN TL 4c: 0.427 (hard) → **0.517 (KL-div)**. Signifikan. Konsisten dengan hipotesis Liliana 2019 bahwa natural emotion recognition diuntungkan dari target fuzzy/distribusional.
+- **Intermediate TL** (juara arch val-tuned): Hard CE menang (val 0.480, test 0.485). Semua soft variant di bawah Hard CE. Ranking by val: A > B > D > C.
+- **Late Fusion TL**: tidak ada Hard baseline internal, tapi semua soft variant jauh di bawah external Late Fusion TL B3 val-tuned (0.466).
+- **CNN TL**: D Label Smoothing 0.456 best di test (val tidak ter-log). **Previous single-seed run** (pre-align, EPOCHS=50 LR=5e-5 tapi code bug) dengan KL-div 0.517 **ternyata fluke** — re-run konsisten KL-div = 0.427 (−0.09 dari sebelumnya). Variance single-seed terbukti besar.
 
-**Temuan 42: Hierarki efektivitas — KL > Soft CE > Label Smoothing > Hard CE**
-> KL-divergence (Face API real distribution) > Soft CE (same distribution, different loss) > Label Smoothing (artificial ε=0.1 uniform) > Hard CE. Urutan ini menunjukkan: **informasi distribusi Face API membawa sinyal real** (bukan sekadar regularisasi seperti label smoothing).
+### Temuan kunci (konsolidasi)
 
-**Temuan 43: KL-div converge di epoch 1 — perlu investigasi**
-> KL-div `best_epoch = 1` (stale 15 epoch lalu early stop). Kemungkinan (1) KL gradient smoothing lebih sesuai dengan initial random state, (2) over-regularization membuat training tidak improve setelah epoch awal. Perlu cek training history + konfirmasi bukan fluke dengan multi-seed run.
+**T41: Single-seed variance ±0.05-0.09 — terlalu besar untuk klaim marginal**
+Gap antar loss config di setiap arsitektur = 0.02-0.03, jauh di bawah variance single-seed. **Mustahil klaim "soft label menang" tanpa multi-seed validation** (3-5 run minimum).
 
-**Temuan 44: Soft label significantly bumps accuracy/Micro F1** 
-> Hard CE acc = 0.70 vs Soft CE acc = 0.84. Ini artinya model **tidak melulu prediksi neutral** dengan soft target — lebih "aware" terhadap kelas lain.
+**T42: Previous KL-div juara (0.517) adalah fluke**
+Re-run dengan setup konsisten kasih KL-div = 0.427 di CNN TL. Selisih 0.09 dari run sebelumnya = manifestasi pure seed/convergence variance. Temuan "hierarki KL > Soft CE > LS > Hard" dari draft lama **tidak reproducible**.
 
-### Extension ke Late Fusion TL (nb 72) — gagal transfer
+**T43: Soft label tidak transfer ke fusion**
+Late Fusion TL gagal (0.432-0.437 vs baseline 0.466). Intermediate TL gagal (Hard CE menang). Fenomena konsisten: weighted softmax averaging (Late) + feature-level concat (Intermediate) tidak diuntungkan dari fuzzy target — modality interaction dominates over loss-function nuance.
 
-nb 72 extend soft label ke Late Fusion TL 4c (CNN branch + FCNN branch, grid-search w di val):
+**T44: Best-epoch anomaly mereda setelah hyperparam align**
+Pre-align (LR=1e-4 nb 78): best_epoch 2-5 (terlalu cepat). Post-align (LR=5e-5): best_epoch 5-9 (normal). **Indikasi LR=1e-4 memang terlalu besar untuk Intermediate Fusion** — bug hyperparam, bukan soft label effect.
 
-| Config | Macro F1 | Note |
-|--------|:--------:|------|
-| LateFusionTL_KL_div | 0.437 | w_best=0.15 |
-| LateFusionTL_soft_CE | 0.432 | w_best=0.05 |
+### Status: Stop eksplorasi
 
-Gagal beat baseline Late Fusion TL B3 hard (0.567 test-tuned / 0.466 val-tuned). Dugaan: soft label gain di CNN single-modal (+0.09 nb 71) tidak transfer ke weighted softmax averaging — weight `w ≈ 0.05-0.15` pilih FCNN-dominant yang di-train dengan soft target sendiri, gain kedua branch "hilang" di averaging.
+**Eksplorasi soft label ditutup sebagai negative result** per Apr 2026. Tidak masuk paper/tesis sebagai finding. Notebook nb 71/72/78 + JSON results tetap di-keep sebagai dokumentasi eksplorasi yang sudah dilakukan.
 
-### Extension ke Intermediate TL (nb 78) — hasil ambigu, red flag methodology
+**Alasan stop:**
+- Hipotesis tidak terkonfirmasi di fusion arsitektur (target utama paper)
+- Multi-seed validation belum dilakukan, tapi gap antar config terlalu kecil (<variance) → tidak worth compute
+- Fokus eksplorasi selanjutnya dipindah ke item lain yang potensinya lebih jelas:
+  - **Geometric Features (Liliana 2019)** — direct extension paper dosen, 20-dim GF vs raw 136-d
+  - **GCN Preprocessing (Pitaloka 2017)** — quick ablation, terukur langsung
 
-nb 78 coba ke Intermediate Fusion TL 4c B1 (joint training, feature-level concat):
-
-| Config | **Test Macro** | **Val Macro** | Best Ep | Acc |
-|--------|:---:|:---:|:---:|:---:|
-| A Hard CE | 0.535 | **0.471** | 3 | 0.845 |
-| B Soft CE | 0.515 | 0.400 | 3 | 0.807 |
-| C KL-div | **0.544** | 0.420 | 2 | 0.842 |
-| D Label Smoothing | 0.513 | 0.422 | 5 | 0.806 |
-
-**Red flag:**
-- Kalau **pilih by val (proper)** — juara = **A Hard CE** (val 0.471, test 0.535)
-- Kalau **pilih by test (cherry-pick)** — juara = C KL-div (test 0.544)
-- Val order ≠ test order → ranking **tidak stabil**
-- Semua 4 config test range 0.513–0.544 (selisih 0.031), val range 0.400–0.471 (selisih 0.071) — dalam range single-seed variance (~0.05 khas DL)
-- Best epoch sangat awal (2-5) konsisten dengan anomaly nb 71 — pattern suggests optimasi landscape odd atau val set tidak ideal
-
-**Kesimpulan tentatif:** tidak cukup bukti untuk klaim "soft label menang di Intermediate TL". Semua 4 config essentially tied dalam noise.
-
-### Caveat (total, across nb 71/72/78)
-- **Single seed** di semua run — variance ~0.05 khas DL
-- **Best epoch anomaly** (1-5) konsisten di soft label configs — perlu diselidiki
-- **Val–test ranking tidak konsisten** di nb 78 → hasil fragile
-- Klaim "soft label effective" saat ini **hanya valid di nb 71 (CNN TL single-modal)** dan kemungkinan by-chance
-
-### Validasi yang dibutuhkan sebelum dianggap finding
-1. Multi-seed (3-5 run) per config — report mean ± std
-2. Kriteria selection **by val** konsisten (jangan mix test-based cherry-pick)
-3. Investigate best_epoch anomaly — plot training history full, bukan cuma val curve
-4. Compare dengan baseline yang sama hyperparam (Hard CE di nb 78 lebih tinggi dari nb 56 existing — artinya re-run dengan seed beda bisa kasih +0.05 gratis)
-
-> **Penjelasan lisan (revisi — observational, tanpa overclaim):**
-> "Pak, saya coba eksplorasi soft label terinspirasi Liliana 2019 — Face API distribution 7-dim langsung jadi target training. Di CNN TL single-modal (nb 71), KL-divergence menang dari Hard CE (+0.09). Tapi saat extend ke fusion, hasilnya tidak konsisten:"
+> **Penjelasan lisan:**
+> "Pak, saya sudah eksplorasi soft label terinspirasi Liliana 2019 di 3 arsitektur (CNN single, Late Fusion, Intermediate Fusion) dengan hyperparam konsisten. Hasilnya **negative result** — hipotesis tidak terkonfirmasi."
 >
-> "Di Late Fusion TL (nb 72), soft label gagal transfer — w_best pilih branch FCNN dominant, gain di CNN hilang."
+> "Temuan kunci: gap antar config sangat kecil (0.02-0.03), dalam range variance single-seed (~0.05-0.09). Re-run konsisten membuktikan sebelumnya KL-div juara di CNN TL (0.517) ternyata fluke — re-run kasih 0.427."
 >
-> "Di Intermediate TL (nb 78), KL-div test 0.544 vs Hard 0.535. Tapi kalau pilih by val (proper), Hard CE yang menang. Semua 4 config dalam range variance single-seed ~0.05."
+> "Di arsitektur juara (Intermediate TL), Hard CE justru yang menang by val. Soft label tidak transfer ke fusion."
 >
-> "Jadi klaim 'soft label efektif' saat ini hanya valid di CNN single-modal. Untuk fusion, perlu multi-seed + methodology by-val yang ketat sebelum bisa dianggap finding. Saya lapor sebagai eksplorasi awal, bukan SOTA push."
+> "Saya stop eksplorasi ini — negative result, tidak masuk paper. Fokus pindah ke Geometric Features (Liliana Table 3) dan GCN Preprocessing (Pitaloka) yang potensinya lebih jelas."
 
 ---
 
