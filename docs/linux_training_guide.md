@@ -1782,7 +1782,82 @@ git push
 
 ---
 
-## 29. Troubleshooting
+## 29. nb 73 — GradCAM Analysis (arahan dosen #1)
+
+Visualisasi bobot NN: region citra yang paling berpengaruh ke prediksi per kelas.
+
+### Prasyarat library (one-time)
+
+```bash
+conda activate emotrain
+pip install grad-cam
+```
+
+### Prasyarat checkpoint
+
+Butuh 2 checkpoint di `models/frontonly_conf60/4class_tl/`:
+- `cnn_tl_b1.pth` (CNN TL 4c B1 baseline)
+- `intermediate_tl_b3.pth` (Intermediate TL 4c B3 — best overall val-tuned)
+
+Kedua file **sudah ada di repo** (dari nb 54 + nb 56 execution). Pastikan `git pull` sebelum run.
+
+### Run
+
+```bash
+cd ~/MultimodalEmoLearn
+tmux new -s gradcam
+conda activate emotrain
+
+jupyter nbconvert --to notebook --execute notebooks/73_gradcam_analysis.ipynb \
+    --output 73_gradcam_analysis_executed.ipynb \
+    --output-dir notebooks/results \
+    --ExecutePreprocessor.timeout=900
+```
+
+**Estimasi:** ~5-10 menit (GradCAM inference lightweight, tidak butuh training).
+
+### Output
+
+```
+docs/figures/gradcam/
+├── cnn_tl_4c_b1_baseline.png                   ← 2×4 grid, 8 sampel
+└── intermediate_tl_4c_b3_img_branch.png        ← 2×4 grid, 8 sampel (fusion image branch)
+
+notebooks/results/73_gradcam_analysis_executed.ipynb
+```
+
+### Troubleshooting
+
+Kalau `Intermediate TL` cell error di line `img_branch = getattr(m2, 'image_features', None)`:
+- Inspect nama attribute image branch via printed `named_children()` output
+- Adjust `img_branch = getattr(m2, '<nama_yang_benar>', None)` sesuai model definition di `src/training/models.py`
+
+### Commit hasil
+
+```bash
+cd ~/MultimodalEmoLearn
+git add docs/figures/gradcam/ notebooks/results/73_*
+git commit -m "Add GradCAM overlays (nb 73): CNN TL + Intermediate TL image branch"
+git push
+```
+
+### Analisis kualitatif (post-run)
+
+Bandingkan 2 PNG overlay:
+- **CNN TL baseline** — fokus di mana per kelas?
+- **Intermediate TL image branch** — apakah fokus bergeser karena adanya landmark stream?
+
+Catatan per kelas (expected):
+- neutral → eyes/mouth (netral, tidak distinct)
+- happy → mouth (smile) + eye crinkle
+- sad → brow + mouth corners
+- negative → heterogen (merge angry/fearful/disgusted/surprised)
+
+Hasil masuk ke BAB Discussion tesis + section paper Qualitative Analysis (optional Fig. 7).
+
+---
+
+## 30. Troubleshooting
 
 ### CUDA Out of Memory untuk RAF-DB (nb 60, 63)
 
