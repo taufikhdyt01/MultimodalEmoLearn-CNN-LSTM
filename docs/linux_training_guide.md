@@ -1782,6 +1782,77 @@ git push
 
 ---
 
+## 28b. nb 78 — Soft Label Training on Intermediate TL (Target: beat 0.521 val-tuned)
+
+Soft label hasil nb 71 (CNN TL + KL-div = 0.517) dan nb 72 (Late Fusion TL + soft gagal transfer = 0.437) → coba ke **Intermediate Fusion TL** (arsitektur juara val-tuned, feature-level joint training — paling kompatibel dengan soft target).
+
+### Prasyarat data
+
+Sama dengan nb 71/72 (soft labels sudah di-commit via `y_*_soft.npy`). Cek:
+```bash
+ls data/dataset_frontonly_conf60/y_*_soft.npy
+```
+
+### Run
+
+```bash
+cd ~/MultimodalEmoLearn
+tmux new -s softintermediate
+conda activate emotrain
+
+jupyter nbconvert --to notebook --execute notebooks/78_soft_label_intermediate_tl.ipynb \
+    --output 78_soft_label_intermediate_tl_executed.ipynb \
+    --output-dir notebooks/results \
+    --ExecutePreprocessor.timeout=7200
+```
+
+### Scope
+
+4 configs × Intermediate TL 4c B1 (no weights, no aug — match nb 71/72 methodology):
+
+| # | Loss | Target |
+|---|------|--------|
+| A | Hard CE | baseline (ref: 0.489 existing) |
+| B | Soft CE | Face API distribusi |
+| C | KL-divergence | Face API distribusi (winning loss nb 71) |
+| D | Label Smoothing ε=0.1 | artificial smoothing baseline |
+
+### Estimasi waktu
+
+~2-3 jam di T4 (4 config × ~30 min training Intermediate TL).
+
+### Output
+
+```
+models/frontonly_conf60/soft_label/4c/
+├── Intermediate_TL_A_hard_CE/model.pth
+├── Intermediate_TL_B_soft_CE/model.pth
+├── Intermediate_TL_C_KL_div/model.pth
+└── Intermediate_TL_D_label_smooth/model.pth
+
+models/frontonly_conf60/soft_label/soft_intermediate_tl_4c_results.json
+notebooks/results/78_soft_label_intermediate_tl_executed.ipynb
+```
+
+### Commit hasil
+
+```bash
+cd ~/MultimodalEmoLearn
+git add models/frontonly_conf60/soft_label/4c/Intermediate_TL_*/ \
+        models/frontonly_conf60/soft_label/soft_intermediate_tl_4c_results.json \
+        notebooks/results/78_*
+git commit -m "Add Soft Label Intermediate TL results (nb 78)"
+git push
+```
+
+### Interpretasi hasil
+
+- **C KL-div > 0.521** → novel SOTA Primer 4c, update paper
+- **C KL-div ~0.52** → tie dengan existing best, gain soft label terkonfirmasi di fusion
+- **C KL-div < 0.50** → soft label tidak transfer ke Intermediate fusion; soft label findings tetap di single-modal (nb 71) sebagai eksplorasi
+
+---
+
 ## 29. nb 73 — GradCAM Analysis (arahan dosen #1)
 
 Visualisasi bobot NN: region citra yang paling berpengaruh ke prediksi per kelas.
