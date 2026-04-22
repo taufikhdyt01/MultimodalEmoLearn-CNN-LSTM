@@ -1858,6 +1858,78 @@ git push
 
 ---
 
+## 30. nb 79 — 3-Class Exploration (Positive/Neutral/Negative, Opsi C)
+
+**Motivasi:** 4-class mapping arbitrary (tidak match literature). 3-class valence (Russell 1980) adalah standard FER dengan imbalance 4× lebih balanced (1:14 vs 1:62).
+
+**Scope:** 5 arsitektur × 3 scenario = **15 configs**:
+- FCNN, CNN TL, Intermediate TL, Late Fusion TL, Early Fusion TL
+- × B1 (baseline) / B2 (class weights) / B3 (weights + augmentation)
+
+### Prerequisite: generate augmented 3-class dataset
+
+```bash
+cd ~/MultimodalEmoLearn
+git pull
+conda activate emotrain
+
+python src/preprocessing/augment_conf60_3class.py --target-min 1500
+```
+
+Output: `data/dataset_frontonly_conf60_3class_augmented/` — train augmented, val/test copy (no aug).
+Estimasi: ~5-10 menit.
+
+### Run nb 79
+
+```bash
+tmux new -s threeclass
+conda activate emotrain
+
+jupyter nbconvert --to notebook --execute notebooks/79_threeclass_exploration.ipynb \
+    --output 79_threeclass_exploration_executed.ipynb \
+    --output-dir notebooks/results \
+    --ExecutePreprocessor.timeout=36000
+```
+
+**Estimasi:** ~7-10 jam di T4 (15 configs × ~30-45 min each). Overnight run.
+
+### Output
+
+```
+data/dataset_frontonly_conf60_3class_augmented/   (B3 source)
+models/frontonly_conf60/3class/
+├── FCNN/                      (B1/B2/B3 checkpoints)
+├── CNN_TL/
+├── Intermediate_TL/
+├── Early_Fusion_TL/
+├── Late_Fusion_TL/            (CNN + FCNN branch + grid-search w)
+├── results_single_and_fusion_tl.json
+└── all_results_3class.json    (master summary)
+
+notebooks/results/79_threeclass_exploration_executed.ipynb
+```
+
+### Commit
+
+```bash
+cd ~/MultimodalEmoLearn
+git add data/dataset_frontonly_conf60_3class_augmented/ \
+        models/frontonly_conf60/3class/ \
+        notebooks/results/79_*
+git commit -m "Add 3-class exploration results (nb 79, 15 configs)"
+git push
+```
+
+### Interpretasi hasil
+
+| 3-class best Macro F1 | Interpretasi |
+|---|---|
+| > 0.60 | Valence mapping lebih cocok untuk Primer natural — pertimbangkan update paper framing |
+| 0.50-0.60 | Comparable dgn 4-class (0.521) — literature precedent jadi alasan prefer |
+| < 0.50 | Remap terlalu lossy, 4-class/7-class tetap preferred |
+
+---
+
 ## 29a. nb 75 — Space Alignment (arahan dosen #2)
 
 Analytical notebook — evaluasi alignment feature space CNN TL (256-d) vs FCNN (128-d) untuk justifikasi Intermediate vs Late Fusion.
