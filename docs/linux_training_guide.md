@@ -1858,6 +1858,73 @@ git push
 
 ---
 
+## 29a. nb 75 — Space Alignment (arahan dosen #2)
+
+Analytical notebook — evaluasi alignment feature space CNN TL (256-d) vs FCNN (128-d) untuk justifikasi Intermediate vs Late Fusion.
+
+### Prasyarat
+
+Dua checkpoint sudah ada di repo (dari nb 51/54 dan nb 48):
+- `models/frontonly_conf60/4class_tl/cnn_tl_b1.pth`
+- `models/frontonly_conf60/4class/fcnn_b2.pth`
+
+Kalau belum ada, `git pull` dulu.
+
+### Run
+
+```bash
+cd ~/MultimodalEmoLearn
+tmux new -s spacealign
+conda activate emotrain
+
+jupyter nbconvert --to notebook --execute notebooks/75_space_alignment.ipynb \
+    --output 75_space_alignment_executed.ipynb \
+    --output-dir notebooks/results \
+    --ExecutePreprocessor.timeout=1800
+```
+
+**Estimasi:** ~20-30 menit (no training, cuma extract features + CCA/t-SNE/retrieval).
+
+### Scope
+
+4 metode analisis (sesuai spec eksplorasi_lanjutan.md #2):
+1. **CCA** (Canonical Correlation Analysis) — linear alignment top-k components
+2. **t-SNE** joint embedding — per-stream visualization
+3. **Per-class paired cosine similarity** (CCA-aligned space)
+4. **Cross-modal retrieval** top-k accuracy (image → paired landmark)
+
+### Output
+
+```
+docs/figures/space_alignment/
+├── cca_correlations.png
+├── tsne_per_stream.png
+└── retrieval_topk.png
+
+models/frontonly_conf60/space_alignment/alignment_metrics.json
+notebooks/results/75_space_alignment_executed.ipynb
+```
+
+### Commit
+
+```bash
+cd ~/MultimodalEmoLearn
+git add docs/figures/space_alignment/ \
+        models/frontonly_conf60/space_alignment/ \
+        notebooks/results/75_*
+git commit -m "Add Space Alignment analysis (nb 75, arahan dosen #2)"
+git push
+```
+
+### Interpretasi hasil
+
+- CCA top-5 > 0.5 → strong linear alignment → Intermediate Fusion justified
+- CCA top-5 < 0.3 → weak alignment → Late Fusion preferred
+- Retrieval top-5 > 0.3 → streams semantically paired (bukan independent)
+- Masuk ke BAB Discussion tesis + paper Section 5 fusion strategy justification
+
+---
+
 ## 29. nb 73 — GradCAM Analysis (arahan dosen #1)
 
 Visualisasi bobot NN: region citra yang paling berpengaruh ke prediksi per kelas.
