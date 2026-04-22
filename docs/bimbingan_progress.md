@@ -1977,25 +1977,103 @@ Paper Liliana et al. (2019) — *"humans express multiple emotions simultaneousl
 **Temuan 44: Soft label significantly bumps accuracy/Micro F1** 
 > Hard CE acc = 0.70 vs Soft CE acc = 0.84. Ini artinya model **tidak melulu prediksi neutral** dengan soft target — lebih "aware" terhadap kelas lain.
 
-### Implikasi untuk Late Fusion TL (best existing)
+### Extension ke Late Fusion TL (nb 72) — gagal transfer
 
-Kalau soft label boost +0.09 di CNN TL single, **ekstensi logis**:
-- Combine soft label + Late Fusion TL 4c + B3 augmentation → potensi **beat 0.567** (current best)
-- Perlu notebook lanjutan `72_soft_label_late_fusion.ipynb` (TODO)
+nb 72 extend soft label ke Late Fusion TL 4c (CNN branch + FCNN branch, grid-search w di val):
 
-### Caveat
-- **Best epoch anomaly** untuk KL-div perlu verified (multi-run / history inspection)
-- **Single seed** run — variance ±0.01-0.05 khas DL
-- Result masih CNN TL single modality — perlu fusion context untuk fair compare vs 0.567
+| Config | Macro F1 | Note |
+|--------|:--------:|------|
+| LateFusionTL_KL_div | 0.437 | w_best=0.15 |
+| LateFusionTL_soft_CE | 0.432 | w_best=0.05 |
 
-> **Penjelasan lisan:**
-> "Pak, saya coba eksplorasi yang pakai distribusi confidence Face API langsung sebagai target training, terinspirasi paper Liliana 2019 tentang fuzzy emotion. Bukannya pakai argmax (hard label), saya pakai 7-dim probability vector dari Face API sebagai target."
+Gagal beat baseline Late Fusion TL B3 hard (0.567 test-tuned / 0.466 val-tuned). Dugaan: soft label gain di CNN single-modal (+0.09 nb 71) tidak transfer ke weighted softmax averaging — weight `w ≈ 0.05-0.15` pilih FCNN-dominant yang di-train dengan soft target sendiri, gain kedua branch "hilang" di averaging.
+
+### Extension ke Intermediate TL (nb 78) — hasil ambigu, red flag methodology
+
+nb 78 coba ke Intermediate Fusion TL 4c B1 (joint training, feature-level concat):
+
+| Config | **Test Macro** | **Val Macro** | Best Ep | Acc |
+|--------|:---:|:---:|:---:|:---:|
+| A Hard CE | 0.535 | **0.471** | 3 | 0.845 |
+| B Soft CE | 0.515 | 0.400 | 3 | 0.807 |
+| C KL-div | **0.544** | 0.420 | 2 | 0.842 |
+| D Label Smoothing | 0.513 | 0.422 | 5 | 0.806 |
+
+**Red flag:**
+- Kalau **pilih by val (proper)** — juara = **A Hard CE** (val 0.471, test 0.535)
+- Kalau **pilih by test (cherry-pick)** — juara = C KL-div (test 0.544)
+- Val order ≠ test order → ranking **tidak stabil**
+- Semua 4 config test range 0.513–0.544 (selisih 0.031), val range 0.400–0.471 (selisih 0.071) — dalam range single-seed variance (~0.05 khas DL)
+- Best epoch sangat awal (2-5) konsisten dengan anomaly nb 71 — pattern suggests optimasi landscape odd atau val set tidak ideal
+
+**Kesimpulan tentatif:** tidak cukup bukti untuk klaim "soft label menang di Intermediate TL". Semua 4 config essentially tied dalam noise.
+
+### Caveat (total, across nb 71/72/78)
+- **Single seed** di semua run — variance ~0.05 khas DL
+- **Best epoch anomaly** (1-5) konsisten di soft label configs — perlu diselidiki
+- **Val–test ranking tidak konsisten** di nb 78 → hasil fragile
+- Klaim "soft label effective" saat ini **hanya valid di nb 71 (CNN TL single-modal)** dan kemungkinan by-chance
+
+### Validasi yang dibutuhkan sebelum dianggap finding
+1. Multi-seed (3-5 run) per config — report mean ± std
+2. Kriteria selection **by val** konsisten (jangan mix test-based cherry-pick)
+3. Investigate best_epoch anomaly — plot training history full, bukan cuma val curve
+4. Compare dengan baseline yang sama hyperparam (Hard CE di nb 78 lebih tinggi dari nb 56 existing — artinya re-run dengan seed beda bisa kasih +0.05 gratis)
+
+> **Penjelasan lisan (revisi — observational, tanpa overclaim):**
+> "Pak, saya coba eksplorasi soft label terinspirasi Liliana 2019 — Face API distribution 7-dim langsung jadi target training. Di CNN TL single-modal (nb 71), KL-divergence menang dari Hard CE (+0.09). Tapi saat extend ke fusion, hasilnya tidak konsisten:"
 >
-> "Hasilnya menarik — CNN TL 4c baseline naik dari 0.427 (Hard CE) ke 0.517 (KL-divergence), +9 percentage points. Ini konsisten dengan argumen Liliana bahwa ekspresi natural itu inherently fuzzy."
+> "Di Late Fusion TL (nb 72), soft label gagal transfer — w_best pilih branch FCNN dominant, gain di CNN hilang."
 >
-> "Hierarki: KL-div > Soft CE > Label Smoothing > Hard CE. Artinya distribusi Face API bukan sekadar noise — membawa informasi yang real. Label smoothing uniform ε=0.1 kurang efektif dibanding soft Face API."
+> "Di Intermediate TL (nb 78), KL-div test 0.544 vs Hard 0.535. Tapi kalau pilih by val (proper), Hard CE yang menang. Semua 4 config dalam range variance single-seed ~0.05."
 >
-> "Langkah berikut: extend soft label ke Late Fusion TL 4c + B3 augmentation untuk coba beat best 0.567."
+> "Jadi klaim 'soft label efektif' saat ini hanya valid di CNN single-modal. Untuk fusion, perlu multi-seed + methodology by-val yang ketat sebelum bisa dianggap finding. Saya lapor sebagai eksplorasi awal, bukan SOTA push."
+
+---
+
+## SLIDE 34: GradCAM Observasi Awal (Eksplorasi, nb 73)
+
+**Status:** eksperimen eksplorasi awal — belum cukup data untuk klaim general. Tidak di-framing ke paper/tesis sampai ada validasi lebih lanjut.
+
+### Setup
+- Tool: `pytorch-grad-cam` (Selvaraju et al. 2017) — visualisasi region gambar yang paling berpengaruh ke prediksi kelas
+- 2 model dibandingkan:
+  - **CNN TL 4c B1** (single-modal baseline, Macro F1 = 0.456)
+  - **Intermediate TL 4c B3 image branch** (juara val-tuned, Macro F1 = 0.521)
+- Sampel: 2 per kelas × 4 kelas = **8 overlay per model** (16 total)
+- Target layer: last conv block ResNet18 (`features[-2][-1]`)
+- Output: `docs/figures/gradcam/{cnn_tl_4c_b1_baseline, intermediate_tl_4c_b3_img_branch}.png`
+
+### Observasi Kualitatif
+
+**CNN TL baseline (8 sample):**
+- Fokus tersebar ke region **non-emosi**: aksesori (kacamata), tangan, pundak, background/pojok
+- Happy (2 sample): fokus di dahi/atas mata, bukan mulut (smile region)
+- Sad (2 sample): 1 sample fokus di pipi+pundak, 1 sample di mulut+pipi
+- Negative (2 sample): 1 di pojok atas (artifact), 1 di mata kiri
+
+**Intermediate TL image branch (8 sample sama):**
+- Fokus **konsisten di region mouth-nose** di 8/8 sample
+- Bahkan di sampel sulit (neutral dengan tangan menutup mulut) — model tetap target area mulut, ignore tangan
+- Pattern seragam lintas 4 kelas
+
+### Interpretasi Tentatif (belum klaim general)
+Observasi awal **menarik**: image branch dalam Intermediate Fusion tampak fokus ke region yang lebih "FER-relevant" dibanding CNN single-modal. Dugaan mekanisme: landmark stream berperan sebagai **implicit attention prior** — gradient dari fusion head memaksa image branch align dengan landmark geometry saat backprop.
+
+### Keterbatasan Metodologi (penting)
+- **Sample kecil**: hanya 2 per kelas (8 total) — representativeness rendah
+- **Single seed**: belum tahu variance antar run
+- **Qualitative only**: belum ada quantitative measure (mis. mean activation di mouth bounding box)
+- **Tidak ada baseline sanity check**: random-init model untuk isolate efek pretrain vs fine-tune
+
+### Validasi yang Dibutuhkan Sebelum Dianggap Finding
+1. Quantitative: mean GradCAM activation di mouth region (via landmark 48-67) vs full face, di ≥50 sample per kelas
+2. Multi-seed (3-5 run) untuk cek variance
+3. Perbandingan dengan model kontrol (random-init, atau CNN single tanpa TL)
+4. Cross-check dengan alternative viz (SmoothGrad, Integrated Gradients)
+
+> **Penjelasan lisan (hati-hati, observational):**
+> "Pak, saya coba GradCAM (arahan sebelumnya) pada 2 model untuk sekilas lihat fokus. Ada pattern awal yang menarik — image branch di Intermediate Fusion tampak lebih konsisten ke region mulut dibanding CNN single. Tapi ini baru 2 sample per kelas, belum quantitative. Saya sediakan dulu sebagai observasi untuk diskusi, apakah perlu diperdalam dengan quantitative measurement + multi-seed validation, atau cukup sebagai eksplorasi saja?"
 
 ---
 
