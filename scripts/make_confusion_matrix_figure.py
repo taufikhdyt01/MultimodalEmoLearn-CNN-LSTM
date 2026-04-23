@@ -96,86 +96,84 @@ def main():
                          'Default: val-tuned (proper out-of-sample).')
     ap.add_argument('--legacy', action='store_true',
                     help='Pakai Late Fusion predictions lama (pre val-tuning fix).')
-    ap.add_argument('--no-3class', action='store_true',
-                    help='Skip panel (c) 3-class (output 2-panel saja, legacy layout).')
+    ap.add_argument('--include-4class', action='store_true',
+                    help='Tambah panel 4-class (ablation). Default: skip — paper pakai 7c + 3c saja.')
     args = ap.parse_args()
 
     FIG_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Load predictions — default pakai NEW best (Intermediate TL 4c + Early Fusion TL 7c)
+    # Load 7-class predictions
     if args.legacy:
         p7 = load_predictions(PRED_DIR / 'best_7c_late_fusion_tl_b1.json')
-        p4 = load_predictions(PRED_DIR / 'best_4c_late_fusion_tl_b3.json')
     else:
         p7 = load_predictions(PRED_DIR / 'best_7c_early_fusion_tl_b3.json')
-        p4 = load_predictions(PRED_DIR / 'best_4c_intermediate_tl_b3.json')
 
-    # Load 3-class from all_results_3class.json (nb 79)
+    # Load 3-class from all_results_3class.json (nb 79) — Late Fusion TL B3 juara
     p3 = None
-    if not args.no_3class:
-        r3_path = PROJECT_ROOT / 'models' / 'frontonly_conf60' / '3class' / 'all_results_3class.json'
-        if r3_path.exists():
-            all3 = json.load(open(r3_path))
-            r3 = all3.get('Late_Fusion_TL_B3')
-            if r3 is not None:
-                p3 = {
-                    'tag': 'Late Fusion TL 3c B3 (juara val-tuned)',
-                    'emotions': ['positive', 'neutral', 'negative'],
-                    'confusion_matrix': r3['confusion_matrix'],
-                    'test_metrics': {
-                        'macro_f1': r3['test_macro_f1'],
-                        'accuracy': r3['test_accuracy'],
-                        'weighted_f1': r3['test_weighted_f1'],
-                    },
-                    'best_cnn_tl_weight': r3.get('best_cnn_weight'),
-                }
-        if p3 is None:
-            print(f'[SKIP 3-class] {r3_path} missing atau Late_Fusion_TL_B3 tidak ada')
+    r3_path = PROJECT_ROOT / 'models' / 'frontonly_conf60' / '3class' / 'all_results_3class.json'
+    if r3_path.exists():
+        all3 = json.load(open(r3_path))
+        r3 = all3.get('Late_Fusion_TL_B3')
+        if r3 is not None:
+            p3 = {
+                'tag': 'Late Fusion TL 3c B3 (juara val-tuned)',
+                'emotions': ['positive', 'neutral', 'negative'],
+                'confusion_matrix': r3['confusion_matrix'],
+                'test_metrics': {
+                    'macro_f1': r3['test_macro_f1'],
+                    'accuracy': r3['test_accuracy'],
+                    'weighted_f1': r3['test_weighted_f1'],
+                },
+                'best_cnn_tl_weight': r3.get('best_cnn_weight'),
+            }
+    if p3 is None:
+        raise FileNotFoundError(f'{r3_path} missing atau Late_Fusion_TL_B3 tidak ada — run nb 79 dulu')
+
+    # Optional 4-class (ablation)
+    p4 = None
+    if args.include_4class:
+        if args.legacy:
+            p4 = load_predictions(PRED_DIR / 'best_4c_late_fusion_tl_b3.json')
+        else:
+            p4 = load_predictions(PRED_DIR / 'best_4c_intermediate_tl_b3.json')
 
     def pick(p):
-        """Return (cm, metrics, w_or_none).
-        - New models (Intermediate/Early Fusion): no fusion weight, w=None
-        - Legacy Late Fusion: has best_cnn_tl_weight + optional test_tuned variant
-        """
+        """Return (cm, metrics, w_or_none)."""
         if args.test_tuned and 'test_tuned' in p:
             t = p['test_tuned']
             return t['confusion_matrix'], t['test_metrics'], t.get('best_cnn_tl_weight')
         return p['confusion_matrix'], p['test_metrics'], p.get('best_cnn_tl_weight')
 
     cm7, m7, w7 = pick(p7)
-    cm4, m4, w4 = pick(p4)
+    cm3, m3, w3 = p3['confusion_matrix'], p3['test_metrics'], p3.get('best_cnn_tl_weight')
 
     if args.legacy:
         tune_label = '(test-tuned w — paper-compat)' if args.test_tuned else '(val-tuned w — proper)'
     else:
         tune_label = '(val-tuned proper — new best models)'
 
-    # Figure: 2 or 3 panels side-by-side
-    if p3 is not None:
+    # Figure: default 2-panel (7c + 3c). With --include-4class: 3-panel
+    if p4 is not None:
+        cm4, m4, w4 = pick(p4)
         fig, axes = plt.subplots(1, 3, figsize=(10.5, 3.6),
                                   gridspec_kw={'width_ratios': [1.3, 1, 0.85]})
+        im7 = plot_cm(axes[0], cm7, p7['emotions'], '(a) 7-Class',
+                      normalize=None if args.normalize == 'raw' else args.normalize)
+        im4 = plot_cm(axes[1], cm4, p4['emotions'], '(b) 4-Class',
+                      normalize=None if args.normalize == 'raw' else args.normalize)
+        im3 = plot_cm(axes[2], cm3, p3['emotions'], '(c) 3-Class',
+                      normalize=None if args.normalize == 'raw' else args.normalize)
+        im_last = im3
     else:
-        fig, axes = plt.subplots(1, 2, figsize=(7.16, 3.6),
-                                  gridspec_kw={'width_ratios': [1.3, 1]})
-
-    # Paper-ready titles: only subplot identifier + class count
-    title_7 = '(a) 7-Class'
-    im7 = plot_cm(axes[0], cm7, p7['emotions'],
-                  title_7, normalize=None if args.normalize == 'raw' else args.normalize)
-
-    title_4 = '(b) 4-Class'
-    im4 = plot_cm(axes[1], cm4, p4['emotions'],
-                  title_4, normalize=None if args.normalize == 'raw' else args.normalize)
-
-    im_last = im4
-    if p3 is not None:
-        cm3, m3, w3 = p3['confusion_matrix'], p3['test_metrics'], p3.get('best_cnn_tl_weight')
-        title_3 = '(c) 3-Class'
-        im3 = plot_cm(axes[2], cm3, p3['emotions'],
-                      title_3, normalize=None if args.normalize == 'raw' else args.normalize)
+        fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.6),
+                                  gridspec_kw={'width_ratios': [1.3, 0.85]})
+        im7 = plot_cm(axes[0], cm7, p7['emotions'], '(a) 7-Class',
+                      normalize=None if args.normalize == 'raw' else args.normalize)
+        im3 = plot_cm(axes[1], cm3, p3['emotions'], '(b) 3-Class',
+                      normalize=None if args.normalize == 'raw' else args.normalize)
         im_last = im3
 
-    # Colorbar shared (only on rightmost panel untuk compactness)
+    # Colorbar shared (on rightmost panel)
     cbar_label = 'Count' if args.normalize == 'raw' else 'Proportion'
     fig.colorbar(im_last, ax=axes[-1], fraction=0.046, pad=0.04, label=cbar_label)
 
@@ -221,9 +219,10 @@ def main():
                       f'F1={f1:.3f}  support={int(r_den)}')
 
     print_summary(p7, m7, w7, '7-class')
-    print_summary(p4, m4, w4, '4-class')
-    if p3 is not None:
-        print_summary(p3, p3['test_metrics'], p3.get('best_cnn_tl_weight'), '3-class')
+    print_summary(p3, p3['test_metrics'], p3.get('best_cnn_tl_weight'), '3-class')
+    if p4 is not None:
+        cm4_, m4_, w4_ = pick(p4)
+        print_summary(p4, m4_, w4_, '4-class (ablation)')
 
 
 if __name__ == '__main__':
