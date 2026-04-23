@@ -2137,6 +2137,108 @@ Berbeda dari soft label (negative + single-seed fragile) dan GradCAM (observatio
 
 ---
 
+## SLIDE 36: 3-Class Exploration (Positive/Neutral/Negative, nb 79)
+
+### Motivasi
+4-class mapping (neutral/happy/sad/negative) **arbitrary** — tidak ada di literature. 3-class valence (positive/neutral/negative) adalah **standard Russell 1980 circumplex**, well-established di affective computing (DEAP, MAHNOB-HCI, Liliana 2019).
+
+**REMAP_3:**
+- `happy, surprised` → **positive** (0)
+- `neutral` → **neutral** (1)
+- `sad, angry, fearful, disgusted` → **negative** (2)
+
+**Imbalance 4× lebih balanced:**
+
+| Mapping | Max/min ratio |
+|---|:---:|
+| 7-class | 1:1138 |
+| 4-class | 1:62 |
+| **3-class** | **1:14** |
+
+### Setup
+- 5 arsitektur × 3 scenario = **15 configs**: FCNN, CNN TL, Intermediate TL, Late Fusion TL, Early Fusion TL × B1/B2/B3
+- Hyperparam: EPOCHS=50, PATIENCE=15, LR_TL=5e-5, LR_scratch=1e-4
+- **Selection by val macro F1** (proper)
+- B3 pakai augmented dataset (`dataset_frontonly_conf60_3class_augmented`, target_min=1500/class)
+
+### Hasil Lengkap (val-based selection)
+
+| Config | Val Macro | Test Macro | Test Acc | w_best |
+|---|:---:|:---:|:---:|:---:|
+| FCNN B1 | 0.603 | 0.589 | 0.741 | — |
+| FCNN B2 | 0.564 | 0.575 | 0.702 | — |
+| FCNN B3 | 0.619 | 0.634 | 0.749 | — |
+| CNN TL B1 | 0.493 | 0.634 | 0.791 | — |
+| CNN TL B2 | 0.515 | 0.516 | 0.581 | — |
+| CNN TL B3 | 0.495 | **0.706** | 0.840 | — |
+| Intermediate TL B1 | 0.554 | 0.686 | 0.790 | — |
+| Intermediate TL B2 | 0.559 | 0.665 | 0.815 | — |
+| Intermediate TL B3 | 0.501 | 0.689 | 0.828 | — |
+| **Late Fusion TL B1** | **0.609** | 0.653 | 0.797 | 0.25 |
+| Late Fusion TL B2 | 0.591 | 0.646 | 0.774 | 0.30 |
+| **Late Fusion TL B3** ⭐ | **0.623** | 0.637 | 0.784 | 0.15 |
+| Early Fusion TL B1 | 0.537 | 0.587 | 0.783 | — |
+| Early Fusion TL B2 | 0.504 | 0.584 | 0.650 | — |
+| Early Fusion TL B3 | 0.509 | 0.699 | 0.820 | — |
+
+**Juara by val: Late Fusion TL B3 — Macro F1 0.623 (val), 0.637 (test), acc 0.784.**
+
+### Perbandingan vs 4-class & 7-class
+
+| Mapping | Juara by val | Val Macro F1 | Δ vs 3-class |
+|---|---|:---:|:---:|
+| 7-class | Early Fusion TL B3 | 0.333 | −0.29 |
+| 4-class | Intermediate TL B3 | 0.521 | −0.10 |
+| **3-class** | **Late Fusion TL B3** | **0.623** | — |
+
+**+0.10 Macro F1 gain** dari 4-class → 3-class.
+
+### Temuan Kunci
+
+**T49: 3-class memberikan gain signifikan lintas semua arsitektur**
+Best 3-class (0.623) jauh melampaui best 4-class (0.521, +0.10 Macro F1). Bahkan config terlemah 3-class (CNN TL B2 test 0.516) masih di level best 4-class. Valence mapping memang lebih cocok untuk Primer natural data.
+
+**T50: Late Fusion TL reclaims juara di 3-class**
+Di 4-class Late Fusion TL kalah dari Intermediate TL (0.466 vs 0.521). Di 3-class, Late Fusion TL juara di **semua scenario** (B1/B2/B3) — Intermediate TL drop ke 3rd/4th. **Fusion strategy preference shifts dengan class granularity:**
+- Fine granularity (7c) → Early Fusion TL (heatmap channel + aug membantu)
+- Medium (4c) → Intermediate TL (feature-level joint learning)
+- Coarse (3c) → **Late Fusion TL** (decision-level averaging optimal)
+
+**T51: w_best lebih balanced di 3-class (0.15–0.30) vs 4-class (0.00–0.15)**
+Di 4-class, w_best hampir selalu FCNN-dominant (11/12 config w ≤ 0.20). Di 3-class, image stream contribute **significantly** (w 0.15-0.30). Streams complementary lebih seimbang di coarser class — mungkin karena kelas merger menyamakan discriminability image vs landmark features.
+
+**T52: FCNN 3-class sangat kompetitif**
+FCNN B3 val=0.619, test=0.634 — hampir setara Late Fusion TL B3 (0.623/0.637). Landmark geometry memang dominan di Primer, dan di 3-class landmark info sudah cukup untuk diskriminasi valence — image stream adds marginal value.
+
+### Status
+
+**Positive result yang strong** — beda dari soft label (negative) dan GradCAM (observational kecil). Methodology-clean (val-based selection, hyperparam konsisten, 15 configs systematic).
+
+**Usulan untuk paper:**
+- **Reframe paper ke 3-class sebagai main experiment** (primary claim: 0.623 Late Fusion TL B3)
+- 4-class jadi ablation comparison (not main result)
+- 7-class tetap di-keep untuk demonstrate fine-grained challenge
+
+### Output Files
+```
+data/dataset_frontonly_conf60_3class_augmented/   (~12k samples train augmented)
+models/frontonly_conf60/3class/
+├── FCNN/, CNN_TL/, Intermediate_TL/, Early_Fusion_TL/, Late_Fusion_TL/
+└── all_results_3class.json
+notebooks/results/79_threeclass_exploration_executed.ipynb
+```
+
+> **Penjelasan lisan:**
+> "Pak, saya coba mapping 3-class valence (positive/neutral/negative) berdasarkan Russell 1980 circumplex — mapping ini punya literature precedent kuat, beda dari 4-class kita yang sebelumnya arbitrary."
+>
+> "Hasilnya signifikan: best 3-class Late Fusion TL B3 = Macro F1 0.623 val, 0.637 test. Gain +0.10 dari 4-class (0.521)."
+>
+> "Menarik, ranking fusion strategy bergeser per granularity: 7c Early Fusion menang, 4c Intermediate menang, 3c Late Fusion menang. w_best di 3-class juga lebih balanced (0.15-0.30) vs 4-class (0-0.15 FCNN-dominant) — artinya image stream di 3-class contribute lebih signifikan."
+>
+> "Saya usulkan reframe paper ke 3-class sebagai main experiment. Imbalance 4× lebih balanced, literature precedent jelas, dan gain 0.10 Macro F1 meaningful. 4-class bisa jadi ablation comparison."
+
+---
+
 ## Ringkasan Poin Konsultasi
 
 | No | Topik | Status |
