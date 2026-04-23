@@ -99,8 +99,8 @@ bash Miniconda3-latest-Linux-x86_64.sh
 source ~/.bashrc
 
 # 2. Buat conda environment
-conda create -n emotrain python=3.10 -y
-conda activate emotrain
+conda create -n mothertrain python=3.10 -y
+conda activate mothertrain
 
 # 3. Install PyTorch dengan CUDA (untuk NVIDIA T4)
 # Cek dulu versi CUDA di VPS:
@@ -170,7 +170,7 @@ Jalankan Jupyter di VPS, akses dari browser di laptop:
 
 ```bash
 # Di MobaXterm, buka SSH session ke VPS, lalu jalankan:
-conda activate emotrain
+conda activate mothertrain
 cd MultimodalEmoLearn
 jupyter notebook --no-browser --port=8888 --ip=0.0.0.0
 ```
@@ -195,7 +195,7 @@ Koneksi SSH bisa putus kapan saja tanpa mempengaruhi training:
 tmux new -s training
 
 # Di dalam tmux:
-conda activate emotrain
+conda activate mothertrain
 cd MultimodalEmoLearn
 bash scripts/run_all.sh
 
@@ -210,7 +210,7 @@ tmux attach -t training
 ### Opsi C: Jalankan satu-satu manual
 
 ```bash
-conda activate emotrain
+conda activate mothertrain
 cd MultimodalEmoLearn
 
 # Jalankan per notebook:
@@ -299,7 +299,7 @@ git pull origin master
 Dataset 4-class dibuat dari dataset 7-class yang sudah ada (hanya remap label, tidak perlu transfer data baru):
 
 ```bash
-conda activate emotrain
+conda activate mothertrain
 python src/preprocessing/prepare_dataset_4class.py
 ```
 
@@ -309,7 +309,7 @@ python src/preprocessing/prepare_dataset_4class.py
 # Pakai tmux supaya aman kalau koneksi putus
 tmux new -s training4class
 
-conda activate emotrain
+conda activate mothertrain
 bash scripts/run_4class.sh
 
 # Detach: Ctrl+B lalu D
@@ -387,7 +387,7 @@ git pull origin master
 ```bash
 tmux new -s transfer
 
-conda activate emotrain
+conda activate mothertrain
 bash scripts/run_transfer.sh
 
 # Detach: Ctrl+B lalu D
@@ -449,7 +449,7 @@ rm dataset_frontonly.tar.gz  # hemat disk
 ls data/dataset_frontonly/*.npy | wc -l  # harus 9+ files
 
 # Generate augmented + 4-class (dari base dataset, ~5 menit)
-conda activate emotrain
+conda activate mothertrain
 python scripts/prepare_frontonly_all.py
 ```
 
@@ -476,7 +476,7 @@ data/
 ```bash
 tmux new -s frontonly
 
-conda activate emotrain
+conda activate mothertrain
 
 # From scratch 7-class (notebook 18-21)
 bash scripts/run_frontonly_7class.sh
@@ -587,7 +587,7 @@ python scripts/generate_user_ids.py
 
 ```bash
 tmux new -s loso
-conda activate emotrain
+conda activate mothertrain
 cd MultimodalEmoLearn
 
 # Jalankan via shell script (otomatis execute notebook 33)
@@ -623,7 +623,7 @@ Lebih cepat dari LOSO (~2-4 jam vs ~8-15 jam).
 
 ```bash
 tmux new -s crossval
-conda activate emotrain
+conda activate mothertrain
 cd MultimodalEmoLearn
 
 bash scripts/run_crossval.sh
@@ -650,7 +650,7 @@ Sampel diacak tanpa memperhatikan user → user yang sama bisa di train & test.
 
 ```bash
 tmux new -s randomsplit
-conda activate emotrain
+conda activate mothertrain
 cd MultimodalEmoLearn
 
 bash scripts/run_randomsplit.sh
@@ -706,7 +706,7 @@ rm benchmark_data.tar.gz
 
 ```bash
 tmux new -s benchmark
-conda activate emotrain
+conda activate mothertrain
 cd MultimodalEmoLearn
 
 bash scripts/run_benchmark.sh
@@ -747,7 +747,7 @@ Setelah single split selesai, jalankan LOSO (JAFFE) dan 10-fold CV (CK+):
 
 ```bash
 tmux new -s benchmark_cv
-conda activate emotrain
+conda activate mothertrain
 cd MultimodalEmoLearn
 
 bash scripts/run_benchmark_cv.sh
@@ -804,7 +804,7 @@ python scripts/prepare_fer2013.py
 
 ```bash
 tmux new -s improved
-conda activate emotrain
+conda activate mothertrain
 cd MultimodalEmoLearn
 
 bash scripts/run_improved.sh
@@ -844,7 +844,7 @@ data/dataset_frontonly_under_114_4class/   # neutral=114 (rasio 1:1)
 ### Jalankan eksperimen
 ```bash
 tmux new -s undersample
-conda activate emotrain
+conda activate mothertrain
 cd MultimodalEmoLearn
 
 bash scripts/run_undersampled.sh
@@ -874,7 +874,7 @@ Kelas minoritas (angry, fearful, disgusted) punya confidence rata-rata rendah (0
 
 ```bash
 cd MultimodalEmoLearn
-conda activate emotrain
+conda activate mothertrain
 
 # Generate 7-class front-only dengan confidence >= 60%
 python src/preprocessing/prepare_dataset.py --min-confidence 0.6 --output data/dataset_frontonly_conf60
@@ -935,7 +935,7 @@ Notebook Late Fusion conf60 (45, 49, 52, 55) diupdate untuk evaluasi **B1, B2, d
 cd MultimodalEmoLearn
 git pull  # ambil notebook Late Fusion yang sudah diupdate
 
-conda activate emotrain
+conda activate mothertrain
 
 # Re-run hanya Late Fusion notebooks (cepat, ~5-10 menit karena tidak training)
 for nb in 45_late_fusion_conf60_7class 49_late_fusion_conf60_4class \
@@ -969,7 +969,7 @@ cd MultimodalEmoLearn
 git pull
 
 tmux new -s under_conf60
-conda activate emotrain
+conda activate mothertrain
 
 bash scripts/run_undersampled_conf60.sh
 ```
@@ -1068,7 +1068,7 @@ chmod 600 ~/.kaggle/kaggle.json
 
 ```bash
 cd MultimodalEmoLearn
-conda activate emotrain
+conda activate mothertrain
 
 # CK+ & JAFFE (dari folder mentah data/benchmark/{ck+,jaffe}/, ~3-5 menit)
 python scripts/prepare_benchmark.py
@@ -1105,7 +1105,7 @@ data/benchmark/
 
 ```bash
 tmux new -s benchmark_full
-conda activate emotrain
+conda activate mothertrain
 cd MultimodalEmoLearn
 
 # Jalankan semua (Skema 1 + Skema 2) — detach-able
@@ -1224,7 +1224,7 @@ Heatmap di-generate dari landmark 136-dim yang sudah ada → Gaussian blob 224×
 
 **Wajib untuk nb 64:**
 ```bash
-conda activate emotrain
+conda activate mothertrain
 cd ~/MultimodalEmoLearn
 
 # Base dataset (untuk B1 dan B2, ~10 menit)
@@ -1245,7 +1245,7 @@ python scripts/generate_landmark_heatmaps.py
 
 ```bash
 tmux new -s early_fusion
-conda activate emotrain
+conda activate mothertrain
 cd ~/MultimodalEmoLearn
 
 jupyter nbconvert --to notebook --execute notebooks/64_early_fusion_conf60.ipynb \
@@ -1323,7 +1323,7 @@ git pull origin master
 
 ```bash
 tmux new -s latefusion_tl
-conda activate emotrain
+conda activate mothertrain
 cd ~/MultimodalEmoLearn
 
 jupyter nbconvert --to notebook --execute notebooks/65_late_fusion_tl_benchmarks.ipynb \
@@ -1398,7 +1398,7 @@ ls data/benchmark/ckplus_7class/X_heatmaps.npy \
 
 Kalau ada file yang missing, generate:
 ```bash
-conda activate emotrain
+conda activate mothertrain
 python scripts/generate_landmark_heatmaps.py --only "CK+"
 python scripts/generate_landmark_heatmaps.py --only "JAFFE"
 python scripts/generate_landmark_heatmaps.py --only "RAF-DB"
@@ -1419,7 +1419,7 @@ git pull origin master
 
 ```bash
 tmux new -s ef_bench
-conda activate emotrain
+conda activate mothertrain
 cd ~/MultimodalEmoLearn
 
 jupyter nbconvert --to notebook --execute notebooks/66_early_fusion_benchmarks.ipynb \
@@ -1514,7 +1514,7 @@ Melengkapi Skema 2 cross-dataset dengan Early Fusion yang sebelumnya terlewat di
 ```bash
 cd ~/MultimodalEmoLearn
 git pull origin master
-conda activate emotrain
+conda activate mothertrain
 
 jupyter nbconvert --to notebook --execute notebooks/68_crossdataset_early_fusion.ipynb \
     --output 68_crossdataset_early_fusion_executed.ipynb \
@@ -1576,7 +1576,7 @@ Melengkapi Skema 2 dengan Late Fusion TL yang terlewat di nb 63. **Inference-onl
 ```bash
 cd ~/MultimodalEmoLearn
 git pull origin master
-conda activate emotrain
+conda activate mothertrain
 
 jupyter nbconvert --to notebook --execute notebooks/69_crossdataset_late_fusion_tl.ipynb \
     --output 69_crossdataset_late_fusion_tl_executed.ipynb \
@@ -1635,7 +1635,7 @@ Eksperimen Soft Label Training — target distribusi Face API confidence, bukan 
 ```bash
 cd ~/MultimodalEmoLearn
 git pull origin master
-conda activate emotrain
+conda activate mothertrain
 
 # Cek file tersedia:
 ls -lh data/dataset_frontonly_conf60/y_*_soft.npy
@@ -1651,7 +1651,7 @@ Kalau belum ada → `git pull` aja, file sudah di-track. Tidak perlu run `extrac
 
 ```bash
 tmux new -s softlabel
-conda activate emotrain
+conda activate mothertrain
 cd ~/MultimodalEmoLearn
 
 jupyter nbconvert --to notebook --execute notebooks/71_soft_label_training.ipynb \
@@ -1723,7 +1723,7 @@ Sama dengan nb 71 (soft labels sudah di-commit via `y_*_soft.npy`).
 
 ```bash
 tmux new -s softlf
-conda activate emotrain
+conda activate mothertrain
 cd ~/MultimodalEmoLearn
 git pull origin master
 
@@ -1803,7 +1803,7 @@ ls data/dataset_frontonly_conf60/y_*_soft.npy
 ```bash
 cd ~/MultimodalEmoLearn
 tmux new -s softintermediate
-conda activate emotrain
+conda activate mothertrain
 
 jupyter nbconvert --to notebook --execute notebooks/78_soft_label_intermediate_tl.ipynb \
     --output 78_soft_label_intermediate_tl_executed.ipynb \
@@ -1871,7 +1871,7 @@ git push
 ```bash
 cd ~/MultimodalEmoLearn
 git pull
-conda activate emotrain
+conda activate mothertrain
 
 python src/preprocessing/augment_conf60_3class.py --target-min 1500
 ```
@@ -1883,7 +1883,7 @@ Estimasi: ~5-10 menit.
 
 ```bash
 tmux new -s threeclass
-conda activate emotrain
+conda activate mothertrain
 
 jupyter nbconvert --to notebook --execute notebooks/79_threeclass_exploration.ipynb \
     --output 79_threeclass_exploration_executed.ipynb \
@@ -1947,7 +1947,7 @@ Kalau belum ada, `git pull` dulu.
 ```bash
 cd ~/MultimodalEmoLearn
 tmux new -s spacealign
-conda activate emotrain
+conda activate mothertrain
 
 jupyter nbconvert --to notebook --execute notebooks/75_space_alignment.ipynb \
     --output 75_space_alignment_executed.ipynb \
@@ -2004,7 +2004,7 @@ Visualisasi bobot NN: region citra yang paling berpengaruh ke prediksi per kelas
 ### Prasyarat library (one-time)
 
 ```bash
-conda activate emotrain
+conda activate mothertrain
 pip install grad-cam
 ```
 
@@ -2021,7 +2021,7 @@ Kedua file **sudah ada di repo** (dari nb 54 + nb 56 execution). Pastikan `git p
 ```bash
 cd ~/MultimodalEmoLearn
 tmux new -s gradcam
-conda activate emotrain
+conda activate mothertrain
 
 jupyter nbconvert --to notebook --execute notebooks/73_gradcam_analysis.ipynb \
     --output 73_gradcam_analysis_executed.ipynb \
