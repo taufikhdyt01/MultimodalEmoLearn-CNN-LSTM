@@ -96,6 +96,8 @@ def main():
                          'Default: val-tuned (proper out-of-sample).')
     ap.add_argument('--legacy', action='store_true',
                     help='Pakai Late Fusion predictions lama (pre val-tuning fix).')
+    ap.add_argument('--no-3class', action='store_true',
+                    help='Skip panel (c) 3-class (output 2-panel saja, legacy layout).')
     args = ap.parse_args()
 
     FIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -107,6 +109,28 @@ def main():
     else:
         p7 = load_predictions(PRED_DIR / 'best_7c_early_fusion_tl_b3.json')
         p4 = load_predictions(PRED_DIR / 'best_4c_intermediate_tl_b3.json')
+
+    # Load 3-class from all_results_3class.json (nb 79)
+    p3 = None
+    if not args.no_3class:
+        r3_path = PROJECT_ROOT / 'models' / 'frontonly_conf60' / '3class' / 'all_results_3class.json'
+        if r3_path.exists():
+            all3 = json.load(open(r3_path))
+            r3 = all3.get('Late_Fusion_TL_B3')
+            if r3 is not None:
+                p3 = {
+                    'tag': 'Late Fusion TL 3c B3 (juara val-tuned)',
+                    'emotions': ['positive', 'neutral', 'negative'],
+                    'confusion_matrix': r3['confusion_matrix'],
+                    'test_metrics': {
+                        'macro_f1': r3['test_macro_f1'],
+                        'accuracy': r3['test_accuracy'],
+                        'weighted_f1': r3['test_weighted_f1'],
+                    },
+                    'best_cnn_tl_weight': r3.get('best_cnn_weight'),
+                }
+        if p3 is None:
+            print(f'[SKIP 3-class] {r3_path} missing atau Late_Fusion_TL_B3 tidak ada')
 
     def pick(p):
         """Return (cm, metrics, w_or_none).
@@ -126,12 +150,15 @@ def main():
     else:
         tune_label = '(val-tuned proper — new best models)'
 
-    # Figure: 2 panels side-by-side
-    fig, axes = plt.subplots(1, 2, figsize=(7.16, 3.6),
-                              gridspec_kw={'width_ratios': [1.3, 1]})
+    # Figure: 2 or 3 panels side-by-side
+    if p3 is not None:
+        fig, axes = plt.subplots(1, 3, figsize=(10.5, 3.6),
+                                  gridspec_kw={'width_ratios': [1.3, 1, 0.85]})
+    else:
+        fig, axes = plt.subplots(1, 2, figsize=(7.16, 3.6),
+                                  gridspec_kw={'width_ratios': [1.3, 1]})
 
-    # Paper-ready titles: only subplot identifier (a/b) + class count
-    # Architecture name + metrics go to LaTeX caption
+    # Paper-ready titles: only subplot identifier + class count
     title_7 = '(a) 7-Class'
     im7 = plot_cm(axes[0], cm7, p7['emotions'],
                   title_7, normalize=None if args.normalize == 'raw' else args.normalize)
@@ -140,9 +167,17 @@ def main():
     im4 = plot_cm(axes[1], cm4, p4['emotions'],
                   title_4, normalize=None if args.normalize == 'raw' else args.normalize)
 
-    # Colorbar shared (only on right panel untuk compactness)
+    im_last = im4
+    if p3 is not None:
+        cm3, m3, w3 = p3['confusion_matrix'], p3['test_metrics'], p3.get('best_cnn_tl_weight')
+        title_3 = '(c) 3-Class'
+        im3 = plot_cm(axes[2], cm3, p3['emotions'],
+                      title_3, normalize=None if args.normalize == 'raw' else args.normalize)
+        im_last = im3
+
+    # Colorbar shared (only on rightmost panel untuk compactness)
     cbar_label = 'Count' if args.normalize == 'raw' else 'Proportion'
-    fig.colorbar(im4, ax=axes[1], fraction=0.046, pad=0.04, label=cbar_label)
+    fig.colorbar(im_last, ax=axes[-1], fraction=0.046, pad=0.04, label=cbar_label)
 
     plt.tight_layout()
 
@@ -163,15 +198,32 @@ def main():
         print(f'\n{label} ({p["tag"]}):')
         w_line = f'w(CNN_TL) = {w:.2f}  ' if w is not None else ''
         print(f'  {w_line}Macro F1 = {m["macro_f1"]:.4f}')
-        print(f'  Per-class F1:')
-        for emo in p['emotions']:
-            if emo in p['classification_report']:
-                r = p['classification_report'][emo]
-                print(f'    {emo:>10}: P={r["precision"]:.3f}  R={r["recall"]:.3f}  '
-                      f'F1={r["f1-score"]:.3f}  support={int(r["support"])}')
+        if 'classification_report' in p:
+            print(f'  Per-class F1:')
+            for emo in p['emotions']:
+                if emo in p['classification_report']:
+                    r = p['classification_report'][emo]
+                    print(f'    {emo:>10}: P={r["precision"]:.3f}  R={r["recall"]:.3f}  '
+                          f'F1={r["f1-score"]:.3f}  support={int(r["support"])}')
+        else:
+            # Derive per-class from CM (for 3c where classification_report wasn't saved)
+            import numpy as _np
+            cm = _np.array(p['confusion_matrix'], dtype=float)
+            print(f'  Per-class F1 (from CM):')
+            for i, emo in enumerate(p['emotions']):
+                tp = cm[i, i]
+                p_den = cm[:, i].sum()
+                r_den = cm[i, :].sum()
+                prec = tp / p_den if p_den > 0 else 0
+                rec  = tp / r_den if r_den > 0 else 0
+                f1 = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0
+                print(f'    {emo:>10}: P={prec:.3f}  R={rec:.3f}  '
+                      f'F1={f1:.3f}  support={int(r_den)}')
 
     print_summary(p7, m7, w7, '7-class')
     print_summary(p4, m4, w4, '4-class')
+    if p3 is not None:
+        print_summary(p3, p3['test_metrics'], p3.get('best_cnn_tl_weight'), '3-class')
 
 
 if __name__ == '__main__':
