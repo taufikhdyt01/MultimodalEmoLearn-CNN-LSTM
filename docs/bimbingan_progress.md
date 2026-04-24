@@ -2139,20 +2139,35 @@ Berbeda dari soft label (negative + single-seed fragile) dan GradCAM (observatio
 
 ## SLIDE 36: 3-Class Exploration (Positive/Neutral/Negative, nb 79)
 
-### Motivasi
-4-class mapping (neutral/happy/sad/negative) **arbitrary** — tidak ada di literature. 3-class valence (positive/neutral/negative) adalah **standard Russell 1980 circumplex**, well-established di affective computing (DEAP, MAHNOB-HCI, Liliana 2019).
+### Motivasi Reframe — Arahan Pak Fitra + Literature
+
+**Arahan Pak Fitra:** cari precedent literatur untuk skema 4-class (neutral/happy/sad/negative) yang sebelumnya dipakai.
+
+**Hasil literature search:**
+- Skema 4-class (neutral/happy/sad/negative) — **sulit ditemukan precedent** di literatur FER konteks online learning. Mapping arbitrary, tidak match standard taxonomy.
+- Skema 3-class polarity (positive/neutral/negative) — **banyak digunakan**, sesuai Russell 1980 circumplex (valence dimension). Standard di affective computing.
+
+**Paper paling relevan:**
+> **Savchenko et al. (2022)** — *"Classifying Emotions and Engagement in Online Learning Based on a Single Facial Expression Recognition Neural Network"*, **IEEE Transactions on Affective Computing, Vol. 13, No. 4 (2022)**
+> - Topik persis sama: FER untuk e-learning engagement
+> - Dataset: VGAF (Video Group Affect)
+> - Skema: **3-class polarity** (positive / neutral / negative)
+> - Justifikasi empiris bahwa 3-class polarity adalah konvensi untuk online learning FER
+
+**Keputusan:** reframe paper JITeCS dari 4-class → 3-class. Training ulang dengan label 3-class dilakukan via nb 79. 4-class hasil lama tidak lagi dipakai di paper.
+
+### Mapping (valence-based, Russell 1980 + Savchenko 2022 precedent)
 
 **REMAP_3:**
 - `happy, surprised` → **positive** (0)
 - `neutral` → **neutral** (1)
 - `sad, angry, fearful, disgusted` → **negative** (2)
 
-**Imbalance 4× lebih balanced:**
+**Imbalance improvement vs 7-class baseline:**
 
 | Mapping | Max/min ratio |
 |---|:---:|
 | 7-class | 1:1138 |
-| 4-class | 1:62 |
 | **3-class** | **1:14** |
 
 ### Setup
