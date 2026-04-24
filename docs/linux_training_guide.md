@@ -1858,6 +1858,62 @@ git push
 
 ---
 
+## 31. nb 80 — CBAM Attention Module (arahan dosen #3)
+
+**Motivasi:** target beat 3-class Late Fusion TL B3 (val=0.6229). CBAM (Woo et al. ECCV 2018) = Channel + Spatial attention, overhead ringan (~2% FLOPs).
+
+**Scope:** 2 variants × 2 scenarios = 4 configs di 3-class:
+- CNN_TL_CBAM × B1/B3 (single-modal)
+- Late_Fusion_TL_CBAM × B1/B3 (CBAM di CNN branch, FCNN plain)
+
+### Prasyarat
+
+- `data/dataset_frontonly_conf60_3class_augmented/` (dari nb 79 pre-requisite) — untuk B3
+- Model classes sudah di-define inline di notebook (tidak perlu update `src/training/models.py`)
+
+### Run
+
+```bash
+cd ~/MultimodalEmoLearn
+git pull
+tmux new -s cbam
+conda activate mothertrain
+
+jupyter nbconvert --to notebook --execute notebooks/80_attention_cbam.ipynb \
+    --output 80_attention_cbam_executed.ipynb \
+    --output-dir notebooks/results \
+    --ExecutePreprocessor.timeout=18000
+```
+
+**Estimasi:** ~4-5 jam di T4.
+
+### Output
+
+```
+models/frontonly_conf60/3class/CBAM/
+├── cnn_tl_cbam_b1.pth, cnn_tl_cbam_b3.pth
+├── Late_Fusion_CBAM/
+│   └── fcnn_b1.pth, fcnn_b3.pth
+└── cbam_3class_results.json
+
+notebooks/results/80_attention_cbam_executed.ipynb
+```
+
+### Commit hasil
+
+```bash
+git add models/frontonly_conf60/3class/CBAM/ notebooks/results/80_*
+git commit -m "Add CBAM attention results (nb 80, arahan dosen #3)"
+git push
+```
+
+### Interpretasi
+
+- **Val > 0.62** → beat Late Fusion TL B3 plain, CBAM menambah value. Lanjut ke Ghost + Triplet.
+- **Val ~ 0.49-0.55** → CBAM tidak bantu CNN single / tidak transfer ke fusion. Dokumentasikan sebagai negative finding, skip Ghost/Triplet.
+
+---
+
 ## 30. nb 79 — 3-Class Exploration (Positive/Neutral/Negative, Opsi C)
 
 **Motivasi:** 4-class mapping arbitrary (tidak match literature). 3-class valence (Russell 1980) adalah standard FER dengan imbalance 4× lebih balanced (1:14 vs 1:62).
