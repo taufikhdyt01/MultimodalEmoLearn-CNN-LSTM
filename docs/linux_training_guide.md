@@ -1858,6 +1858,80 @@ git push
 
 ---
 
+## 32. nb 81 — Geometric Features (arahan dosen #4, Liliana 2019)
+
+**Motivasi:** direct extension paper dosen pembimbing. 20-dim geometric features (10 facial components × 2 metrik) — test apakah interpretable compact features kompetitif dengan 136-d raw, atau kombinasi sinergis dengan fusion.
+
+**Scope (3-class Primer):**
+- Setup B: FCNN_geometric (20-d) × B1 + B3 = 2 configs
+- Setup C: FCNN_combined (136+20=156) × B1 + B3 = 2 configs
+- Setup D: Late Fusion TL + FCNN_combined × B3 = 1 config (target beat 0.623)
+
+Total 5 configs.
+
+### Prerequisite 1: compute geometric features
+
+```bash
+cd ~/MultimodalEmoLearn
+git pull
+conda activate mothertrain
+
+python src/preprocessing/compute_geometric_features.py \
+    --data-dir data/dataset_frontonly_conf60
+python src/preprocessing/compute_geometric_features.py \
+    --data-dir data/dataset_frontonly_conf60_3class_augmented
+```
+
+Output: `X_{split}_geometric.npy` (N × 20) di kedua directory. Estimasi <2 menit.
+
+### Prerequisite 2: nb 79 checkpoints
+
+- `models/frontonly_conf60/3class/Late_Fusion_TL/cnn_tl_b3.pth` — reused untuk Setup D image branch
+
+### Run
+
+```bash
+tmux new -s geometric
+jupyter nbconvert --to notebook --execute notebooks/81_geometric_features.ipynb \
+    --output 81_geometric_features_executed.ipynb \
+    --output-dir notebooks/results \
+    --ExecutePreprocessor.timeout=14400
+```
+
+**Estimasi:** ~2-3 jam T4 (FCNN cepat, Late Fusion reuse CNN checkpoint → no retrain).
+
+### Output
+
+```
+models/frontonly_conf60/3class/Geometric/
+├── fcnn_geometric_b1.pth, fcnn_geometric_b3.pth
+├── fcnn_combined_b1.pth, fcnn_combined_b3.pth
+└── geometric_3class_results.json
+
+notebooks/results/81_geometric_features_executed.ipynb
+```
+
+### Interpretasi
+
+| Setup D val vs 0.623 (plain LF TL B3) | Kesimpulan |
+|---|---|
+| > 0.64 | Novel extension Liliana 2019 — new SOTA 3c, cite paper dosen |
+| 0.62-0.63 | Geometric redundant dengan raw — tapi interpretability tetap valuable |
+| < 0.60 | 20-d GF lossy, stop extension |
+
+### Commit
+
+```bash
+git add models/frontonly_conf60/3class/Geometric/ \
+        data/dataset_frontonly_conf60/X_*_geometric.npy \
+        data/dataset_frontonly_conf60_3class_augmented/X_*_geometric.npy \
+        notebooks/results/81_*
+git commit -m "Add Geometric Features results (nb 81, arahan dosen #4)"
+git push
+```
+
+---
+
 ## 31. nb 80 — CBAM Attention Module (arahan dosen #3)
 
 **Motivasi:** target beat 3-class Late Fusion TL B3 (val=0.6229). CBAM (Woo et al. ECCV 2018) = Channel + Spatial attention, overhead ringan (~2% FLOPs).
