@@ -1858,6 +1858,74 @@ git push
 
 ---
 
+## 33. nb 82 — 3-Class Scratch Variants (close 12-config gap untuk paper JITeCS)
+
+**Motivasi:** nb 79 cover 15 configs (FCNN + 4 TL variants × B1/B2/B3) tapi belum run scratch variants. Untuk full 27-config grid (mirror 4-class & 7-class), perlu 12 scratch configs:
+- CNN scratch × B1/B2/B3
+- Intermediate scratch × B1/B2/B3
+- Late Fusion scratch × B1/B2/B3
+- Early Fusion scratch × B1/B2/B3
+
+### Prerequisite
+
+Sama dengan nb 79: `data/dataset_frontonly_conf60_3class_augmented/` (untuk B3).
+
+### Run
+
+```bash
+cd ~/MultimodalEmoLearn
+git pull
+tmux new -s scratch3c
+conda activate mothertrain
+
+jupyter nbconvert --to notebook --execute notebooks/82_threeclass_scratch.ipynb \
+    --output 82_threeclass_scratch_executed.ipynb \
+    --output-dir notebooks/results \
+    --ExecutePreprocessor.timeout=28800
+```
+
+**Estimasi:** ~5-7 jam T4.
+
+### Output
+
+```
+models/frontonly_conf60/3class/
+├── CNN_scratch/         (B1/B2/B3 checkpoints)
+├── Intermediate_scratch/
+├── Early_Fusion_scratch/
+├── Late_Fusion_scratch/  (CNN scratch + FCNN per scenario + grid w)
+├── scratch_singlearch_results.json   (9 configs: CNN/Intermediate/Early × B1/B2/B3)
+├── scratch_all_results.json          (12 configs total, includes Late Fusion)
+└── all_results_3class_full.json      (master 27 configs: nb 79 + nb 82 merged)
+```
+
+### Merge ke master JSON (di akhir notebook)
+
+Notebook auto-generate `scratch_all_results.json` (12 configs). Untuk merge ke master:
+```python
+import json
+master = json.load(open('models/frontonly_conf60/3class/all_results_3class.json'))
+scratch = json.load(open('models/frontonly_conf60/3class/scratch_all_results.json'))
+master.update(scratch)
+json.dump(master, open('models/frontonly_conf60/3class/all_results_3class_full.json', 'w'), indent=2)
+```
+
+### Commit
+
+```bash
+git add models/frontonly_conf60/3class/CNN_scratch/ \
+        models/frontonly_conf60/3class/Intermediate_scratch/ \
+        models/frontonly_conf60/3class/Late_Fusion_scratch/ \
+        models/frontonly_conf60/3class/Early_Fusion_scratch/ \
+        models/frontonly_conf60/3class/scratch_*.json \
+        models/frontonly_conf60/3class/all_results_3class_full.json \
+        notebooks/results/82_*
+git commit -m "Add 3-class scratch variants (nb 82, 12 configs) — close paper grid"
+git push
+```
+
+---
+
 ## 32. nb 81 — Geometric Features (arahan dosen #4, Liliana 2019)
 
 **Motivasi:** direct extension paper dosen pembimbing. 20-dim geometric features (10 facial components × 2 metrik) — test apakah interpretable compact features kompetitif dengan 136-d raw, atau kombinasi sinergis dengan fusion.
