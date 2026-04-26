@@ -1858,6 +1858,58 @@ git push
 
 ---
 
+## 34. Test Subset Analysis by Confidence (post-hoc, supporting evidence paper)
+
+**Tujuan:** evaluate Late Fusion TL B3 (3-class juara) di test subset dengan confidence threshold berbeda — argument paper bahwa label noise adalah faktor pembatas, bukan model limitation. **Tidak perlu retrain.**
+
+### Run
+
+```bash
+cd ~/MultimodalEmoLearn
+git pull
+conda activate mothertrain
+
+python scripts/analyze_test_high_conf_subset.py
+```
+
+**Estimasi:** ~1-2 menit (inference 929 test sample saja).
+
+### Prerequisite
+
+Checkpoint Late Fusion TL B3 3-class dari nb 79:
+- `models/frontonly_conf60/3class/Late_Fusion_TL/cnn_tl_b3.pth`
+- `models/frontonly_conf60/3class/Late_Fusion_TL/fcnn_b3.pth`
+
+### Output
+
+```
+models/frontonly_conf60/3class/test_subset_by_confidence.json
+docs/figures/test_macro_f1_by_confidence.{png,pdf}
+docs/test_subset_analysis.md
+```
+
+### Commit
+
+```bash
+git add models/frontonly_conf60/3class/test_subset_by_confidence.json \
+        docs/figures/test_macro_f1_by_confidence.* \
+        docs/test_subset_analysis.md
+git commit -m "Add test subset analysis by confidence threshold (post-hoc)"
+git push
+```
+
+### Interpretasi
+
+Kalau Macro F1 naik dengan threshold (e.g., 0.637 di full → 0.77+ di conf≥0.95):
+- **Confirms hipotesis:** label noise = factor pembatas
+- Argumen Discussion: model accountable for label noise impact, retain conf60 for training viability
+
+Kalau flat:
+- Model has fundamental limitation independent of label quality
+- Need different angle untuk paper Discussion
+
+---
+
 ## 33. nb 82 — 3-Class Scratch Variants (close 12-config gap untuk paper JITeCS)
 
 **Motivasi:** nb 79 cover 15 configs (FCNN + 4 TL variants × B1/B2/B3) tapi belum run scratch variants. Untuk full 27-config grid (mirror 4-class & 7-class), perlu 12 scratch configs:
