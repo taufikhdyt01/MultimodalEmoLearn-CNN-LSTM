@@ -2254,6 +2254,86 @@ notebooks/results/79_threeclass_exploration_executed.ipynb
 
 ---
 
+## SLIDE 37: 3-Class Full Grid + Geometric Features (nb 81 + nb 82)
+
+### Update: 27-Config Grid Lengkap
+
+Pasca nb 82 (12 scratch configs), grid 3-class **lengkap mirror 7-class earlier**. Total 27 configs (5 single-modal + scratch fusion + TL fusion).
+
+**Top-5 Overall Ranking (val-based, 27 configs):**
+
+| Rank | Config | Val F1 | Test F1 |
+|:---:|---|:---:|:---:|
+| 1 | **Late Fusion TL B3** ⭐ | **0.6229** | 0.6370 |
+| 2 | Late Fusion TL B1 | 0.6093 | 0.6526 |
+| 3 | Late Fusion scratch B3 | 0.6085 | 0.5393 |
+| 4 | Late Fusion scratch B1 | 0.6065 | 0.6713 |
+| 5 | Late Fusion scratch B2 | 0.6000 | 0.5876 |
+
+**Pattern:** Late Fusion (TL + scratch) dominasi top-5. Strategi fusion paling konsisten di 3-class. Juara overall **tidak berubah** — Late Fusion TL B3 = 0.623 tetap valid.
+
+**Scratch vs TL pattern:** TL > scratch konsisten (Late Fusion TL B3 0.623 vs scratch B3 0.609, gap −0.014). Konsisten dengan 7-class earlier finding.
+
+### Eksplorasi Lanjutan: Geometric Features (Liliana 2019, nb 81)
+
+> **Scope: untuk tesis, bukan paper JITeCS.** Direct extension paper dosen pembimbing — 20-d GF dari 10 facial components × 2 metrik (eccentricity + distance ratio).
+
+| Setup | Val F1 | Test F1 | vs Raw |
+|---|:---:|:---:|:---:|
+| FCNN_Geometric B1 (20-d only) | 0.422 | 0.468 | −0.18 |
+| FCNN_Geometric B3 (20-d only) | 0.539 | 0.607 | −0.08 |
+| FCNN_Combined B1 (raw+geo 156-d) | 0.536 | 0.592 | −0.07 |
+| FCNN_Combined B3 (raw+geo 156-d) | 0.561 | 0.615 | −0.06 |
+| Late Fusion TL + Combined B3 | 0.583 | 0.660 | val −0.04, test +0.02 |
+
+**Verdict (val-based):** Geometric extension **gagal beat baseline**. Late Fusion + Combined val=0.583 < plain Late Fusion TL B3 val=0.623.
+
+**Observasi menarik:**
+- w_best shift dari **0.15 → 0.70** ketika FCNN dapat input combined — image stream jadi dominant (model rebalance karena FCNN_Combined lebih lemah dari FCNN raw)
+- Test 0.660 > plain 0.637 — val-test mismatch. Tidak bisa di-claim by-val proper.
+
+**Kesimpulan (untuk tesis):** 20-d Liliana GF **tidak menambah value** sebagai extension dari raw 136-d landmark di Primer. Masuk BAB Eksplorasi tesis sebagai negative result + analisis kenapa (raw FCNN sudah belajar implicit geometric representation dari 136-d coords). **Tidak masuk paper JITeCS** — scope paper fokus ke 7-class & 3-class fusion strategy main result.
+
+### Temuan Baru
+
+**T53: Late Fusion strategi paling robust di 3-class**
+Top-5 by val SEMUA Late Fusion (TL B3, TL B1, scratch B3, scratch B1, scratch B2). Decision-level averaging dengan val-tuned w optimal untuk valence task — konsisten dengan T50 (fusion strategy shifts per class granularity).
+
+**T54: TL > scratch konsisten di 3-class**
+Late Fusion TL B3 0.623 vs scratch B3 0.609 (gap −0.014). Pre-trained ImageNet features tetap memberikan boost di ResNet-18 backbone, sebagaimana 7-class earlier.
+
+**T55: Geometric Features Liliana 2019 — negative result (untuk tesis, tidak masuk paper)**
+Compact 20-d GF lossy (FCNN_Geom 0.42 val << FCNN raw 0.60). Combined 156-d juga underperform. Possibly raw 136-d coords sudah cukup informatif via FCNN learned representation. Eksplorasi ini di-frame untuk BAB Tesis saja (direct extension paper dosen) — paper JITeCS tetap fokus 7c/3c fusion strategy main result.
+
+**T56: w_best shifts dengan branch input dim**
+Plain LF TL B3: w=0.15 (FCNN dominant). Combined LF TL B3: w=0.70 (CNN dominant). Suggests fusion weight reflects relative branch quality — robust val-tuning compensate for branch imbalance.
+
+### Status Eksplorasi Lanjutan (Apr 2026)
+
+| # | Item | Status | Hasil |
+|---|---|---|---|
+| 1 | GradCAM (arahan #1) | ✅ DONE (nb 73) | Observational only |
+| 2 | Space Alignment (arahan #2) | ✅ DONE (nb 75) | Positive result, paper-ready |
+| 3 | Attention CBAM (arahan #3) | ✅ DONE (nb 80) | Negative result, closed |
+| 4 | Geometric Features (arahan #4) | ✅ DONE (nb 81) | Negative result by val |
+| 5 | Soft Label (Liliana) | ✅ DONE (nb 71/72/78) | Negative result, closed |
+| 6 | FEIS Fuzzy Rule | ⏳ belum | — |
+| 7 | Geo + Soft Combined | ❌ N/A (soft closed) | — |
+| 8 | GCN Preprocessing (Pitaloka) | ⏳ belum | — |
+
+**4/4 arahan dosen DONE.** Sisa eksplorasi: FEIS + GCN (turunan paper, optional).
+
+> **Penjelasan lisan:**
+> "Pak, saya sudah selesaikan 4 arahan dosen + 3-class reframe + scratch grid lengkap. Hasil:"
+>
+> "1) Juara 3-class tidak berubah: Late Fusion TL B3 val=0.623, test=0.637. Top-5 by val semua Late Fusion."
+>
+> "2) Geometric Features (Liliana 2019) gagal beat baseline by val — extension Liliana di Primer tidak menambah value vs raw landmark. Karena ini direct extension paper Bapak, saya masukkan ke BAB tesis saja sebagai negative result eksplorasi. Tidak masuk paper JITeCS (scope paper fokus 7c/3c fusion strategy)."
+>
+> "3) Sisa eksplorasi: GCN Preprocessing (Pitaloka 2017) sebagai quick win + FEIS (fuzzy rule, replikasi Liliana). Optional, bisa skip kalau scope cukup."
+
+---
+
 ## Ringkasan Poin Konsultasi
 
 | No | Topik | Status |

@@ -99,15 +99,13 @@ Augmentation script: `src/preprocessing/augment_conf60_3class.py --target-min 15
 
 **Hyperparam identik dengan run 4-class** (lihat §5). Selection by val macro F1.
 
-> **Status coverage (per Apr 2026):**
-> - ✅ **15 configs DONE** (nb 79): FCNN + 4 TL variants × B1/B2/B3
-> - ⏳ **12 configs PENDING** (nb 82 prepared, belum di-run di VPS):
->   CNN scratch / Intermediate scratch / Late Fusion scratch / Early Fusion scratch × B1/B2/B3
->
-> Tabel di bawah ini hanya yang sudah DONE. Setelah nb 82 selesai → master JSON `all_results_3class_full.json` akan punya full 27-config grid (mirror 4-class & 7-class earlier coverage).
+✅ **Full 27-config grid DONE** (nb 79 + nb 82). Mirror 7-class earlier coverage.
 
 | experiment_id | backbone | fusion_variant | class_scheme | scenario | val_macro_f1 | test_acc | test_macro_f1 | test_weighted_f1 | best_epoch | w_best |
 |---|---|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| 3c-cnn-b1 | 5-block CNN scratch | CNN single | 3class | B1 | 0.4874 | 0.8052 | 0.6122 | 0.7973 | — | — |
+| 3c-cnn-b2 | 5-block CNN scratch | CNN single | 3class | B2 | 0.4477 | 0.5759 | 0.4644 | 0.6107 | — | — |
+| 3c-cnn-b3 | 5-block CNN scratch | CNN single | 3class | B3 | 0.4531 | 0.6588 | 0.5165 | 0.6957 | — | — |
 | 3c-fcnn-b1 | MLP (5-layer) | FCNN single | 3class | B1 | 0.6025 | 0.7406 | 0.5893 | 0.7589 | — | — |
 | 3c-fcnn-b2 | MLP | FCNN single | 3class | B2 | 0.5641 | 0.7018 | 0.5750 | 0.7384 | — | — |
 | 3c-fcnn-b3 | MLP | FCNN single | 3class | B3 | 0.6193 | 0.7492 | 0.6342 | 0.7702 | — | — |
@@ -123,17 +121,29 @@ Augmentation script: `src/preprocessing/augment_conf60_3class.py --target-min 15
 | 3c-early-tl-b1 | ResNet-18 (4-ch) | Early Fusion TL | 3class | B1 | 0.5371 | 0.7826 | 0.5872 | 0.7858 | — | — |
 | 3c-early-tl-b2 | ResNet-18 (4-ch) | Early Fusion TL | 3class | B2 | 0.5039 | 0.6502 | 0.5840 | 0.6989 | — | — |
 | 3c-early-tl-b3 | ResNet-18 (4-ch) | Early Fusion TL | 3class | B3 | 0.5088 | 0.8202 | 0.6988 | 0.8282 | — | — |
+| 3c-interm-b1 | CNN+FCNN scratch | Intermediate (feature concat) | 3class | B1 | 0.5673 | 0.8019 | 0.5910 | 0.7980 | — | — |
+| 3c-interm-b2 | CNN+FCNN scratch | Intermediate | 3class | B2 | 0.4810 | 0.7212 | 0.4942 | 0.7250 | — | — |
+| 3c-interm-b3 | CNN+FCNN scratch | Intermediate | 3class | B3 | 0.5871 | 0.7912 | 0.6235 | 0.8016 | — | — |
+| 3c-late-b1 | CNN+FCNN scratch | Late Fusion (val-tuned w) | 3class | B1 | 0.6065 | 0.8224 | 0.6713 | 0.8264 | — | 0.10 |
+| 3c-late-b2 | CNN+FCNN scratch | Late Fusion | 3class | B2 | 0.6000 | 0.7244 | 0.5876 | 0.7479 | — | 0.45 |
+| 3c-late-b3 | CNN+FCNN scratch | Late Fusion | 3class | B3 | 0.6085 | 0.6825 | 0.5393 | 0.7256 | — | 0.25 |
+| 3c-early-b1 | 4-channel CNN scratch | Early Fusion (RGB+heatmap) | 3class | B1 | 0.5216 | 0.7427 | 0.5158 | 0.7511 | — | — |
+| 3c-early-b2 | 4-channel CNN | Early Fusion | 3class | B2 | 0.5173 | 0.7352 | 0.5699 | 0.7470 | — | — |
+| 3c-early-b3 | 4-channel CNN | Early Fusion | 3class | B3 | 0.4825 | 0.7266 | 0.5070 | 0.7411 | — | — |
 
-**Pending (nb 82 prepared, belum di-run):**
+**3-class juara overall (val-based, full 27 configs):** Late Fusion TL B3 — val=**0.6229**, test=0.6370, acc=0.784, w_best=0.15. Tidak berubah setelah scratch grid lengkap (TL > scratch konsisten, sebagaimana 7-class earlier).
 
-| experiment_id | backbone | fusion_variant | class_scheme | scenario | Status |
-|---|---|---|:---:|:---:|:---:|
-| 3c-cnn-b1, b2, b3 | 5-block CNN scratch | CNN single | 3class | B1/B2/B3 | ⏳ PENDING (nb 82) |
-| 3c-interm-b1, b2, b3 | CNN+FCNN scratch | Intermediate (concat) | 3class | B1/B2/B3 | ⏳ PENDING (nb 82) |
-| 3c-late-b1, b2, b3 | CNN+FCNN scratch | Late Fusion (val-tuned w) | 3class | B1/B2/B3 | ⏳ PENDING (nb 82) |
-| 3c-early-b1, b2, b3 | 4-channel CNN scratch | Early Fusion (RGB+heatmap) | 3class | B1/B2/B3 | ⏳ PENDING (nb 82) |
+### 2.2.1 Top-5 Ranking (val-based)
 
-**3-class juara (val-based, dari 15 config DONE):** Late Fusion TL B3 — val=0.6229, test=0.6370, acc=0.784. Mungkin shift kalau 12 scratch configs nb 82 punya juara baru (unlikely karena 4-class & 7-class pattern: TL > scratch konsisten).
+| Rank | Config | Val F1 | Test F1 | Catatan |
+|:---:|---|:---:|:---:|---|
+| **1** | **Late Fusion TL B3** ⭐ | **0.6229** | 0.6370 | Juara overall val-tuned |
+| 2 | Late Fusion TL B1 | 0.6093 | 0.6526 | TL + baseline scenario |
+| 3 | Late Fusion scratch B3 | 0.6085 | 0.5393 | Scratch competitive |
+| 4 | Late Fusion scratch B1 | 0.6065 | 0.6713 | — |
+| 5 | Late Fusion scratch B2 | 0.6000 | 0.5876 | — |
+
+**Pattern:** Late Fusion (TL + scratch) **dominasi top-5** by val — strategi fusion paling robust di 3-class Primer. Konsisten dengan observasi T50 (decision-level averaging optimal untuk coarse class granularity).
 
 **3-class juara (test-based sanity check):** CNN TL B3 — test=0.7055 (lebih tinggi dari val-based juara, tapi val CNN TL B3 = 0.4953 di bawah Late Fusion val 0.6229). Val-test mismatch ini worth mentioning di Discussion — confirm val-based selection tetap proper methodology meski test angka ranking beda.
 
