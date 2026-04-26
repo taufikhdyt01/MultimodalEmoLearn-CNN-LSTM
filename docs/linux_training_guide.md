@@ -1921,6 +1921,74 @@ Kalau flat:
 
 ---
 
+## 36. nb 84 + nb 85 — 3-Class Benchmark (Skema 1 + Skema 2)
+
+**Motivasi:** paper reframe ke 3-class. Untuk konsistensi, benchmark Skema 1 (CK+/JAFFE/RAF-DB/KDEF self-train-test) + Skema 2 (cross-dataset → Primer) perlu di-3-class-kan via REMAP_3.
+
+### nb 84 — Skema 1 Self-Train-Test 3-class
+
+**Scope:** 4 datasets × 9 archs × B1 = **36 configs**.
+
+```bash
+cd ~/MultimodalEmoLearn
+git pull
+tmux new -s bench3c
+conda activate mothertrain
+
+jupyter nbconvert --to notebook --execute notebooks/84_threeclass_skema1_benchmark.ipynb \
+    --output 84_threeclass_skema1_benchmark_executed.ipynb \
+    --output-dir notebooks/results \
+    --ExecutePreprocessor.timeout=54000
+```
+
+**Estimasi:** ~10-12 jam T4 (RAF-DB paling besar 11k samples).
+
+### nb 85 — Skema 2 Cross-Dataset 3-class → Primer 3-class
+
+**Scope:** 4 sources × 7+2 archs = **36 configs** (inference saja, pakai checkpoint nb 84).
+
+```bash
+jupyter nbconvert --to notebook --execute notebooks/85_threeclass_skema2_crossdataset.ipynb \
+    --output 85_threeclass_skema2_crossdataset_executed.ipynb \
+    --output-dir notebooks/results \
+    --ExecutePreprocessor.timeout=3600
+```
+
+**Estimasi:** ~30 menit (inference only).
+
+### Output
+
+```
+models/benchmark/
+├── ckplus/{ckplus_3c_results.json, 3class/*.pth}
+├── jaffe/{jaffe_3c_results.json, 3class/*.pth}
+├── rafdb/{rafdb_3c_results.json, 3class/*.pth}
+├── kdef/{kdef_3c_results.json, 3class/*.pth}
+├── all_3c_skema1_results.json
+└── all_3c_skema2_cross_results.json
+```
+
+### Commit
+
+```bash
+git add models/benchmark/*/3class/ models/benchmark/*/*_3c_results.json \
+        models/benchmark/all_3c_*.json notebooks/results/84_* notebooks/results/85_*
+git commit -m "Add 3-class benchmark Skema 1 + Skema 2 (nb 84 + 85)"
+git push
+```
+
+### Total scope 3-class lengkap setelah ini
+
+| Coverage | Status |
+|---|:---:|
+| Primer 3c Skema 1 (27 configs nb 79+82) | ✅ DONE |
+| Primer 3c Geometric (5 configs nb 81) | ✅ DONE (tesis only) |
+| Primer 3c CBAM (4 configs nb 80) | ✅ DONE (negative) |
+| **Benchmark 3c Skema 1 (36 configs nb 84)** | ⏳ Run di VPS |
+| **Cross-dataset 3c Skema 2 (36 configs nb 85)** | ⏳ Run di VPS |
+
+---
+
 ## 35. nb 83 — Partial Re-Train dengan History Logging (audit dosen)
 
 **Motivasi:** nb 79/82 tidak save training history per epoch. Untuk audit/analisis convergence, re-train **5 key configs** dengan logging epoch-by-epoch (loss, acc, val_macro_f1).
