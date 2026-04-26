@@ -99,13 +99,41 @@ def main():
     print(f'Test: {len(y3)} samples, conf range [{confs.min():.3f}, {confs.max():.3f}], '
           f'mean={confs.mean():.3f}')
 
-    # ── Load checkpoints ──
+    # ── Load checkpoints with fallback ──
     cnn_path  = CKPT_DIR / 'cnn_tl_b3.pth'
     fcnn_path = CKPT_DIR / 'fcnn_b3.pth'
+
+    use_fallback = False
     if not cnn_path.exists() or not fcnn_path.exists():
-        raise FileNotFoundError(
-            f'Late Fusion TL 3c B3 checkpoints missing: {cnn_path} / {fcnn_path}\n'
-            f'Run nb 79 di VPS dulu untuk generate.')
+        # Fallback: try single-modal checkpoints (different folders, dari nb 79 ARCH_REGISTRY loop)
+        fallback_cnn  = OUT_DIR / 'CNN_TL' / 'cnn_tl_b3.pth'
+        fallback_fcnn = OUT_DIR / 'FCNN'   / 'fcnn_b3.pth'
+
+        print('[WARN] Late Fusion TL B3 dedicated checkpoints missing:')
+        print(f'  {cnn_path}  exists={cnn_path.exists()}')
+        print(f'  {fcnn_path}  exists={fcnn_path.exists()}')
+        print(f'\nTrying fallback to single-modal checkpoints (different training trajectory):')
+        print(f'  {fallback_cnn}  exists={fallback_cnn.exists()}')
+        print(f'  {fallback_fcnn}  exists={fallback_fcnn.exists()}')
+
+        if fallback_cnn.exists() and fallback_fcnn.exists():
+            cnn_path = fallback_cnn
+            fcnn_path = fallback_fcnn
+            use_fallback = True
+            print('\n[INFO] Using fallback single-modal checkpoints. Will re-grid-search w on val.')
+        else:
+            raise FileNotFoundError(
+                'Both Late Fusion TL and single-modal CNN_TL/FCNN B3 checkpoints missing.\n'
+                'Available alternatives:\n'
+                '  1. Re-run nb 79 di VPS (~7-10 jam) untuk regenerate semua checkpoint\n'
+                '  2. Re-run hanya Late Fusion TL B3 config (~60-90 min) — perlu modify nb 79\n'
+                '  3. Use any other arch checkpoint yang tersedia (modify script)\n\n'
+                f'Cek path:\n'
+                f'  ls -la {OUT_DIR}/*/cnn*.pth {OUT_DIR}/*/fcnn*.pth')
+
+    print(f'\nLoading: CNN={cnn_path.name}, FCNN={fcnn_path.name}')
+    if use_fallback:
+        print('  [FALLBACK MODE] approximate analysis with single-modal checkpoints')
 
     cnn = EmotionCNNTransfer(num_classes=NUM_CLASSES).to(device)
     cnn.load_state_dict(torch.load(cnn_path, map_location=device, weights_only=True))
@@ -126,14 +154,41 @@ def main():
     p_cnn  = softmax_from_loader(cnn,  cnn_loader,  'cnn')
     p_fcnn = softmax_from_loader(fcnn, fcnn_loader, 'fcnn')
 
-    # ── Fused prediction (val-tuned w=0.15) ──
-    fused = W_BEST * p_cnn + (1.0 - W_BEST) * p_fcnn
+    # ── Fused prediction with val-tuned w ──
+    if use_fallback:
+        # Re-grid-search w on val set (since single-modal trained differently)
+        from sklearn.metrics import f1_score as _f1
+        val_img = np.load(DATA_DIR / 'X_val_images.npy').astype(np.float32)
+        val_lm  = np.load(DATA_DIR / 'X_val_landmarks.npy').astype(np.float32)
+        val_y   = REMAP_3[np.load(DATA_DIR / 'y_val.npy')]
+        val_img_t = torch.from_numpy(val_img).permute(0, 3, 1, 2).float()
+        val_lm_t  = torch.from_numpy(val_lm).float()
+        val_y_t   = torch.from_numpy(val_y).long()
+        val_cnn_loader  = DataLoader(TensorDataset(val_img_t, val_y_t), batch_size=BATCH)
+        val_fcnn_loader = DataLoader(TensorDataset(val_lm_t,  val_y_t), batch_size=BATCH)
+        p_val_cnn  = softmax_from_loader(cnn,  val_cnn_loader,  'cnn')
+        p_val_fcnn = softmax_from_loader(fcnn, val_fcnn_loader, 'fcnn')
+        best_w, best_vf1 = 0.5, 0.0
+        for w in np.arange(0.0, 1.05, 0.05):
+            fused_val = w * p_val_cnn + (1.0 - w) * p_val_fcnn
+            vf = _f1(val_y, fused_val.argmax(1), average='macro', zero_division=0)
+            if vf > best_vf1: best_vf1, best_w = vf, float(w)
+        w_used = best_w
+        print(f'  Fallback grid-search: w_best = {w_used:.2f}  val_macro = {best_vf1:.4f}')
+    else:
+        w_used = W_BEST  # 0.15 dari nb 79 Late Fusion TL B3
+        print(f'  Using val-tuned w = {w_used:.2f} (dari nb 79 Late Fusion TL B3)')
+
+    fused = w_used * p_cnn + (1.0 - w_used) * p_fcnn
     y_pred = fused.argmax(1)
 
     # ── Per threshold metrics ──
     results = {
-        'model':           'Late Fusion TL B3 (3-class, val-tuned)',
-        'w_best':          W_BEST,
+        'model':           'Late Fusion TL B3 (3-class, val-tuned)' + (' [FALLBACK single-modal]' if use_fallback else ''),
+        'w_best':          float(w_used),
+        'fallback_mode':   bool(use_fallback),
+        'cnn_checkpoint':  str(cnn_path.relative_to(PROJECT_ROOT)),
+        'fcnn_checkpoint': str(fcnn_path.relative_to(PROJECT_ROOT)),
         'n_total':         int(len(y3)),
         'thresholds':      [],
     }

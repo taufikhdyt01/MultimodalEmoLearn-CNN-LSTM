@@ -1874,11 +1874,22 @@ python scripts/analyze_test_high_conf_subset.py
 
 **Estimasi:** ~1-2 menit (inference 929 test sample saja).
 
-### Prerequisite
+### Prerequisite (graceful fallback)
 
-Checkpoint Late Fusion TL B3 3-class dari nb 79:
+**Primary:** Late Fusion TL B3 dedicated checkpoints (dari nb 79 Late_Fusion_TL section):
 - `models/frontonly_conf60/3class/Late_Fusion_TL/cnn_tl_b3.pth`
 - `models/frontonly_conf60/3class/Late_Fusion_TL/fcnn_b3.pth`
+
+**Fallback (otomatis):** kalau primary missing, script auto-fallback ke single-modal checkpoints:
+- `models/frontonly_conf60/3class/CNN_TL/cnn_tl_b3.pth`
+- `models/frontonly_conf60/3class/FCNN/fcnn_b3.pth`
+
+Dengan fallback, script re-grid-search `w` di val set (karena training trajectory beda dari Late Fusion dedicated). Hasil approximate, tidak persis sama, tapi pattern label-noise scaling tetap valid.
+
+**Kalau dua-duanya missing:** script raise error dengan instruksi:
+1. Re-run nb 79 (~7-10 jam) — full regenerate
+2. Re-run hanya Late Fusion TL B3 config (~60-90 min) — perlu modify nb 79
+3. Cek path lain via `ls -la models/frontonly_conf60/3class/*/cnn*.pth`
 
 ### Output
 
