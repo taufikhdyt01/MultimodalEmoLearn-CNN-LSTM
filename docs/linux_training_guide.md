@@ -1921,6 +1921,67 @@ Kalau flat:
 
 ---
 
+## 35. nb 83 — Partial Re-Train dengan History Logging (audit dosen)
+
+**Motivasi:** nb 79/82 tidak save training history per epoch. Untuk audit/analisis convergence, re-train **5 key configs** dengan logging epoch-by-epoch (loss, acc, val_macro_f1).
+
+**5 configs:**
+- FCNN B3
+- CNN TL B3
+- Intermediate TL B3
+- Late Fusion TL B3 (2-branch: CNN + FCNN)
+- Late Fusion TL B1 (2-branch: CNN + FCNN)
+
+= 7 actual training runs (Late Fusion B1+B3 each butuh 2-branch).
+
+### Run
+
+```bash
+cd ~/MultimodalEmoLearn
+git pull
+tmux new -s history3c
+conda activate mothertrain
+
+jupyter nbconvert --to notebook --execute notebooks/83_history_logging_partial.ipynb \
+    --output 83_history_logging_partial_executed.ipynb \
+    --output-dir notebooks/results \
+    --ExecutePreprocessor.timeout=18000
+```
+
+**Estimasi:** ~3-4 jam T4.
+
+### Output
+
+```
+models/frontonly_conf60/3class/history/
+├── all_histories.json          # epoch-by-epoch metrics 7 runs
+├── fcnn_b3.pth, cnn_tl_b3.pth, intermediate_tl_b3.pth
+└── lf_cnn_tl_b1/3.pth, lf_fcnn_b1/3.pth
+
+docs/figures/3class_training_history/
+└── training_curves_5configs.png   # 5×3 subplot (loss, acc, val_macro per config)
+```
+
+### Commit
+
+```bash
+git add models/frontonly_conf60/3class/history/ \
+        docs/figures/3class_training_history/ \
+        notebooks/results/83_*
+git commit -m "Add training history + curves (nb 83 partial re-train)"
+git push
+```
+
+### Tujuan untuk Audit Dosen
+
+Convergence visualization menunjukkan:
+- **Tidak overfit:** train acc tidak jauh > val acc
+- **Best epoch reasonable:** bukan epoch=1 anomaly (yang terjadi di soft label nb 71/78)
+- **Comparable convergence speed** antar arch — fair comparison
+- **Val curve smooth atau noisy** — indikasi training stability
+
+---
+
 ## 33. nb 82 — 3-Class Scratch Variants (close 12-config gap untuk paper JITeCS)
 
 **Motivasi:** nb 79 cover 15 configs (FCNN + 4 TL variants × B1/B2/B3) tapi belum run scratch variants. Untuk full 27-config grid (mirror 4-class & 7-class), perlu 12 scratch configs:
