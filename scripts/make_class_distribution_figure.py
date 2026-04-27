@@ -1,9 +1,9 @@
 """
 Generate Class Distribution Figure for JITeCS Paper (Section 3.1).
 
-Side-by-side bar chart 7-class vs 4-class dataset Primer conf60,
-highlighting imbalance ratio (1:1138 di 7-class) untuk justifikasi
-penggunaan macro-F1 sebagai metrik utama.
+Side-by-side bar chart 7-class vs 3-class dataset Primer conf60,
+highlighting imbalance ratio improvement (7c 1:1138 → 3c 1:14) untuk
+justifikasi reframe ke 3-class valence (Russell 1980).
 
 Output:
   docs/figures/class_distribution.pdf   (IEEE paper insert)
@@ -12,7 +12,10 @@ Output:
 Data source: data/dataset_frontonly_conf60/dataset_info.json
   - neutral: 5691, happy: 651, sad: 361,
   - angry: 32, fearful: 5, disgusted: 16, surprised: 39
-  - 4-class: negative = angry + fearful + disgusted + surprised = 92
+  - 3-class valence:
+      positive = happy + surprised = 690
+      neutral  = neutral           = 5691
+      negative = sad + angry + fearful + disgusted = 414
 
 Usage:
     python scripts/make_class_distribution_figure.py
@@ -35,7 +38,7 @@ COLOR_GRID = '#e0e0e0'
 
 # Class orderings
 EMOTIONS_7 = ['neutral', 'happy', 'sad', 'angry', 'fearful', 'disgusted', 'surprised']
-EMOTIONS_4 = ['neutral', 'happy', 'sad', 'negative']
+EMOTIONS_3 = ['positive', 'neutral', 'negative']
 
 
 def load_counts():
@@ -44,14 +47,16 @@ def load_counts():
         info = json.load(f)
     dist = info['emotion_distribution']
     counts_7 = [dist[e] for e in EMOTIONS_7]
-    # 4-class remap: negative = angry + fearful + disgusted + surprised
-    counts_4 = [
+    # 3-class valence remap (Russell 1980):
+    #   positive = happy + surprised
+    #   neutral  = neutral
+    #   negative = sad + angry + fearful + disgusted
+    counts_3 = [
+        dist['happy'] + dist['surprised'],
         dist['neutral'],
-        dist['happy'],
-        dist['sad'],
-        dist['angry'] + dist['fearful'] + dist['disgusted'] + dist['surprised'],
+        dist['sad'] + dist['angry'] + dist['fearful'] + dist['disgusted'],
     ]
-    return counts_7, counts_4, info
+    return counts_7, counts_3, info
 
 
 def format_bar(ax, bars, counts, total, color_threshold_pct=1.0):
@@ -76,12 +81,12 @@ def main():
     ap.add_argument('--no-pdf', action='store_true', help='Skip PDF output')
     args = ap.parse_args()
 
-    counts_7, counts_4, info = load_counts()
+    counts_7, counts_3, info = load_counts()
     total = info['total_samples']
 
-    # Ratio calc
-    ratio_7 = counts_7[0] / min(counts_7)
-    ratio_4 = counts_4[0] / min(counts_4)
+    # Ratio calc (max/min — works regardless of ordering)
+    ratio_7 = max(counts_7) / min(counts_7)
+    ratio_3 = max(counts_3) / min(counts_3)
 
     # IEEE single-column width ~3.5 in, double-column ~7.16 in. Use 7in × 3.5in.
     fig, axes = plt.subplots(1, 2, figsize=(7.16, 3.4), sharey=False)
@@ -102,19 +107,19 @@ def main():
 
     # (Annotation narrative moved to LaTeX figure caption)
 
-    # ── Right: 4-class ──
+    # ── Right: 3-class ──
     ax2 = axes[1]
-    x4 = np.arange(len(EMOTIONS_4))
-    bars4 = ax2.bar(x4, counts_4, edgecolor='black', linewidth=0.4)
-    format_bar(ax2, bars4, counts_4, total)
+    x3 = np.arange(len(EMOTIONS_3))
+    bars3 = ax2.bar(x3, counts_3, edgecolor='black', linewidth=0.4)
+    format_bar(ax2, bars3, counts_3, total)
     ax2.set_yscale('log')
-    ax2.set_xticks(x4)
-    ax2.set_xticklabels(EMOTIONS_4, rotation=0, fontsize=9)
+    ax2.set_xticks(x3)
+    ax2.set_xticklabels(EMOTIONS_3, rotation=0, fontsize=9)
     ax2.set_ylabel('Number of Samples (log scale)', fontsize=9)
-    ax2.set_title('(b) 4-Class (remap)', fontsize=10)
+    ax2.set_title('(b) 3-Class (valence remap)', fontsize=10)
     ax2.grid(axis='y', color=COLOR_GRID, linestyle='--', linewidth=0.5, alpha=0.7)
     ax2.set_axisbelow(True)
-    ax2.set_ylim(1, max(counts_4) * 3)
+    ax2.set_ylim(1, max(counts_3) * 3)
 
     # (Ratio note moved to LaTeX figure caption)
 
@@ -145,11 +150,11 @@ def main():
         print(f'Saved: {pdf_path}')
 
     print(f'\n7-class counts: {dict(zip(EMOTIONS_7, counts_7))}')
-    print(f'4-class counts: {dict(zip(EMOTIONS_4, counts_4))}')
+    print(f'3-class counts: {dict(zip(EMOTIONS_3, counts_3))}')
     print(f'Total: {total}')
     print(f'\nImbalance ratios:')
-    print(f'  7-class: majority/minority = {counts_7[0]}/{min(counts_7)} = 1:{int(ratio_7)}')
-    print(f'  4-class: majority/minority = {counts_4[0]}/{min(counts_4)} = 1:{int(ratio_4)}')
+    print(f'  7-class: majority/minority = {max(counts_7)}/{min(counts_7)} = 1:{int(ratio_7)}')
+    print(f'  3-class: majority/minority = {max(counts_3)}/{min(counts_3)} = 1:{int(ratio_3)}')
 
 
 if __name__ == '__main__':
