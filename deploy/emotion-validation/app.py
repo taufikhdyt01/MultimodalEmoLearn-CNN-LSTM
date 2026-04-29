@@ -9,15 +9,25 @@ Deployed on Streamlit Cloud.
 import streamlit as st
 import json
 import os
+import base64
 from pathlib import Path
 from datetime import datetime
 from collections import Counter
+
+import requests
 
 # ============== CONFIG ==============
 BASE_DIR = Path("data")
 RESULTS_DIR = BASE_DIR / "results"
 ADMIN_CONFIG_PATH = BASE_DIR / "admin_config.json"
 ADMIN_PASSWORD = "emoval2026"  # ganti sesuai kebutuhan
+
+# GitHub auto-commit untuk persistent storage di Streamlit Cloud
+# Default: repo deploy emotion-validation (terpisah dari repo riset utama).
+# Bisa di-override via Streamlit secrets (GITHUB_REPO, GITHUB_BRANCH, GITHUB_PATH_PREFIX).
+GITHUB_REPO_DEFAULT = "taufikhdyt01/emotion-validation"
+GITHUB_BRANCH_DEFAULT = "main"
+GITHUB_PATH_PREFIX_DEFAULT = "data/results"
 
 DEFAULT_CONFIG = {
     "active_set": "1pct_frontonly",
@@ -79,8 +89,112 @@ def get_results_path(validator_name):
     return RESULTS_DIR / f"results_{safe_name}.json"
 
 
+def safe_validator_name(validator_name):
+    return validator_name.lower().replace(" ", "_")
+
+
+def _secret(key, default):
+    """Read Streamlit secret with safe fallback."""
+    try:
+        val = st.secrets.get(key)
+        return val if val else default
+    except (FileNotFoundError, AttributeError, Exception):
+        return default
+
+
+def github_token():
+    """Get GitHub PAT dari Streamlit secrets, return None kalau belum di-set."""
+    return _secret("GITHUB_TOKEN", None)
+
+
+def github_repo():
+    return _secret("GITHUB_REPO", GITHUB_REPO_DEFAULT)
+
+
+def github_branch():
+    return _secret("GITHUB_BRANCH", GITHUB_BRANCH_DEFAULT)
+
+
+def github_path_prefix():
+    return _secret("GITHUB_PATH_PREFIX", GITHUB_PATH_PREFIX_DEFAULT)
+
+
+def github_load(validator_name):
+    """Fetch results dari GitHub via Contents API. Return dict atau None kalau gagal."""
+    token = github_token()
+    if not token:
+        return None
+    file_path = f"{github_path_prefix()}/results_{safe_validator_name(validator_name)}.json"
+    api_url = f"https://api.github.com/repos/{github_repo()}/contents/{file_path}"
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+    try:
+        r = requests.get(api_url, headers=headers,
+                         params={"ref": github_branch()}, timeout=10)
+        if r.status_code != 200:
+            return None
+        content_b64 = r.json().get("content", "")
+        content = base64.b64decode(content_b64).decode("utf-8")
+        return json.loads(content)
+    except Exception:
+        return None
+
+
+def github_save(validator_name, results):
+    """Save results ke GitHub via Contents API. Return (ok, message)."""
+    token = github_token()
+    if not token:
+        return False, "GITHUB_TOKEN belum di-set di Streamlit secrets"
+    file_path = f"{github_path_prefix()}/results_{safe_validator_name(validator_name)}.json"
+    api_url = f"https://api.github.com/repos/{github_repo()}/contents/{file_path}"
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+    branch = github_branch()
+    try:
+        # Ambil SHA file existing kalau ada
+        r = requests.get(api_url, headers=headers,
+                         params={"ref": branch}, timeout=10)
+        sha = r.json().get("sha") if r.status_code == 200 else None
+
+        # Encode content + commit
+        content_str = json.dumps(results, indent=2, ensure_ascii=False)
+        content_b64 = base64.b64encode(content_str.encode("utf-8")).decode("ascii")
+        n_validated = len([k for k, v in results.items() if v.get("expert_label")])
+        payload = {
+            "message": f"Update {validator_name} validation results ({n_validated} validated)",
+            "content": content_b64,
+            "branch": branch,
+        }
+        if sha:
+            payload["sha"] = sha
+
+        r = requests.put(api_url, headers=headers, json=payload, timeout=15)
+        if r.status_code in (200, 201):
+            return True, "Backup ke GitHub OK"
+        return False, f"GitHub error {r.status_code}: {r.text[:120]}"
+    except Exception as e:
+        return False, f"Exception: {e}"
+
+
 def load_results(validator_name):
-    """Load hasil validasi untuk validator tertentu."""
+    """Load hasil validasi: GitHub first (always-fresh), fallback lokal."""
+    # Coba GitHub dulu (always-fresh, biar tidak stale dari container restart)
+    remote = github_load(validator_name)
+    if remote is not None:
+        # Cache lokal untuk performa session
+        os.makedirs(RESULTS_DIR, exist_ok=True)
+        path = get_results_path(validator_name)
+        try:
+            with open(path, "w") as f:
+                json.dump(remote, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+        return remote
+    # Fallback lokal
     path = get_results_path(validator_name)
     if path.exists():
         with open(path, "r") as f:
@@ -89,11 +203,22 @@ def load_results(validator_name):
 
 
 def save_results(validator_name, results):
-    """Simpan hasil validasi."""
+    """Save lokal + auto-backup ke GitHub (persist saat Streamlit Cloud restart)."""
     os.makedirs(RESULTS_DIR, exist_ok=True)
     path = get_results_path(validator_name)
     with open(path, "w") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
+
+    # Auto-commit ke GitHub (silent kalau token belum di-set)
+    ok, msg = github_save(validator_name, results)
+    if not ok:
+        if "github_warned" not in st.session_state:
+            st.warning(
+                f"⚠️ Backup GitHub gagal: {msg}\n\n"
+                "Data hanya tersimpan lokal di Streamlit container — bisa hilang saat app restart. "
+                "Set GITHUB_TOKEN di Streamlit secrets supaya persistent."
+            )
+            st.session_state["github_warned"] = True
 
 
 def find_image(images_dir, filename):
