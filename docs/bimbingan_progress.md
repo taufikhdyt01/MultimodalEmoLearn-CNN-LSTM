@@ -2334,6 +2334,93 @@ Plain LF TL B3: w=0.15 (FCNN dominant). Combined LF TL B3: w=0.70 (CNN dominant)
 
 ---
 
+## Progress 10 Mei 2026 — GPU Lab FILKOM (Server L40)
+
+### Yang Selesai
+
+**Benchmark 3-class Skema 1 (nb 84) — SELESAI ✅**
+- RAF-DB: 21/21 runs selesai, `rafdb_3c_results.json` tersimpan 10 Mei 04:08
+- KDEF: 21/21 runs selesai, `kdef_3c_results.json` tersimpan 9 Mei 10:24
+- CK+ dan JAFFE: di-skip nb 84 (tidak ada raw data di GPU lab, `*_3c_results.json` dari laptop sudah ada)
+- Master JSON `all_3c_skema1_results.json` terupdate
+
+**Robustness Eval 3-class (scripts/run_eval_3c_chain.sh) — Partial 🔄**
+
+| Tahap | Status | Hasil |
+|---|---|---|
+| Random Split (5 seeds × 3 model) | ✅ SELESAI | `late_fusion_tl`: 0.7037±0.0106 / `intermediate_tl`: 0.7052±0.0141 / `fcnn`: 0.6459±0.0261 |
+| 5-Fold CV subject-wise | 🔄 Berjalan (GPU 1) | Estimasi ~7 jam |
+| LOSO 37-fold | ⏳ Menunggu CV5 | Estimasi ~30 jam |
+
+> **Catatan penting:** Random Split menunjukkan `intermediate_tl` (0.7052) sedikit mengungguli `late_fusion_tl` (0.7037) di split random — konsisten dengan indikasi sebelumnya. Perlu divalidasi di CV5 dan LOSO (split yang lebih proper untuk dataset Primer berbasis user).
+
+**Bug fix `scripts/run_eval_3c.py`**
+- `drop_last=shuffle` ditambahkan di `build_loader()` — mencegah BatchNorm error ketika batch terakhir berisi 1 sample di fold kecil (crash di CV5 fold 4/5)
+
+**Restrukturisasi direktori benchmark**
+- Checkpoint dan JSON dipindah ke subdir class: `models/benchmark/{ds}/3class/`, `4class/`, `7class/`
+- Memudahkan pemisahan antar eksperimen class-level
+
+**Benchmark 3-class Skema 2 (nb 85) — SELESAI ✅**
+- Checkpoint CK+ dan JAFFE direstorasi dari backup Google Drive
+- Bug fix nb 85: naming checkpoint (lowercase→PascalCase), path results.json, Late Fusion dedicated checkpoint logic
+- **36 konfigurasi** selesai: 4 dataset × 9 arsitektur → Primer conf60 test set
+- Hasil disimpan di `models/benchmark/all_3c_skema2_cross_results.json`
+
+**Hasil lengkap (best per source dataset):**
+
+| Source → Primer | Best Arch | Macro F1 | Acc |
+|---|:---:|:---:|:---:|
+| CK+ | `Late_Fusion` | **0.5052** | 0.6125 |
+| RAF-DB | `CNN_TL` | 0.4442 | 0.5285 |
+| KDEF | `Late_Fusion_TL` | 0.2179 | 0.1970 |
+| JAFFE | `Late_Fusion_TL` | 0.2107 | 0.2110 |
+
+**Detail all configs:**
+
+| Source | Arch | Macro F1 | Acc |
+|---|---|:---:|:---:|
+| ckplus | `Late_Fusion` | 0.5052 | 0.6125 |
+| ckplus | `Late_Fusion_TL` | 0.4448 | 0.6555 |
+| ckplus | `EarlyFusion_TL` | 0.4127 | 0.6792 |
+| ckplus | `EarlyFusion` | 0.3890 | 0.5414 |
+| ckplus | `CNN` | 0.3690 | 0.6997 |
+| ckplus | `FCNN` | 0.3223 | 0.3003 |
+| ckplus | `CNN_TL` | 0.2795 | 0.4898 |
+| ckplus | `Intermediate` | 0.2731 | 0.3628 |
+| ckplus | `Intermediate_TL` | 0.1399 | 0.1830 |
+| rafdb | `CNN_TL` | 0.4442 | 0.5285 |
+| rafdb | `Late_Fusion_TL` | 0.4442 | 0.5285 |
+| rafdb | `EarlyFusion_TL` | 0.4395 | 0.5350 |
+| rafdb | `EarlyFusion` | 0.2858 | 0.3046 |
+| rafdb | `Intermediate` | 0.2491 | 0.2605 |
+| rafdb | `FCNN` | 0.2235 | 0.1485 |
+| rafdb | `Intermediate_TL` | 0.2363 | 0.2982 |
+| rafdb | `CNN` | 0.1288 | 0.1281 |
+| rafdb | `Late_Fusion` | 0.1254 | 0.1238 |
+| kdef | `Late_Fusion_TL` | 0.2179 | 0.1970 |
+| kdef | `Intermediate_TL` | 0.2072 | 0.1873 |
+| kdef | `CNN` | 0.1245 | 0.1238 |
+| kdef | `Late_Fusion` | 0.1142 | 0.1206 |
+| kdef | `FCNN` | 0.1128 | 0.2002 |
+| kdef | `EarlyFusion_TL` | 0.0925 | 0.1066 |
+| kdef | `EarlyFusion` | 0.0868 | 0.1012 |
+| kdef | `Intermediate` | 0.1112 | 0.2002 |
+| kdef | `CNN_TL` | 0.0445 | 0.0603 |
+| jaffe | `Late_Fusion_TL` | 0.2107 | 0.2110 |
+| jaffe | `Intermediate` | 0.1710 | 0.1905 |
+| jaffe | `FCNN` | 0.1681 | 0.2002 |
+| jaffe | `Late_Fusion` | 0.1524 | 0.1442 |
+| jaffe | `EarlyFusion_TL` | 0.1122 | 0.1819 |
+| jaffe | `Intermediate_TL` | 0.0682 | 0.0646 |
+| jaffe | `CNN` | 0.0373 | 0.0592 |
+| jaffe | `CNN_TL` | 0.0373 | 0.0592 |
+| jaffe | `EarlyFusion` | 0.0373 | 0.0592 |
+
+> **Observasi:** CK+ terbaik sebagai source (0.50) — setting lab-controlled mirip Primer. RAF-DB decent (0.44) karena dataset besar. JAFFE dan KDEF rendah karena domain gap etnis + ukuran kecil. Semua nilai jauh di bawah Skema 1 (0.81–0.97) — domain gap benchmark→Primer nyata. Late Fusion dominan di 3/4 source dataset.
+
+---
+
 ## Ringkasan Poin Konsultasi
 
 | No | Topik | Status |
@@ -2341,15 +2428,17 @@ Plain LF TL B3: w=0.15 (FCNN dominant). Combined LF TL B3: w=0.70 (CNN dominant)
 | 1 | Eksperimen front+side (48 kombinasi) | ✅ Selesai |
 | 2 | Eksperimen front-only (48 kombinasi) | ✅ Selesai |
 | 3 | Perbandingan front-only vs front+side | ✅ Selesai — front-only sedikit lebih baik |
-| 4 | LOSO Cross-Validation (37 fold) | ⏳ Sedang berjalan di VPS |
-| 5 | 5-Fold CV (subject-wise) | ⏳ Sedang berjalan di VPS |
-| 6 | Random Split (baseline) | ⏳ Sedang berjalan di VPS |
+| 4 | LOSO Cross-Validation (37 fold) | ⏳ Menunggu CV5 selesai (chain GPU lab, est. +30 jam) |
+| 5 | 5-Fold CV subject-wise | 🔄 Berjalan di GPU lab FILKOM (est. +7 jam) |
+| 6 | Random Split (baseline) | ✅ Selesai — LF_TL 0.704, IntTL 0.705, FCNN 0.646 |
 | 7 | Validasi ahli — dataset 146 sampel | ✅ Dataset siap, butuh 3 validator |
 | 8 | Validasi ahli — Streamlit web app | ✅ App siap deploy |
 | 9 | Perubahan dlib → MediaPipe | ✅ Cukup dijelaskan di BAB 4 |
-| 10 | Benchmark CK+/JAFFE/RAF-DB/KDEF/Primer Skema 1 & 2 | ✅ Selesai (Apr 2026) |
+| 10 | Benchmark 4c/7c CK+/JAFFE/RAF-DB/KDEF Skema 1 & 2 | ✅ Selesai (Apr 2026) |
 | 11 | Early Fusion (arahan dosen, HAE-Net style) | ✅ Selesai (nb 64, 12 configs) |
-| 12 | Cross-dataset semua source → Primer | ✅ Selesai (nb 63) |
+| 12 | Cross-dataset 4c/7c semua source → Primer | ✅ Selesai (nb 63) |
+| 13 | Benchmark 3-class Skema 1 (nb 84) RAF-DB + KDEF | ✅ Selesai (10 Mei 2026, GPU lab) |
+| 14 | Benchmark 3-class Skema 2 (nb 85) cross-dataset → Primer | ✅ Selesai (10 Mei 2026, 36 configs, best: CK+→LF 0.5052) |
 
 ### Pertanyaan yang Perlu Didiskusikan
 
@@ -2360,6 +2449,8 @@ Plain LF TL B3: w=0.15 (FCNN dominant). Combined LF TL B3: w=0.70 (CNN dominant)
 | 3 | Macro F1 0.412 | Acceptable untuk tesis? |
 | 4 | Validasi ahli | Rekomendasi 3 validator psikologi? |
 | 5 | Honorarium | Perlu fee untuk validator? |
+| 6 | Cross-dataset macro F1 rendah (<0.45) | Apakah perlu dibahas sebagai domain adaptation limitation? Atau cukup disajikan as-is sebagai Skema 2? |
+| 7 | Robustness eval random split vs CV5/LOSO | Random Split `intermediate_tl` (0.705) sedikit unggul `late_fusion_tl` (0.704) — apakah perlu diskusi implikasi untuk pilihan model final tesis? |
 
 ---
 

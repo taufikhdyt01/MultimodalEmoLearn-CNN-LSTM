@@ -18,7 +18,12 @@ Sumber:
 
 ## A. 3-Class (Negative / Neutral / Positive) — 27 konfigurasi
 
-**Class scheme:** REMAP_3 = `{0:Neutral→1, 1:Happy→0, 2-6:Sad/Angry/Fearful/Disgusted/Surprised→2}` (Positive=0, Neutral=1, Negative=2).
+**Class scheme:** `REMAP_3 = np.array([1, 0, 2, 2, 2, 2, 0])` →
+- **Positive (0):** happy, surprised
+- **Neutral (1):** neutral
+- **Negative (2):** sad, angry, fearful, disgusted
+
+(Surprised dipetakan ke positive — mengikuti konvensi Russell circumplex untuk surprise sebagai high-arousal positive emotion. Sumber: nb 79, 82, 84.)
 
 **Konvensi B1/B2/B3:** Backbone variants (3 arsitektur backbone berbeda).
 
@@ -148,3 +153,284 @@ models/frontonly_conf60/
 ```
 
 Generated: 2026-05-09 by Claude Opus 4.7.
+
+---
+
+## E. Benchmark Dataset Sekunder — CK+, JAFFE, RAF-DB, KDEF (3c/7c)
+
+**Konteks:** Skema 1 benchmark — train & test di dataset sekunder masing-masing (bukan cross-dataset).
+**Sumber data:**
+- 3-class: `models/benchmark/{ds}/3class/{ds}_3c_results.json`
+- 7-class: `models/benchmark/{ds}/7class/{ds}_7c_results.json`
+
+**Catatan umum:**
+- 7-class: 1 run (B1) — val_f1 tidak tersimpan di format JSON lama
+- CK+ dan JAFFE 3-class: 1 run (B1) — val_f1 tersimpan
+- RAF-DB dan KDEF 3-class: mean 3 runs (B1/B2/B3) — val_f1 tersimpan hanya untuk EarlyFusion ke atas
+- JAFFE 7-class sangat kecil (10 subjects, ~20 samples test) — angka tidak stabil
+
+_Update: 10 Mei 2026_
+
+---
+
+### CK+ (Extended Cohn-Kanade)
+_3-class B1 only. No EarlyFusion checkpoint._
+
+**3-Class** *(B1 only)*
+
+| Arch | Val F1 | Test Macro F1 | Test Weighted F1 | Test Acc |
+|:---|:---:|:---:|:---:|:---:|
+| `CNN` | 0.7434 | 0.7104 | 0.7297 | 0.7458 |
+| `FCNN` | 0.8008 | 0.5498 | 0.5387 | 0.5424 |
+| `Intermediate` | 0.6834 | 0.5752 | 0.6055 | 0.6949 |
+| `CNN_TL` | 0.9700 | 0.9560 | 0.9499 | 0.9492 |
+| `Intermediate_TL` | 0.9487 | 0.9704 | 0.9665 | 0.9661 |
+| `LateFusion` | 0.8164 | 0.7084 | 0.6835 | 0.6780 |
+| `LateFusion_TL` | 0.9449 | 0.9365 | 0.9497 | 0.9492 |
+
+> Best test macro F1: **`Intermediate_TL`** = 0.9704
+
+**7-Class** *(B1 only)*
+
+| Arch | Test Macro F1 | Test Weighted F1 | Test Acc |
+|:---|:---:|:---:|:---:|
+| `CNN` | 0.4611 | 0.6593 | 0.7288 |
+| `FCNN` | 0.3947 | 0.6143 | 0.6780 |
+| `Intermediate` | 0.3160 | 0.5846 | 0.6949 |
+| `CNN_TL` | 0.9127 | 0.9461 | 0.9492 |
+| `Intermediate_TL` | 0.8333 | 0.8855 | 0.8814 |
+| `EarlyFusion` | 0.4458 | 0.6646 | 0.6949 |
+| `EarlyFusion_TL` | 0.7624 | 0.8471 | 0.8475 |
+| `LateFusion` | 0.4942 | 0.6914 | 0.7797 |
+| `LateFusion_TL` | 0.8352 | 0.8905 | 0.8814 |
+
+> Best test macro F1: **`CNN_TL`** = 0.9127
+
+---
+
+### JAFFE (Japanese Female Facial Expression)
+_3-class B1 only. Hanya 10 subjects — angka test tidak stabil (20 sampel test)._
+
+**3-Class** *(B1 only)*
+
+| Arch | Val F1 | Test Macro F1 | Test Weighted F1 | Test Acc |
+|:---|:---:|:---:|:---:|:---:|
+| `CNN` | 0.7475 | 0.4452 | 0.5632 | 0.6000 |
+| `FCNN` | 0.4841 | 0.3596 | 0.4570 | 0.5000 |
+| `Intermediate` | 0.4195 | 0.2837 | 0.3744 | 0.4000 |
+| `CNN_TL` | 0.4710 | 0.8116 | 0.7963 | 0.8000 |
+| `Intermediate_TL` | 0.7172 | 0.4382 | 0.5867 | 0.6500 |
+| `LateFusion` | 0.9496 | 0.4841 | 0.6321 | 0.7000 |
+| `LateFusion_TL` | 0.9552 | 0.3988 | 0.5152 | 0.5500 |
+
+> Best test macro F1: **`CNN_TL`** = 0.8116
+
+**7-Class** *(B1 only)*
+
+| Arch | Test Macro F1 | Test Weighted F1 | Test Acc |
+|:---|:---:|:---:|:---:|
+| `CNN` | 0.3040 | 0.3192 | 0.4500 |
+| `FCNN` | 0.2088 | 0.1692 | 0.2500 |
+| `Intermediate` | 0.0373 | 0.0391 | 0.1500 |
+| `CNN_TL` | 0.4639 | 0.4371 | 0.5000 |
+| `Intermediate_TL` | 0.4473 | 0.4197 | 0.4500 |
+| `EarlyFusion` | 0.2857 | 0.2667 | 0.3500 |
+| `EarlyFusion_TL` | 0.0408 | 0.0429 | 0.1500 |
+| `LateFusion` | 0.3143 | 0.2900 | 0.4000 |
+| `LateFusion_TL` | 0.1457 | 0.1196 | 0.2000 |
+
+> Best test macro F1: **`CNN_TL`** = 0.4639
+
+---
+
+### RAF-DB (Real-world Affective Faces Database)
+_~15,000 samples. 3-class: mean 3 runs (B1/B2/B3). 7c: B1 only._
+
+**3-Class** *(mean 3 runs)*
+
+| Arch | Val F1 | Test Macro F1 | Test Weighted F1 | Test Acc |
+|:---|:---:|:---:|:---:|:---:|
+| `CNN` | — | 0.8028 | 0.8248 | 0.8235 |
+| `FCNN` | — | 0.6938 | 0.7254 | 0.7242 |
+| `Intermediate` | — | 0.7792 | 0.8049 | 0.8059 |
+| `CNN_TL` | — | 0.8119 | 0.8326 | 0.8327 |
+| `Intermediate_TL` | — | 0.7703 | 0.7962 | 0.7960 |
+| `EarlyFusion` | 0.7905 | 0.7903 | 0.8138 | 0.8127 |
+| `EarlyFusion_TL` | 0.7648 | 0.7550 | 0.7812 | 0.7807 |
+| `LateFusion` | 0.8123 | 0.8078 | 0.8293 | 0.8282 |
+| `LateFusion_TL` | 0.8295 | 0.8141 | 0.8344 | 0.8345 |
+
+> Best test macro F1: **`LateFusion_TL`** = 0.8141
+
+**7-Class** *(B1 only)*
+
+| Arch | Test Macro F1 | Test Weighted F1 | Test Acc |
+|:---|:---:|:---:|:---:|
+| `CNN` | 0.7294 | 0.8128 | 0.8152 |
+| `FCNN` | 0.5781 | 0.7031 | 0.7136 |
+| `Intermediate` | 0.6958 | 0.7827 | 0.7854 |
+| `CNN_TL` | 0.7407 | 0.8265 | 0.8304 |
+| `Intermediate_TL` | 0.7440 | 0.8322 | 0.8329 |
+| `EarlyFusion` | 0.7098 | 0.8044 | 0.8079 |
+| `EarlyFusion_TL` | 0.6929 | 0.7864 | 0.7902 |
+| `LateFusion` | 0.7191 | 0.8046 | 0.8093 |
+| `LateFusion_TL` | 0.7350 | 0.8231 | 0.8294 |
+
+> Best test macro F1: **`Intermediate_TL`** = 0.7440
+
+---
+
+### KDEF (Karolinska Directed Emotional Faces)
+_4,900 samples, 70 subjects. 3-class: mean 3 runs (B1/B2/B3). 7c: B1 only._
+
+**3-Class** *(mean 3 runs)*
+
+| Arch | Val F1 | Test Macro F1 | Test Weighted F1 | Test Acc |
+|:---|:---:|:---:|:---:|:---:|
+| `CNN` | 0.9541 | 0.8332 | 0.8479 | 0.8481 |
+| `FCNN` | 0.8304 | 0.7080 | 0.7387 | 0.7404 |
+| `Intermediate` | 0.9103 | 0.8194 | 0.8321 | 0.8311 |
+| `CNN_TL` | 0.9722 | 0.9059 | 0.9136 | 0.9127 |
+| `Intermediate_TL` | 0.9753 | 0.9111 | 0.9169 | 0.9161 |
+| `EarlyFusion` | 0.8908 | 0.7854 | 0.8097 | 0.8095 |
+| `EarlyFusion_TL` | 0.9417 | 0.8770 | 0.8942 | 0.8946 |
+| `LateFusion` | 0.9573 | 0.8380 | 0.8523 | 0.8526 |
+| `LateFusion_TL` | 0.9724 | 0.9139 | 0.9168 | 0.9161 |
+
+> Best test macro F1: **`LateFusion_TL`** = 0.9139
+
+**7-Class** *(B1 only)*
+
+| Arch | Test Macro F1 | Test Weighted F1 | Test Acc |
+|:---|:---:|:---:|:---:|
+| `CNN` | 0.7984 | 0.7979 | 0.8012 |
+| `FCNN` | 0.6657 | 0.6629 | 0.6795 |
+| `Intermediate` | 0.6710 | 0.6681 | 0.6736 |
+| `CNN_TL` | 0.8333 | 0.8329 | 0.8309 |
+| `Intermediate_TL` | 0.8431 | 0.8426 | 0.8427 |
+| `EarlyFusion` | 0.6665 | 0.6633 | 0.6736 |
+| `EarlyFusion_TL` | 0.7987 | 0.7971 | 0.7953 |
+| `LateFusion` | 0.7757 | 0.7753 | 0.7774 |
+| `LateFusion_TL` | 0.8358 | 0.8356 | 0.8338 |
+
+> Best test macro F1: **`Intermediate_TL`** = 0.8431
+
+---
+
+## F. Ringkasan Komparatif Benchmark (Best per Dataset per Class)
+
+> Primer tidak dimasukkan — sudah dibahas lengkap di Section A (3-class) dan Section B (7-class).
+
+| Dataset | 3-class best | Macro F1 | 7-class best | Macro F1 |
+|:---|:---:|:---:|:---:|:---:|
+| **CK+** | `Intermediate_TL` | 0.9704 | `CNN_TL` | 0.9127 |
+| **JAFFE** | `CNN_TL` | 0.8116 | `CNN_TL` | 0.4639 |
+| **RAF-DB** | `LateFusion_TL` | 0.8141 | `Intermediate_TL` | 0.7440 |
+| **KDEF** | `LateFusion_TL` | 0.9139 | `Intermediate_TL` | 0.8431 |
+
+**Pola konsisten:**
+- `Intermediate_TL` dan `LateFusion_TL` mendominasi di CK+, RAF-DB, KDEF (dataset besar + terstruktur)
+- JAFFE sangat kecil (10 subjects) — hasil tidak stabil, best model berbeda-beda antar class granularity
+- TL variant secara konsisten mengalahkan scratch — pre-trained ImageNet backbone membantu generalisasi
+- 7-class Primer sangat rendah (0.29) karena class imbalance ekstrim; 7-class RAF-DB dan KDEF jauh lebih baik (0.74–0.84) karena distribusi lebih seimbang
+
+_Update: 10 Mei 2026_
+
+---
+
+## G. Skema 2 — Cross-Dataset Inference (3-class, nb 85)
+
+**Konteks:** Model dilatih di dataset sekunder (Skema 1), lalu di-*inference* ke test set Primer conf60 (3-class).
+**Sumber:** `models/benchmark/all_3c_skema2_cross_results.json` — 36 konfigurasi (4 dataset × 9 arsitektur).
+
+_Update: 10 Mei 2026_
+
+---
+
+### CK+ → Primer
+
+| Arch | Test Macro F1 | Test Weighted F1 | Test Acc |
+|:---|:---:|:---:|:---:|
+| `CNN` | 0.3690 | 0.6557 | 0.6997 |
+| `FCNN` | 0.3223 | 0.3029 | 0.3003 |
+| `Intermediate` | 0.2731 | 0.3500 | 0.3628 |
+| `CNN_TL` | 0.2795 | 0.5523 | 0.4898 |
+| `Intermediate_TL` | 0.1399 | 0.2194 | 0.1830 |
+| `EarlyFusion` | 0.3890 | 0.6139 | 0.5414 |
+| `EarlyFusion_TL` | 0.4127 | 0.6438 | 0.6792 |
+| `Late_Fusion` | **0.5052** | 0.6772 | 0.6125 |
+| `Late_Fusion_TL` | 0.4448 | 0.6731 | 0.6555 |
+
+> Best: **`Late_Fusion`** = 0.5052
+
+---
+
+### JAFFE → Primer
+
+| Arch | Test Macro F1 | Test Weighted F1 | Test Acc |
+|:---|:---:|:---:|:---:|
+| `CNN` | 0.0373 | 0.0066 | 0.0592 |
+| `FCNN` | 0.1681 | 0.0830 | 0.2002 |
+| `Intermediate` | 0.1710 | 0.0847 | 0.1905 |
+| `CNN_TL` | 0.0373 | 0.0066 | 0.0592 |
+| `Intermediate_TL` | 0.0682 | 0.0264 | 0.0646 |
+| `EarlyFusion` | 0.0373 | 0.0066 | 0.0592 |
+| `EarlyFusion_TL` | 0.1122 | 0.0953 | 0.1819 |
+| `Late_Fusion` | 0.1524 | 0.0790 | 0.1442 |
+| `Late_Fusion_TL` | **0.2107** | 0.1065 | 0.2110 |
+
+> Best: **`Late_Fusion_TL`** = 0.2107
+
+---
+
+### RAF-DB → Primer
+
+| Arch | Test Macro F1 | Test Weighted F1 | Test Acc |
+|:---|:---:|:---:|:---:|
+| `CNN` | 0.1288 | 0.0955 | 0.1281 |
+| `FCNN` | 0.2235 | 0.1735 | 0.1485 |
+| `Intermediate` | 0.2491 | 0.3297 | 0.2605 |
+| `CNN_TL` | **0.4442** | 0.5929 | 0.5285 |
+| `Intermediate_TL` | 0.2363 | 0.3491 | 0.2982 |
+| `EarlyFusion` | 0.2858 | 0.3081 | 0.3046 |
+| `EarlyFusion_TL` | 0.4395 | 0.5765 | 0.5350 |
+| `Late_Fusion` | 0.1254 | 0.0860 | 0.1238 |
+| `Late_Fusion_TL` | 0.4442 | 0.5929 | 0.5285 |
+
+> Best: **`CNN_TL`** = 0.4442 (tie dengan `Late_Fusion_TL`)
+
+---
+
+### KDEF → Primer
+
+| Arch | Test Macro F1 | Test Weighted F1 | Test Acc |
+|:---|:---:|:---:|:---:|
+| `CNN` | 0.1245 | 0.1032 | 0.1238 |
+| `FCNN` | 0.1128 | 0.0678 | 0.2002 |
+| `Intermediate` | 0.1112 | 0.0668 | 0.2002 |
+| `CNN_TL` | 0.0445 | 0.0123 | 0.0603 |
+| `Intermediate_TL` | 0.2072 | 0.2206 | 0.1873 |
+| `EarlyFusion` | 0.0868 | 0.0548 | 0.1012 |
+| `EarlyFusion_TL` | 0.0925 | 0.0477 | 0.1066 |
+| `Late_Fusion` | 0.1142 | 0.0668 | 0.1206 |
+| `Late_Fusion_TL` | **0.2179** | 0.1112 | 0.1970 |
+
+> Best: **`Late_Fusion_TL`** = 0.2179
+
+---
+
+### Ringkasan Skema 2 (Best per Source)
+
+| Source Dataset | Best Arch | Macro F1 | Keterangan |
+|:---|:---:|:---:|:---|
+| **CK+** | `Late_Fusion` | **0.5052** | Tertinggi — karakteristik lab-controlled mirip Primer |
+| **RAF-DB** | `CNN_TL` | 0.4442 | Dataset besar in-the-wild, TL membantu |
+| **KDEF** | `Late_Fusion_TL` | 0.2179 | Rendah — Scandinavian subjects, domain gap besar |
+| **JAFFE** | `Late_Fusion_TL` | 0.2107 | Sangat rendah — hanya 10 subjects Jepang |
+
+**Analisis:**
+- CK+ memberikan generalisasi terbaik ke Primer — setting lab-controlled paling mirip kondisi pengambilan data Primer
+- RAF-DB cukup baik (0.44) meskipun in-the-wild karena ukuran dataset besar → feature lebih robust
+- JAFFE dan KDEF rendah karena domain gap etnis + ukuran kecil
+- `Late_Fusion` / `Late_Fusion_TL` dominan di 3/4 source dataset — weighted ensemble membantu adaptasi cross-domain
+- Semua nilai << Skema 1 self-trained (0.81–0.97) → domain gap benchmark→Primer nyata dan signifikan

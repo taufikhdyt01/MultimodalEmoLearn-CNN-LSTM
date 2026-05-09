@@ -1,6 +1,6 @@
 # Setup Training di Server GPU Lab FILKOM untuk Eksperimen 3-Class yang Pending
 
-## Status Eksekusi (Update: 9 Mei 2026 ~10:45)
+## Status Eksekusi (Update: 10 Mei 2026 ~05:40)
 
 > **Server GPU Lab FILKOM** (bukan cloud/VPS sewaan) — 3× NVIDIA L40 47.6 GB, shared server.
 > NAS: `10.34.0.124:/mnt/FILKOM-LABKC-NAS1/Dataset_L40`
@@ -8,22 +8,20 @@
 
 | Task | Notebook/Script | Status | GPU | Catatan |
 |---|---|---|---|---|
-| Skema 1 benchmark RAF-DB 3c | nb 84 | ❌ **CRASH (OOM)** — perlu resume | — | Crash 9 Mei pagi saat mulai EarlyFusion. Last .pth: Intermediate_TL_b3 (03:25). Sisa ~8 runs |
-| Skema 1 benchmark KDEF 3c | scripts/run_kdef_gpu1.py | ✅ **SELESAI** 21/21 | GPU 1 | `kdef_3c_results.json` saved 9 Mei 10:24, master JSON updated |
-| Skema 2 cross-dataset → Primer 3c | nb 85 | ⬜ Menunggu RAF-DB | - | - |
-| History logging (optional) | nb 83 | ⬜ Belum | - | - |
+| Skema 1 benchmark RAF-DB 3c | nb 84 | ✅ **SELESAI** 21/21 | — | `rafdb_3c_results.json` saved 10 Mei 04:08 |
+| Skema 1 benchmark KDEF 3c | scripts/run_kdef_gpu1.py | ✅ **SELESAI** 21/21 | — | `kdef_3c_results.json` saved 9 Mei 10:24, master JSON updated |
+| **Robustness eval 3c (Random+CV5+LOSO)** | scripts/run_eval_3c_chain.sh | 🔄 **BERJALAN** | GPU 1 | PID 2235895, started 10 Mei 05:33. Random ✅ → **CV5 berjalan** |
+| Skema 2 cross-dataset → Primer 3c | nb 85 | ⬜ Siap dijalankan | - | nb 84 sudah selesai — bisa langsung run |
+| History logging (optional) | nb 83 | ⬜ partial (7/27) | - | - |
 
-### Progress RAF-DB / nb 84 (per 9 Mei 2026 10:45) — CRASH, perlu resume
+### Progress RAF-DB / nb 84 (per 10 Mei 2026 05:40) — SELESAI ✅
 - CK+ → **SKIP** (data tidak ada, `ckplus_3c_results.json` sudah ada)
 - JAFFE → **SKIP** (sama)
-- RAF-DB → ❌ **15/21 runs** lalu OOM saat EarlyFusion training:
-  - CNN b1/b2/b3 ✅ (May 7: 02:18 / 07:05 / 10:34)
-  - FCNN b1/b2/b3 ✅ (May 7: 11:56 / 11:59 / 12:03)
-  - Intermediate b1/b2/b3 ✅ (May 7-8: 15:49 / 20:39 / 00:34)
-  - CNN_TL b1/b2/b3 ✅ (May 8: 05:15 / 07:16 / 11:50)
-  - Intermediate_TL b1/b2/b3 ✅ (May 8-9: 12:25 / 20:22 / 03:25)
-  - **Sisa: EarlyFusion ×3, EarlyFusion_TL ×3, LateFusion (1 eval), LateFusion_TL (1 eval)** — ~8 runs
-  - `rafdb_3c_results.json` BELUM ada (akan ditulis setelah semua run selesai)
+- RAF-DB → ✅ **21/21 runs selesai** (`rafdb_3c_results.json` saved 10 Mei 04:08):
+  - CNN b1/b2/b3 ✅ | FCNN b1/b2/b3 ✅ | Intermediate b1/b2/b3 ✅
+  - CNN_TL b1/b2/b3 ✅ | Intermediate_TL b1/b2/b3 ✅
+  - EarlyFusion b1/b2/b3 ✅ | EarlyFusion_TL b1/b2/b3 ✅
+  - LateFusion ✅ | LateFusion_TL ✅
 - KDEF → ✅ **21/21 selesai** (mulai 8 Mei 13:06, selesai 9 Mei 10:24, ~21 jam):
   - CNN, FCNN, Intermediate, CNN_TL, Intermediate_TL, EarlyFusion, EarlyFusion_TL, LateFusion, LateFusion_TL — semua ✅
   - Best test_f1: LateFusion_TL_b2 = 0.9274, Intermediate_TL_b2 = 0.9236
@@ -37,14 +35,14 @@ OOM di GPU 2 — saat hendak training EarlyFusion (~9 Mei 03:25 → 10:44 antara
 - **KDEF diparalelkan** ke GPU 1 via `scripts/run_kdef_gpu1.py` — sudah selesai
 - GPU monitor otomatis: `logs/gpu_monitor.sh` (PID 1828266), output di `logs/gpu_monitor.log`
 
-### Kontensi GPU (per 9 Mei 2026 10:44)
+### Kontensi GPU (per 10 Mei 2026 05:32)
 | GPU | Util | VRAM Used | Free | Job kita |
 |---|---|---|---|---|
-| 0 | 100% | 41.3 GB | 4.1 GB | — |
-| 1 | 20%  | 19.2 GB | 26.1 GB | — (KDEF sudah selesai) |
-| 2 | 98%  | 37.2 GB | 8.2 GB | — (RAF-DB crash) |
+| 0 | 100% | 37.5 GB | 8.6 GB | — (user lain) |
+| 1 | 25%  | 19.3 GB | 26.8 GB | ✅ eval_3c_chain (PID 2235895) |
+| 2 | 100% | 36.5 GB | 9.6 GB | — (user lain) |
 
-> **GPU 1 paling longgar (26 GB free)** — kandidat terbaik untuk resume RAF-DB.
+> **GPU 1 dipakai untuk eval_3c_chain** (CV5 → LOSO).
 
 ### Perintah untuk cek progress
 ```bash
@@ -70,17 +68,8 @@ tail -50 logs/kdef_gpu1_run.log
 tail -30 logs/gpu_monitor.log
 ```
 
-### Resume RAF-DB (nb84) — WAJIB SEKARANG (crashed 9 Mei pagi)
-> Pakai GPU 1 (26 GB free) — lebih aman daripada GPU 2 (cuma 8 GB free). Resume logic akan skip 15 run yang `.pth`-nya sudah ada, lanjut dari EarlyFusion.
-```bash
-cd /mnt/extended-home/fitra_dosen/2025_iris_fer_taufik/MultimodalEmoLearn
-CUDA_VISIBLE_DEVICES=1 nohup \
-  /mnt/extended-home/fitra_dosen/2025_iris_fer_taufik/miniconda3/envs/2025_iris_fer_taufik/bin/jupyter nbconvert \
-  --to notebook --execute --inplace \
-  --ExecutePreprocessor.timeout=-1 \
-  notebooks/84_threeclass_skema1_benchmark.ipynb \
-  > logs/nb84_run.log 2>&1 &
-```
+### Resume RAF-DB (nb84) — ✅ SUDAH SELESAI (10 Mei 04:08)
+> `rafdb_3c_results.json` sudah tersimpan. Tidak perlu dijalankan ulang.
 
 ### Resume jika KDEF (run_kdef_gpu1.py) mati
 ```bash
@@ -92,6 +81,63 @@ CUDA_VISIBLE_DEVICES=1 nohup \
 ```
 
 > Resume logic: skip dataset yang sudah punya `*_3c_results.json` (level dataset), DAN skip per-run yang `.pth`-nya sudah ada (level run). Aman restart kapan saja untuk kedua proses.
+
+---
+
+## Robustness Evaluation 3-class (Random Split + 5-Fold CV + LOSO 37-fold)
+
+**Script:** `scripts/run_eval_3c.py` (parametrik) + `scripts/run_eval_3c_chain.sh` (chain wrapper).
+
+**Top-3 model (val-based selection):**
+1. `late_fusion_tl` — CNN_TL + FCNN, weighted ensemble (val-tuned w)
+2. `fcnn` — landmark-only baseline
+3. `intermediate_tl` — IntermediateFusionTransfer
+
+**Catatan training:**
+- Semua model pakai **B2 scenario** (class weights, no augmentation) — augmented dataset tidak bisa di-regenerate per-fold secara konsisten.
+- Class weights dihitung per-fold dari training data fold tersebut.
+- Resume-aware per (model, fold/seed).
+
+**Status (per 10 Mei 2026 05:40):** chain berjalan di GPU 1 (PID 2235895, started 05:33), urutan Random → CV5 → LOSO.
+
+> **Bug fix (10 Mei):** `drop_last=shuffle` ditambahkan di `build_loader()` (`scripts/run_eval_3c.py:135`) — mencegah BatchNorm error saat batch terakhir berisi 1 sample di fold kecil.
+
+| Tahap | Status | Hasil | Output dir |
+|---|---|---|---|
+| Random Split (5 seeds × 3 models) | ✅ **SELESAI** | late_fusion_tl: 0.7037±0.0106 / intermediate_tl: 0.7052±0.0141 / fcnn: 0.6459±0.0261 | `models/frontonly_conf60/3class/randomsplit/` |
+| 5-Fold CV subject-wise | 🔄 **BERJALAN** | ~7 jam estimasi | `models/frontonly_conf60/3class/crossval/` |
+| LOSO 37-fold | ⬜ Menunggu CV5 | ~30 jam estimasi | `models/frontonly_conf60/3class/loso/` |
+
+**Total:** ~40 jam GPU idle (3-5 hari realistis dengan kontensi).
+
+**Cek progress:**
+```bash
+tail -50 logs/eval_3c_chain.log
+ls models/frontonly_conf60/3class/{randomsplit,crossval,loso}/
+
+# Ringkasan per model (running mean ± std):
+for f in models/frontonly_conf60/3class/randomsplit/*.json; do
+  python3 -c "
+import json
+d = json.load(open('$f'))
+print(f\"{d['model']:<20s} {d.get('num_seeds',d.get('num_folds',0))} runs  {d.get('macro_f1_mean',0):.4f}±{d.get('macro_f1_std',0):.4f}\")
+"
+done
+```
+
+**Resume jika chain mati:**
+> Pastikan bug fix sudah ada (`drop_last=shuffle` di `scripts/run_eval_3c.py:135`) sebelum resume.
+```bash
+cd /mnt/extended-home/fitra_dosen/2025_iris_fer_taufik/MultimodalEmoLearn
+CUDA_VISIBLE_DEVICES=1 nohup bash scripts/run_eval_3c_chain.sh > logs/eval_3c_chain.log 2>&1 &
+```
+
+Atau per strategy individu:
+```bash
+CUDA_VISIBLE_DEVICES=1 python scripts/run_eval_3c.py --strategy random --seeds 5
+CUDA_VISIBLE_DEVICES=1 python scripts/run_eval_3c.py --strategy cv5
+CUDA_VISIBLE_DEVICES=1 python scripts/run_eval_3c.py --strategy loso
+```
 
 ---
 
