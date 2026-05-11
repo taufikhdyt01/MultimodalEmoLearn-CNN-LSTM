@@ -1,5 +1,139 @@
 # Setup Training di Server GPU Lab FILKOM untuk Eksperimen 3-Class yang Pending
 
+---
+
+## 🆕 Eksperimen Clean-6c 5-Fold CV (Update: 11 Mei 2026)
+
+> **Konteks:** 7-class baseline lama macro-F1 hanya 0.23–0.33. Grad-CAM analysis menemukan
+> banyak sampel dengan wajah tertutup tangan. Hand-occlusion audit pakai MediaPipe HandLandmarker
+> menemukan **19.3% sampel teroklusi** (laporan: `deploy/data_cleaning/hand_occlusion_report.md`).
+> Notabene: kelas `sad` 60.66% teroklusi, `fearful` 100% teroklusi.
+>
+> Eksperimen ini me-retrain 7-class dengan data bersih untuk lihat apakah cleaning menaikkan
+> macro-F1. Karena fearful tersisa 0 sampel pasca-cleaning → forced jadi **6-class**.
+
+**Pipeline ringkas:**
+1. Cleaning + drop fearful (sudah dijalankan di laptop, output di `deploy/data_cleaning/` & `data/dataset_frontonly_conf60_clean6c/`)
+2. 5-fold user-level CV (stratifikasi minoritas, sudah disiapkan di `folds.json`)
+3. Training top-3 config × 5 fold = **15 runs** (B2 scenario, class weights, no aug)
+4. Aggregate macro-F1 mean ± std per config
+
+**Config pilot:**
+| Config | Model class | Modal input | Catatan |
+|---|---|---|---|
+| `intermediate_tl` | `IntermediateFusionTransfer` | image + landmarks | Top-2/3 di 7c baseline |
+| `late_fusion_tl` | `CNN_TL + FCNN` (weighted ensemble) | image + landmarks | w tuned di inner-val |
+| `early_fusion_tl` | `EmotionEarlyFusionTransfer` | 4-channel (RGB+heatmap) | Top-1 di 7c baseline (test_f1=0.3330) |
+
+### Sync ke GPU lab via git
+
+Semua file kecil (script + metadata) sync lewat git. Data gambar (di `data/dataset_frontonly_conf60/`) sudah ada di server.
+
+**Di LAPTOP:**
+```bash
+git add scripts/detect_hand_occlusion.py \
+        scripts/build_clean6c_folds.py \
+        scripts/analyze_user_class_distribution.py \
+        scripts/run_cv5_clean6c.py \
+        deploy/data_cleaning/ \
+        data/dataset_frontonly_conf60_clean6c/ \
+        docs/gpu_lab_setup_guide.md
+git commit -m "Add hand-occlusion cleaning + clean-6c 5-fold CV pipeline"
+git push
+```
+
+> ⚠️ **Cek `.gitignore` dulu** — `data/` dan `deploy/` mungkin di-ignore. Kalau iya, force-add:
+> ```bash
+> git add -f deploy/data_cleaning/ data/dataset_frontonly_conf60_clean6c/
+> ```
+> File yang di-add seharusnya berisi:
+> - `deploy/data_cleaning/hand_occlusion_{train,val,test}.npz` (~kB tiap)
+> - `deploy/data_cleaning/hand_occlusion_report.md` + `user_class_distribution_clean6c.{md,csv}`
+> - `data/dataset_frontonly_conf60_clean6c/clean_index.npz` + `folds.json` + `dataset_info.json`
+>
+> JANGAN add `deploy/data_cleaning/hand_landmarker.task` (7.6 MB model file, bisa di-download ulang).
+
+**Di SERVER GPU lab:**
+```bash
+cd /mnt/extended-home/fitra_dosen/2025_iris_fer_taufik/MultimodalEmoLearn
+git pull
+```
+
+**Opsional kalau mau regenerate occlusion mask dari nol di server** (tidak perlu — biasanya cukup git pull):
+```bash
+pip install mediapipe
+mkdir -p deploy/data_cleaning
+curl -L -o deploy/data_cleaning/hand_landmarker.task \
+  https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task
+python scripts/detect_hand_occlusion.py --splits train val test --min-conf 0.3
+python scripts/build_clean6c_folds.py
+```
+
+### Menjalankan training (di server GPU lab)
+
+```bash
+cd /mnt/extended-home/fitra_dosen/2025_iris_fer_taufik/MultimodalEmoLearn
+source /mnt/extended-home/fitra_dosen/2025_iris_fer_taufik/miniconda3/bin/activate 2025_iris_fer_taufik
+
+# Full run: 3 configs × 5 folds (~3-6 jam GPU idle, lebih lama kalau kontensi tinggi)
+CUDA_VISIBLE_DEVICES=1 nohup python scripts/run_cv5_clean6c.py \
+  > logs/cv5_clean6c.log 2>&1 &
+echo "PID: $!"
+
+# Atau partial — 1 config saja untuk smoke test:
+CUDA_VISIBLE_DEVICES=1 python scripts/run_cv5_clean6c.py --configs intermediate_tl --folds 0
+```
+
+**Resume-aware:** script skip (config, fold) yang sudah ada di `models/frontonly_conf60_clean6c/cv5/cv5_<config>.json` → aman restart kapan saja.
+
+**Cek progress:**
+```bash
+tail -50 logs/cv5_clean6c.log
+
+# Ringkasan per config (running mean ± std):
+for f in models/frontonly_conf60_clean6c/cv5/cv5_*.json; do
+  python3 -c "
+import json
+d = json.load(open('$f'))
+m = d.get('macro_f1_mean', 0); s = d.get('macro_f1_std', 0); n = len(d.get('per_fold', []))
+print(f\"{d['config']:<20s} {n} folds  macro_f1 = {m:.4f} ± {s:.4f}\")
+"
+done
+```
+
+### Sync hasil balik ke laptop via git
+
+**Di SERVER GPU lab** setelah training selesai:
+```bash
+cd /mnt/extended-home/fitra_dosen/2025_iris_fer_taufik/MultimodalEmoLearn
+git add -f models/frontonly_conf60_clean6c/cv5/cv5_*.json
+git commit -m "Add CV5 clean-6c training results"
+git push
+```
+
+**Di LAPTOP:**
+```bash
+git pull
+```
+
+> Hanya commit `.json` (hasil metrics ~kB), JANGAN commit `.pth` checkpoints — script otomatis delete checkpoint setelah evaluasi (`.unlink()` di akhir tiap fit function).
+
+**Output yang diharapkan per config (`cv5_<config>.json`):**
+- `per_fold`: list 5 entries dengan `test_macro_f1`, `test_weighted_f1`, `test_accuracy`, `confusion_matrix`, `inner_val_macro_f1`, `best_epoch`, `n_train`, `n_inner_val`, `n_test`, `elapsed_sec`
+- `macro_f1_mean`, `macro_f1_std` (across 5 folds)
+- `weighted_f1_mean`, `weighted_f1_std`
+
+**Target untuk dibandingkan:**
+| Config | 7c baseline test_f1 (lama, 1 split) | Hipotesis pasca-cleaning |
+|---|:---:|:---:|
+| Intermediate_TL_B3 | 0.2917 | naik (lihat apakah signifikan) |
+| Late_Fusion_TL_B2 | 0.2490 | naik |
+| EarlyFusion_TL_B3 | 0.3330 | naik |
+
+Kalau mean macro-F1 ada di range 0.40+ → bukti kuat bahwa label/oklusi adalah bottleneck utama. Kalau tetap di 0.30-an → bottleneck-nya pada hal lain (label noise inherent, class imbalance setelah cleaning, dll).
+
+---
+
 ## Status Eksekusi (Update: 10 Mei 2026 ~05:40)
 
 > **Server GPU Lab FILKOM** (bukan cloud/VPS sewaan) — 3× NVIDIA L40 47.6 GB, shared server.
