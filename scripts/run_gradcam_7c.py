@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Grad-CAM error analysis — 3-class Primer conf60.
-4 model families: CNN_TL, EarlyFusion_TL, Intermediate_TL, LateFusion_TL.
+Grad-CAM error analysis — 7-class Primer conf60.
+4 model families: CNN, EarlyFusion_TL, Intermediate_TL, LateFusion (scratch).
 
 Usage:
-  CUDA_VISIBLE_DEVICES=1 python scripts/run_gradcam_3c.py
+  CUDA_VISIBLE_DEVICES=1 python scripts/run_gradcam_7c.py
 """
 import sys
 import json
@@ -19,25 +19,24 @@ import torch
 import torch.nn.functional as F
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
-from sklearn.metrics import f1_score, confusion_matrix, classification_report
+from sklearn.metrics import f1_score, classification_report
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from training.models import (
-    EmotionCNNTransfer,
+    EmotionCNN,
     EmotionEarlyFusionTransfer,
     EmotionFCNN,
     IntermediateFusionTransfer,
 )
 
 DATA_DIR  = PROJECT_ROOT / "data" / "dataset_frontonly_conf60"
-CKPT_DIR  = PROJECT_ROOT / "models" / "frontonly_conf60" / "gradcam_ckpts"
-OUT_DIR   = PROJECT_ROOT / "outputs" / "gradcam"
+CKPT_DIR  = PROJECT_ROOT / "models" / "frontonly_conf60" / "gradcam_ckpts_7c"
+OUT_DIR   = PROJECT_ROOT / "outputs" / "gradcam_7c"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-NUM_CLASSES = 3
-REMAP_3     = np.array([1, 0, 2, 2, 2, 2, 0], dtype=np.int64)
-CLASS_NAMES = ["positive", "neutral", "negative"]
+NUM_CLASSES = 7
+CLASS_NAMES = ["angry", "disgust", "fear", "happy", "neutral", "sad", "surprise"]
 DEVICE      = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 RNG         = np.random.RandomState(42)
 BATCH       = 64
@@ -50,15 +49,12 @@ def load_split(split):
     img = np.load(DATA_DIR / f"X_{split}_images.npy").astype(np.float32)
     lm  = np.load(DATA_DIR / f"X_{split}_landmarks.npy").astype(np.float32)
     hm  = np.load(DATA_DIR / f"X_{split}_heatmaps.npy").astype(np.float32)
-    y7  = np.load(DATA_DIR / f"y_{split}.npy")
-    y   = REMAP_3[y7].astype(np.int64)
+    y   = np.load(DATA_DIR / f"y_{split}.npy").astype(np.int64)
     return img, lm, hm, y
 
-
-img_tr, lm_tr, hm_tr, y_tr = load_split("train")
 img_va, lm_va, hm_va, y_va = load_split("val")
 img_te, lm_te, hm_te, y_te = load_split("test")
-print(f"Train={len(y_tr)}  Val={len(y_va)}  Test={len(y_te)}")
+print(f"Val={len(y_va)}  Test={len(y_te)}")
 print(f"Test class dist: {np.bincount(y_te, minlength=NUM_CLASSES).tolist()}")
 
 
@@ -105,58 +101,39 @@ def get_preds(model, arch, img_arr, lm_arr, hm_arr):
 
 # ─── Load models ──────────────────────────────────────────────────────────────
 print("\nLoading models...")
-cnn_tl = load_ckpt(EmotionCNNTransfer(num_classes=NUM_CLASSES).to(DEVICE),
-                   CKPT_DIR / "cnn_tl.pth")
-ef_tl  = load_ckpt(EmotionEarlyFusionTransfer(num_classes=NUM_CLASSES).to(DEVICE),
-                   CKPT_DIR / "early_fusion_tl.pth")
-itl    = load_ckpt(IntermediateFusionTransfer(num_classes=NUM_CLASSES).to(DEVICE),
-                   CKPT_DIR / "intermediate_tl.pth")
-lf_cnn = load_ckpt(EmotionCNNTransfer(num_classes=NUM_CLASSES).to(DEVICE),
-                   CKPT_DIR / "late_fusion_tl_cnn.pth")
-lf_fcnn= load_ckpt(EmotionFCNN(num_classes=NUM_CLASSES).to(DEVICE),
-                   CKPT_DIR / "late_fusion_tl_fcnn.pth")
+cnn     = load_ckpt(EmotionCNN(num_classes=NUM_CLASSES).to(DEVICE),
+                    CKPT_DIR / "cnn.pth")
+ef_tl   = load_ckpt(EmotionEarlyFusionTransfer(num_classes=NUM_CLASSES).to(DEVICE),
+                    CKPT_DIR / "early_fusion_tl.pth")
+itl     = load_ckpt(IntermediateFusionTransfer(num_classes=NUM_CLASSES).to(DEVICE),
+                    CKPT_DIR / "intermediate_tl.pth")
+lf_cnn  = load_ckpt(EmotionCNN(num_classes=NUM_CLASSES).to(DEVICE),
+                    CKPT_DIR / "late_fusion_cnn.pth")
+lf_fcnn = load_ckpt(EmotionFCNN(num_classes=NUM_CLASSES).to(DEVICE),
+                    CKPT_DIR / "late_fusion_fcnn.pth")
 print("All checkpoints loaded.")
 
-
-# ─── LateFusion best_w (grid search on val) ───────────────────────────────────
-results_path = CKPT_DIR / "retrain_results.json"
-if results_path.exists():
-    best_w = json.load(open(results_path)).get("late_fusion_tl", {}).get("best_w_cnn", None)
-else:
-    best_w = None
-
-if best_w is None:
-    print("Computing LateFusion best_w from val set...")
-    _, p_va_cnn  = get_preds(lf_cnn,  "cnn",  img_va, lm_va, hm_va)
-    _, p_va_fcnn = get_preds(lf_fcnn, "fcnn", img_va, lm_va, hm_va)
-    best_w, best_f1 = 0.5, 0.0
-    for w in np.arange(0.0, 1.05, 0.05):
-        fused = w * p_va_cnn + (1 - w) * p_va_fcnn
-        f1 = f1_score(y_va, fused.argmax(1), average="macro", zero_division=0)
-        if f1 > best_f1:
-            best_f1, best_w = f1, float(w)
-    print(f"  best_w_cnn={best_w:.2f}  val_f1={best_f1:.4f}")
-
+# LateFusion best_w from retrain_results.json
+best_w = json.load(open(CKPT_DIR / "retrain_results.json"))["late_fusion"]["best_w_cnn"]
 print(f"LateFusion best_w_cnn = {best_w:.2f}")
 
 
-# ─── Compute all predictions ───────────────────────────────────────────────────
+# ─── Compute all test predictions ─────────────────────────────────────────────
 print("\nComputing test predictions...")
-_, p_cnn  = get_preds(cnn_tl, "cnn",          img_te, lm_te, hm_te)
-_, p_ef   = get_preds(ef_tl,  "early_fusion",  img_te, lm_te, hm_te)
-_, p_itl  = get_preds(itl,    "fusion",        img_te, lm_te, hm_te)
-_, p_lfc  = get_preds(lf_cnn,  "cnn",          img_te, lm_te, hm_te)
-_, p_lffc = get_preds(lf_fcnn, "fcnn",         img_te, lm_te, hm_te)
+_, p_cnn   = get_preds(cnn,    "cnn",          img_te, lm_te, hm_te)
+_, p_ef    = get_preds(ef_tl,  "early_fusion",  img_te, lm_te, hm_te)
+_, p_itl   = get_preds(itl,    "fusion",        img_te, lm_te, hm_te)
+_, p_lfc   = get_preds(lf_cnn,  "cnn",          img_te, lm_te, hm_te)
+_, p_lffc  = get_preds(lf_fcnn, "fcnn",         img_te, lm_te, hm_te)
 p_lf = best_w * p_lfc + (1 - best_w) * p_lffc
 
-MODEL_NAMES   = ["CNN_TL", "EarlyFusion_TL", "Intermediate_TL", "LateFusion_TL"]
-MODEL_PROBS   = {"CNN_TL": p_cnn, "EarlyFusion_TL": p_ef,
-                 "Intermediate_TL": p_itl, "LateFusion_TL": p_lf}
+MODEL_NAMES   = ["CNN", "EarlyFusion_TL", "Intermediate_TL", "LateFusion"]
+MODEL_PROBS   = {"CNN": p_cnn, "EarlyFusion_TL": p_ef,
+                 "Intermediate_TL": p_itl, "LateFusion": p_lf}
 MODEL_PREDS   = {k: v.argmax(1) for k, v in MODEL_PROBS.items()}
-MODEL_OBJECTS = {"CNN_TL": cnn_tl, "EarlyFusion_TL": ef_tl,
-                 "Intermediate_TL": itl, "LateFusion_TL": lf_cnn}
-MODEL_ARCH    = {"CNN_TL": "cnn", "EarlyFusion_TL": "early_fusion",
-                 "Intermediate_TL": "fusion", "LateFusion_TL": "cnn"}
+# Grad-CAM runs on the CNN branch for each model
+MODEL_OBJECTS = {"CNN": cnn, "EarlyFusion_TL": ef_tl,
+                 "Intermediate_TL": itl, "LateFusion": lf_cnn}
 
 print("\n=== Test Metrics ===")
 for name in MODEL_NAMES:
@@ -166,14 +143,6 @@ for name in MODEL_NAMES:
 
 
 # ─── Grad-CAM helpers ─────────────────────────────────────────────────────────
-def get_target_layer(model_obj, model_name):
-    if model_name in ("CNN_TL", "LateFusion_TL", "EarlyFusion_TL"):
-        return model_obj.features[-2][-1]
-    elif model_name == "Intermediate_TL":
-        return model_obj.image_features[-2][-1]
-    raise ValueError(model_name)
-
-
 class FusionWrapper(torch.nn.Module):
     def __init__(self, m, lm):
         super().__init__()
@@ -191,18 +160,23 @@ def run_gradcam(model_obj, model_name, sample_idx):
     rgb = np.clip(rgb, 0, 1)
 
     if model_name == "Intermediate_TL":
-        lm_fixed = lm_t(lm_te, [sample_idx])
-        wrapper  = FusionWrapper(model_obj, lm_fixed)
-        target_layer = model_obj.image_features[-2][-1]
+        lm_fixed     = lm_t(lm_te, [sample_idx])
+        wrapper      = FusionWrapper(model_obj, lm_fixed)
+        target_layer = model_obj.image_features[-2][-1]  # ResNet18 layer4 last block
         cam = GradCAM(model=wrapper, target_layers=[target_layer])
         inp = img_t(img_te, [sample_idx])
-    else:
-        target_layer = get_target_layer(model_obj, model_name)
+    elif model_name == "EarlyFusion_TL":
+        target_layer = model_obj.features[-2][-1]        # ResNet18 layer4 last block
         cam = GradCAM(model=model_obj, target_layers=[target_layer])
-        if model_name == "EarlyFusion_TL":
-            inp = ef_t(img_te, hm_te, [sample_idx])
-        else:
-            inp = img_t(img_te, [sample_idx])
+        inp = ef_t(img_te, hm_te, [sample_idx])
+    elif model_name in ("CNN", "LateFusion"):
+        # EmotionCNN scratch: features is a flat Sequential of conv blocks
+        # target = last Conv2d in Block 4 (index -5, before BN/ReLU/MaxPool/Dropout)
+        target_layer = model_obj.features[-5]
+        cam = GradCAM(model=model_obj, target_layers=[target_layer])
+        inp = img_t(img_te, [sample_idx])
+    else:
+        raise ValueError(model_name)
 
     grayscale = cam(input_tensor=inp, targets=None)[0]
     overlay   = show_cam_on_image(rgb, grayscale, use_rgb=True)
@@ -210,7 +184,7 @@ def run_gradcam(model_obj, model_name, sample_idx):
 
 
 # ─── Sample helpers ───────────────────────────────────────────────────────────
-def sample_idx(preds, true_cls, pred_cls, n=1):
+def pick_sample(preds, true_cls, pred_cls, n=1):
     mask = (y_te == true_cls) & (preds == pred_cls)
     idx  = np.where(mask)[0]
     if len(idx) == 0:
@@ -225,22 +199,39 @@ for model_name in MODEL_NAMES:
     preds     = MODEL_PREDS[model_name]
     probs     = MODEL_PROBS[model_name]
 
-    fig, axes = plt.subplots(NUM_CLASSES, 4, figsize=(14, NUM_CLASSES * 3.5))
-    fig.suptitle(f"{model_name} — Grad-CAM Error Analysis (3-class Primer)",
+    # Hanya tampilkan kelas dengan cukup sampel di test set (≥5)
+    # dan memiliki minimal 1 prediksi benar + 1 prediksi salah
+    MIN_SUPPORT = 5
+    active_cls = []
+    for c in range(NUM_CLASSES):
+        n_support = (y_te == c).sum()
+        has_correct = len(pick_sample(preds, c, c, n=1)) > 0
+        has_wrong   = any(len(pick_sample(preds, c, pc, n=1)) > 0
+                          for pc in range(NUM_CLASSES) if pc != c)
+        if n_support >= MIN_SUPPORT and has_correct and has_wrong:
+            active_cls.append(c)
+    print(f"  [{model_name}] kelas aktif (≥{MIN_SUPPORT} sampel, ada benar+salah): "
+          f"{[CLASS_NAMES[c] for c in active_cls]}")
+    n_rows = len(active_cls)
+
+    fig, axes = plt.subplots(n_rows, 4, figsize=(14, n_rows * 3.2))
+    if n_rows == 1:
+        axes = axes[np.newaxis, :]
+    fig.suptitle(f"{model_name} — Grad-CAM Error Analysis (7-class Primer)",
                  fontsize=13, fontweight="bold")
     for ax, lbl in zip(axes[0], ["Original (benar)", "Grad-CAM (benar)",
                                   "Original (salah)", "Grad-CAM (salah)"]):
         ax.set_title(lbl, fontsize=9, fontweight="bold")
 
-    for cls in range(NUM_CLASSES):
-        row = axes[cls]
-        row[0].set_ylabel(f"True: {CLASS_NAMES[cls]}", fontsize=9)
+    for row_i, cls in enumerate(active_cls):
+        row = axes[row_i]
+        row[0].set_ylabel(CLASS_NAMES[cls], fontsize=9, rotation=90, labelpad=4)
 
-        correct_idx = sample_idx(preds, cls, cls, n=1)
+        correct_idx = pick_sample(preds, cls, cls, n=1)
         wrong_idx, wrong_pred = [], None
         for pc in range(NUM_CLASSES):
             if pc == cls: continue
-            w = sample_idx(preds, cls, pc, n=1)
+            w = pick_sample(preds, cls, pc, n=1)
             if w:
                 wrong_idx, wrong_pred = w, pc
                 break
@@ -289,7 +280,7 @@ for cls in range(NUM_CLASSES):
     if len(idxs) == 0:
         print(f"  {CLASS_NAMES[cls]}: tidak ada sampel salah di semua model")
         continue
-    sel = RNG.choice(idxs, size=min(3, len(idxs)), replace=False)
+    sel = RNG.choice(idxs, size=min(2, len(idxs)), replace=False)
 
     for sample_idx_ in sel:
         fig, axes = plt.subplots(1, 5, figsize=(18, 3))
@@ -297,8 +288,9 @@ for cls in range(NUM_CLASSES):
             f"True: {CLASS_NAMES[cls]} | Sample #{sample_idx_} — semua model salah",
             fontsize=11, fontweight="bold"
         )
-        rgb = np.clip(img_te[sample_idx_].copy(), 0, 1)
+        rgb = img_te[sample_idx_].copy()
         if rgb.max() > 1.0: rgb = rgb / 255.0
+        rgb = np.clip(rgb, 0, 1)
         axes[0].imshow(rgb); axes[0].axis("off"); axes[0].set_title("Original", fontsize=9)
 
         for col, model_name in enumerate(MODEL_NAMES, start=1):
@@ -310,7 +302,7 @@ for cls in range(NUM_CLASSES):
                                 fontsize=8, color="red")
 
         plt.tight_layout()
-        save_path = OUT_DIR / f"gradcam_comparison_cls{cls}_sample{sample_idx_}.png"
+        save_path = OUT_DIR / f"gradcam_comparison_{CLASS_NAMES[cls]}_s{sample_idx_}.png"
         plt.savefig(save_path, dpi=150, bbox_inches="tight")
         plt.close()
         print(f"  Saved: {save_path.name}")
@@ -318,7 +310,7 @@ for cls in range(NUM_CLASSES):
 
 # ─── Ringkasan metrics ────────────────────────────────────────────────────────
 print("\n" + "="*60)
-print("RINGKASAN METRICS — 3-class Primer test set")
+print("RINGKASAN METRICS — 7-class Primer test set")
 print("="*60)
 for name in MODEL_NAMES:
     preds = MODEL_PREDS[name]
