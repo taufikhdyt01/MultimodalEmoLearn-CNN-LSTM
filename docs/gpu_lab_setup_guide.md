@@ -2,6 +2,87 @@
 
 ---
 
+## 🆕 Eksplorasi CNN1D Fitur Geometrik 7-class (Update: 13 Mei 2026)
+
+> **Arahan dosen:** "Coba model CNN dengan fitur geometrik (baseline - hanya koordinat titik)".
+>
+> **Interpretasi:** CNN 1D di koordinat landmark mentah — 68 titik × 2 (x, y) sebagai sequence,
+> bukan flat 136-dim vector seperti FCNN. "Baseline" = raw coordinates dulu, sebelum tambah
+> fitur turunan (eccentricity / distance ratio à la Liliana 2019).
+
+**Setup:**
+- Input: (B, 2, 68) — Conv1d di sequence landmark
+- Model: `EmotionCNN1D` (`src/training/models.py`) — 4 conv1d blocks 32→64→128→256 + GAP + FC(128) → 442K params
+- Skenario **B1** (no aug, no class weight) untuk fair comparison vs FCNN B1
+- Single train/val/test split asli, batch=32, lr=1e-3, Adam, early-stop patience=15
+- Script: `scripts/run_cnn1d_geom_7c.py`
+
+**Hasil (1 run per kombinasi, GPU 1, ~110-280 detik tiap run):**
+
+### 7-class
+| Metric | FCNN B1 | **CNN1D B1** | FCNN B2 | CNN1D B2 | FCNN B3 | CNN1D B3 |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| test_macro_f1 | 0.2317 | **0.2766** ✓ | 0.2437 | 0.1631 ✗ | 0.2224 | 0.2235 ≈ |
+| test_weighted_f1 | 0.7650 | **0.8014** | 0.7674 | 0.5994 | 0.7580 | 0.7003 |
+| test_accuracy | 0.7675 | **0.8084** | 0.7653 | 0.5608 | 0.7395 | 0.6609 |
+| delta macro_f1 | — | **+0.045** | — | −0.081 | — | +0.001 |
+
+### 3-class (positive / neutral / negative)
+| Metric | FCNN B1 | **CNN1D B1** | FCNN B2 | CNN1D B2 | FCNN B3 ⭐ | CNN1D B3 |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| test_macro_f1 | 0.5893 | **0.6183** ✓ | 0.5750 | 0.5935 ✓ | **0.6342** | 0.5744 ✗ |
+| test_weighted_f1 | 0.7596 | **0.8203** | 0.7302 | 0.7686 | 0.7636 | 0.7072 |
+| test_accuracy | 0.7406 | **0.8299** | 0.7018 | 0.7524 | 0.7492 | 0.6598 |
+| delta macro_f1 | — | **+0.029** | — | +0.019 | — | −0.060 |
+
+Output: `models/frontonly_conf60/{3class,7class}/CNN1D_geom/cnn1d_geom_{b1,b2,b3}_results.json`.
+
+**Interpretasi:**
+- **CNN1D B1 menang vs FCNN B1 di kedua skema** (7c +4.5%, 3c +2.9% macro-F1) — struktur spasial
+  sequential antar titik landmark konsisten membantu vs flat vector.
+- **B2 hasilnya beragam:**
+  - 7c: **collapse** (0.16 vs 0.24) — rasio 4526:2 di class fear, weight 377.6 didominasi 2 sampel,
+    model over-correct ke minoritas, accuracy hancur (0.56).
+  - 3c: **marginal unggul** (+0.019) — rasio max 14:1, class weights jauh lebih moderate (5.4:1:0.4).
+- **B3 hasilnya beragam:**
+  - 7c: ≈ tie (+0.001) — augmentasi membantu tapi tidak signifikan.
+  - 3c: **kalah dari FCNN B3** (−0.060) — kemungkinan karena augmentasi on-the-fly yang saya pakai
+    (rotate ±10°, hflip, flip+rotate) berbeda dengan offline augmentation di FCNN B3 (full image+landmark
+    matched augment dataset). Augmented data on-the-fly mungkin terlalu agresif/kurang regularisasi.
+- **Best overall:** FCNN 3c B3 = **0.6342** masih raja. **Best CNN1D:** 3c B1 = **0.6183** (close second).
+
+**Cara menjalankan ulang:**
+```bash
+cd /mnt/extended-home/fitra_dosen/2025_iris_fer_taufik/MultimodalEmoLearn
+source /mnt/extended-home/fitra_dosen/2025_iris_fer_taufik/miniconda3/bin/activate 2025_iris_fer_taufik
+
+# 7-class
+CUDA_VISIBLE_DEVICES=1 python scripts/run_cnn1d_geom_7c.py --scenario b1 --classes 7
+CUDA_VISIBLE_DEVICES=1 python scripts/run_cnn1d_geom_7c.py --scenario b2 --classes 7
+CUDA_VISIBLE_DEVICES=1 python scripts/run_cnn1d_geom_7c.py --scenario b3 --classes 7
+
+# 3-class (positive/neutral/negative, remap on-the-fly)
+CUDA_VISIBLE_DEVICES=1 python scripts/run_cnn1d_geom_7c.py --scenario b1 --classes 3
+CUDA_VISIBLE_DEVICES=1 python scripts/run_cnn1d_geom_7c.py --scenario b2 --classes 3
+CUDA_VISIBLE_DEVICES=1 python scripts/run_cnn1d_geom_7c.py --scenario b3 --classes 3
+```
+
+**Catatan implementasi B3:** karena augmented dataset offline (`data/dataset_frontonly_conf60_3class_augmented/`)
+tidak ada di server, B3 dijalankan dengan **on-the-fly landmark augmentation** di training script:
+hflip + rotate ±10° + flip_rot, oversampling minoritas hingga match majority count. Implementasinya
+mirror `src/preprocessing/augment_conf60_3class.py:73` (`augment_landmark`).
+
+**Next steps:**
+1. **Multi-seed (3-5 seeds)** — dapat error bar; test imbalanced ini noisy untuk 1 run
+2. **5-fold CV subject-wise / LOSO** — pakai pattern dari `scripts/run_eval_7c.py`
+3. **Regenerate offline augmented dataset 3c** dengan `src/preprocessing/augment_conf60_3class.py`
+   lalu re-run B3 dengan augmented data persis sama dengan FCNN B3 — bandingkan fair
+4. **CNN1D di clean-6c** — buang fear (2 sampel) supaya class weights B2 tidak ekstrem
+5. **Coordinate normalization** — center-of-face + inter-ocular scaling sering bantu landmark models
+6. **Compare vs FCNN + Liliana 20-dim geometric** (nb 81) — apakah CNN1D di raw coords > FCNN di derived features?
+
+---
+
 ## 🆕 Eksperimen Clean-6c 5-Fold CV (Update: 11 Mei 2026)
 
 > **Konteks:** 7-class baseline lama macro-F1 hanya 0.23–0.33. Grad-CAM analysis menemukan

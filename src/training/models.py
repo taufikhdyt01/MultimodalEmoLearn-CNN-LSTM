@@ -63,6 +63,132 @@ class EmotionCNN(nn.Module):
         return self.classifier(x)
 
 
+class EmotionCNN1D(nn.Module):
+    """1D-CNN untuk fitur geometrik mentah (koordinat 68 landmark sebagai sequence).
+
+    Input shape: (B, 2, 68) — 2 channel (x, y) × 68 titik landmark.
+    Arahan dosen: CNN dengan fitur geometrik baseline = hanya koordinat titik.
+
+    4 Conv1d blocks (32->64->128->256) + GAP + FC head — mirror EmotionCNN tapi 1D.
+    """
+
+    def __init__(self, num_classes=7, num_points=68, in_channels=2):
+        super().__init__()
+
+        self.features = nn.Sequential(
+            # Block 1: 68 -> 34
+            nn.Conv1d(in_channels, 32, kernel_size=5, padding=2),
+            nn.BatchNorm1d(32), nn.ReLU(),
+            nn.Conv1d(32, 32, kernel_size=5, padding=2),
+            nn.BatchNorm1d(32), nn.ReLU(),
+            nn.MaxPool1d(2), nn.Dropout(0.25),
+
+            # Block 2: 34 -> 17
+            nn.Conv1d(32, 64, kernel_size=5, padding=2),
+            nn.BatchNorm1d(64), nn.ReLU(),
+            nn.Conv1d(64, 64, kernel_size=5, padding=2),
+            nn.BatchNorm1d(64), nn.ReLU(),
+            nn.MaxPool1d(2), nn.Dropout(0.25),
+
+            # Block 3: 17 -> 8
+            nn.Conv1d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.Conv1d(128, 128, kernel_size=3, padding=1),
+            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.MaxPool1d(2), nn.Dropout(0.25),
+
+            # Block 4: 8 -> 4
+            nn.Conv1d(128, 256, kernel_size=3, padding=1),
+            nn.BatchNorm1d(256), nn.ReLU(),
+            nn.Conv1d(256, 256, kernel_size=3, padding=1),
+            nn.BatchNorm1d(256), nn.ReLU(),
+            nn.AdaptiveAvgPool1d(1),  # global average pool -> (B, 256, 1)
+        )
+
+        self.classifier = nn.Sequential(
+            nn.Flatten(),  # (B, 256)
+            nn.Linear(256, 128),
+            nn.BatchNorm1d(128), nn.ReLU(), nn.Dropout(0.3),
+        )
+
+        self.head = nn.Linear(128, num_classes)
+
+    def forward(self, x):
+        # Accept (B, 136) flat → reshape to (B, 68, 2) → permute to (B, 2, 68)
+        if x.dim() == 2:
+            x = x.view(x.size(0), -1, 2).transpose(1, 2)
+        x = self.features(x)
+        x = self.classifier(x)
+        return self.head(x)
+
+    def extract_features(self, x):
+        """Extract 128-dim feature vector (untuk fusion)."""
+        if x.dim() == 2:
+            x = x.view(x.size(0), -1, 2).transpose(1, 2)
+        x = self.features(x)
+        return self.classifier(x)
+
+
+class EmotionCNN1D_FACS(nn.Module):
+    """1D-CNN untuk FACS-decomposed Euclidean distance features.
+
+    Input shape: (B, 1, D) where D = jumlah FACS-AU distances (default 28).
+    Arahan dosen: "CNN dengan fitur geometrik yang didekomposisi - mencari jarak
+    euclid dari acuan FACS - Facial Action Coding System".
+
+    3 Conv1d blocks (32->64->128) + GAP + FC head — kernel kecil k=3 sesuai
+    ukuran sequence yang lebih pendek dari raw landmark sequence (28 vs 68).
+    """
+
+    def __init__(self, num_classes=7, in_dim=28, in_channels=1):
+        super().__init__()
+
+        self.features = nn.Sequential(
+            # Block 1: D -> D
+            nn.Conv1d(in_channels, 32, kernel_size=3, padding=1),
+            nn.BatchNorm1d(32), nn.ReLU(),
+            nn.Conv1d(32, 32, kernel_size=3, padding=1),
+            nn.BatchNorm1d(32), nn.ReLU(),
+            nn.Dropout(0.25),
+
+            # Block 2: D -> D/2
+            nn.Conv1d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm1d(64), nn.ReLU(),
+            nn.Conv1d(64, 64, kernel_size=3, padding=1),
+            nn.BatchNorm1d(64), nn.ReLU(),
+            nn.MaxPool1d(2), nn.Dropout(0.25),
+
+            # Block 3: D/2 -> 1 (GAP)
+            nn.Conv1d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.Conv1d(128, 128, kernel_size=3, padding=1),
+            nn.BatchNorm1d(128), nn.ReLU(),
+            nn.AdaptiveAvgPool1d(1),
+        )
+
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(128, 64),
+            nn.BatchNorm1d(64), nn.ReLU(), nn.Dropout(0.3),
+        )
+
+        self.head = nn.Linear(64, num_classes)
+
+    def forward(self, x):
+        # Accept (B, D) flat → unsqueeze to (B, 1, D)
+        if x.dim() == 2:
+            x = x.unsqueeze(1)
+        x = self.features(x)
+        x = self.classifier(x)
+        return self.head(x)
+
+    def extract_features(self, x):
+        if x.dim() == 2:
+            x = x.unsqueeze(1)
+        x = self.features(x)
+        return self.classifier(x)
+
+
 class EmotionFCNN(nn.Module):
     """FCNN untuk fitur geometrik (68 landmarks = 136 fitur).
 
