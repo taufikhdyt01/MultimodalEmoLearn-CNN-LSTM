@@ -285,6 +285,101 @@ CUDA_VISIBLE_DEVICES=1 python scripts/run_fcnn_faceapi_compare.py
 
 ---
 
+## Eksperimen FACS-decomposed Euclidean distance (14 Mei 2026)
+
+**Arahan dosen:** "Coba model CNN dengan fitur geometrik (yang didekomposisi - mencari jarak euclid dari acuan FACS - Facial Action Coding System)".
+
+**Interpretasi:** Berbeda dengan raw 136-dim coordinates atau Liliana 20-dim eccentricity/ratio, ini pakai **jarak Euclidean murni** antar pasangan landmark yang men-encode FACS Action Units (AUs).
+
+### Setup
+- **Feature:** 28 jarak Euclidean (dlib 68-point indexing), grouped per FACS AU:
+  - AU1 (inner brow raiser): 2 distances
+  - AU2 (outer brow raiser): 2 distances
+  - AU4 (brow lowerer/frown): 3 distances
+  - AU5/7 (eye opening): 4 distances
+  - AU6 (cheek raiser): 2 distances
+  - AU9 (nose wrinkler): 2 distances
+  - AU10 (upper lip raiser): 3 distances
+  - AU12 (smile/lip corner puller): 2 distances
+  - AU15 (lip corner depressor): 2 distances
+  - AU20/23 (mouth width/tightener): 2 distances
+  - AU25/26 (lips part/jaw drop): 3 distances
+  - face_height (reference): 1 distance
+- **Normalisasi:** dibagi inter-ocular distance d(36, 45) untuk scale invariance
+- **Model:** `EmotionCNN1D_FACS` — 3 Conv1d blocks (32→64→128) + GAP + FC(64) + head, ~105K params
+- **Input shape:** (B, 1, 28) — 28-dim FACS distance vector sebagai sequence
+- **Sweep:** 2 sources × 2 schemes × 2 scenarios = **8 runs**
+
+### Hasil (test_macro_f1)
+
+| Skema | Skenario | MediaPipe | **face-api.js** | Δ |
+|---|:---:|:---:|:---:|:---:|
+| 3c | B1 | 0.5363 | **0.6818** | **+0.1455** |
+| 3c | B2 | 0.4962 | **0.6778** | **+0.1816** |
+| 7c | B1 | 0.2311 | **0.3063** | **+0.0752** |
+| 7c | B2 | 0.1999 | **0.2956** | **+0.0957** |
+
+Detail (weighted_f1, accuracy):
+
+| Config | macro_f1 | weighted_f1 | accuracy | best_epoch | time(s) |
+|---|:---:|:---:|:---:|:---:|:---:|
+| MP × 3c × B1 | 0.5363 | 0.7671 | 0.7879 | 28 | 165 |
+| MP × 3c × B2 | 0.4962 | 0.7417 | 0.7255 | 3 | 69 |
+| **FA × 3c × B1** | **0.6818** | **0.8359** | **0.8471** | 7 | 83 |
+| FA × 3c × B2 | 0.6778 | 0.8417 | 0.8224 | 3 | 69 |
+| MP × 7c × B1 | 0.2311 | 0.7639 | 0.7826 | 34 | 187 |
+| MP × 7c × B2 | 0.1999 | 0.6453 | 0.5823 | 18 | 118 |
+| **FA × 7c × B1** | **0.3063** | **0.8539** | **0.8590** | 12 | 90 |
+| FA × 7c × B2 | 0.2956 | 0.8203 | 0.7944 | 37 | 166 |
+
+(MP = MediaPipe, FA = face-api.js)
+
+### Interpretasi
+
+1. **face-api.js advantage robust** di FACS feature juga (Δ +0.075 sampai +0.18 macro_f1). Konsisten dengan finding di raw coords (CNN1D) dan flat coords (FCNN).
+
+2. **FACS-decomposed < raw 136-dim coords.** Bandingkan CNN1D B1 di kedua representasi (face-api.js):
+   | Representation | 3c | 7c |
+   |---|:---:|:---:|
+   | Raw coords (136-dim) | **0.7524** | **0.3036** |
+   | FACS distances (28-dim) | 0.6818 | 0.3063 |
+   
+   3-class: raw unggul +0.07. 7-class: hampir sama (sedikit unggul FACS). Information loss dari decomposisi 136→28 lebih besar daripada information gain dari semantic prior.
+
+3. **B2 jarang membantu di FACS.** Sama seperti di raw coords — class weights di setup imbalance ekstrem 7c menyebabkan collapse, di 3c marginal.
+
+4. **Training jauh lebih cepat** (~70-180 detik per run vs 110-280 detik untuk raw CNN1D) karena model lebih kecil (105K vs 442K params). Cocok untuk eksperimen iteratif lebih banyak.
+
+### Comprehensive logging
+
+Output JSON sekarang mencakup (untuk laporan/analisis lanjutan):
+- `hardware`: GPU name, total VRAM, torch/CUDA version
+- `model`: n_params, trainable params, full architecture repr (str)
+- `hyperparams`: batch/epochs/patience/lr/optimizer/loss/seed/scenario/class_weights
+- `dataset`: source, num_classes, class_names, n_train/val/test, class_counts per split, feature_kind, FACS pairs metadata
+- `training`: elapsed_sec, epochs_completed, best_epoch, early_stopped, peak_vram_mb, **history per epoch** (train_loss, train_accuracy, val_macro_f1, val_weighted_f1, val_accuracy, epoch_time_sec)
+- `test`: accuracy, macro_f1, weighted_f1, micro_f1, confusion_matrix, **classification_report** (precision/recall/f1/support per class), inference_time_sec, inference_throughput
+- `git_commit`, `timestamp`
+
+Helper module: `src/training/exp_utils.py`. Untuk re-run dengan logging penuh, semua script comprehensive: `run_cnn1d_facs.py`, `run_intermediate_fusion_faceapi.py`.
+
+### Output files
+
+```
+models/frontonly_conf60/3class/CNN1D_FACS/facs_sweep_results.json
+models/frontonly_conf60/7class/CNN1D_FACS/facs_sweep_results.json
+logs/cnn1d_facs.log
+```
+
+### Cara reproduce
+
+```bash
+CUDA_VISIBLE_DEVICES=1 python scripts/run_cnn1d_facs.py
+# Output: 2 JSON files (one per num_classes), masing-masing berisi 4 runs.
+```
+
+---
+
 ## Eksplorasi lanjutan yang disarankan
 
 1. **Multi-seed (3-5 seeds)** — dapat error bar. Test set imbalanced (1-3 sampel di kelas minoritas) membuat 1 run noisy.
