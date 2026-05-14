@@ -434,3 +434,87 @@ _Update: 10 Mei 2026_
 - JAFFE dan KDEF rendah karena domain gap etnis + ukuran kecil
 - `Late_Fusion` / `Late_Fusion_TL` dominan di 3/4 source dataset — weighted ensemble membantu adaptasi cross-domain
 - Semua nilai << Skema 1 self-trained (0.81–0.97) → domain gap benchmark→Primer nyata dan signifikan
+
+---
+
+## H. Evaluasi Robustness — LOSO, 5-Fold CV, Random Split (Primer conf60)
+
+**Konteks:** Section A/B di atas memakai single fixed split (29 train / 3 val / 5 test user, seed=42). Untuk hasil yang lebih stabil dan dapat melaporkan mean ± std, kami menjalankan tiga strategi evaluasi tambahan pada subset arsitektur terpilih:
+
+- **LOSO (Leave-One-Subject-Out)** — 33 fold, tiap fold 1 user dijadikan test, 2 user lain validation, sisa user training. Estimasi paling konservatif (subject-independent).
+- **5-Fold CV subject-wise** — 5 fold, partisi user disjoint per fold; validation set diambil dari training set.
+- **Random Split** — 5 seed berbeda (seed 0–4), split 80/10/10 secara stratified per-sample (BUKAN subject-wise). Catatan: angka random split bias optimistik karena sampel dari user yang sama bisa muncul di train & test (subject leakage).
+
+**Konvensi arsitektur:**
+- 3-class: `FCNN` (hybrid), `Intermediate_TL` (TL), `Late_Fusion_TL` (TL) — top performer dari Section A.
+- 7-class: `CNN`, `Intermediate_TL`, `Late_Fusion` — representasi single-stream + 2 fusion family.
+
+**Sumber data:**
+```
+models/frontonly_conf60/{3class,7class}/{loso,crossval,randomsplit}/*.json
+```
+
+_Update: 14 Mei 2026_
+
+---
+
+### H.1 3-Class (Negative / Neutral / Positive)
+
+| Strategy | n | Arch | Test Macro F1 (mean ± std) | Test Weighted F1 (mean ± std) | Test Acc (mean ± std) |
+|:---|:---:|:---|:---:|:---:|:---:|
+| **LOSO** | 33 | `FCNN` | 0.4490 ± 0.1014 | 0.7395 ± 0.1575 | 0.7127 ± 0.1842 |
+| **LOSO** | 33 | `Intermediate_TL` | 0.4355 ± 0.1153 | 0.7693 ± 0.1476 | 0.7601 ± 0.1445 |
+| **LOSO** | 33 | `Late_Fusion_TL` | **0.4548 ± 0.1125** | 0.7728 ± 0.1489 | 0.7679 ± 0.1579 |
+| **5-Fold CV** | 5 | `FCNN` | 0.4822 ± 0.0485 | 0.7857 ± 0.0493 | 0.7720 ± 0.0716 |
+| **5-Fold CV** | 5 | `Intermediate_TL` | **0.5518 ± 0.0548** | 0.8371 ± 0.0618 | 0.8368 ± 0.0607 |
+| **5-Fold CV** | 5 | `Late_Fusion_TL` | 0.5010 ± 0.0162 | 0.8006 ± 0.0435 | 0.7952 ± 0.0545 |
+| **Random Split** | 5 | `FCNN` | 0.6459 ± 0.0261 | 0.8486 ± 0.0159 | 0.8371 ± 0.0173 |
+| **Random Split** | 5 | `Intermediate_TL` | **0.7052 ± 0.0141** | 0.8812 ± 0.0084 | 0.8816 ± 0.0087 |
+| **Random Split** | 5 | `Late_Fusion_TL` | 0.7037 ± 0.0106 | 0.8826 ± 0.0076 | 0.8837 ± 0.0083 |
+
+**Observasi 3-class:**
+- Urutan macro F1: **Random Split (0.65–0.71) > 5-Fold CV (0.48–0.55) > LOSO (0.44–0.46)** — gap ~0.25 antara Random vs LOSO konsisten dengan ekspektasi subject leakage.
+- LOSO std sangat tinggi (~0.10–0.12) — beberapa subjek menjadi outlier (lihat per_fold di JSON: macro F1 fold terendah ~0.22, tertinggi ~0.75).
+- `Intermediate_TL` paling konsisten unggul di CV dan Random Split. Di LOSO, `Late_Fusion_TL` sedikit unggul karena weighted ensemble lebih robust terhadap subject yang sulit.
+
+---
+
+### H.2 7-Class (Neutral / Happy / Sad / Angry / Fearful / Disgusted / Surprised)
+
+| Strategy | n | Arch | Test Macro F1 (mean ± std) | Test Weighted F1 (mean ± std) | Test Acc (mean ± std) |
+|:---|:---:|:---|:---:|:---:|:---:|
+| **LOSO** | 33 | `CNN` | 0.1695 ± 0.0930 | 0.4770 ± 0.2917 | 0.4439 ± 0.2878 |
+| **LOSO** | 33 | `Intermediate_TL` | **0.3089 ± 0.1401** | 0.7129 ± 0.2159 | 0.6888 ± 0.2235 |
+| **LOSO** | 33 | `Late_Fusion` | 0.2603 ± 0.1147 | 0.6674 ± 0.2187 | 0.6358 ± 0.2223 |
+| **5-Fold CV** | 5 | `CNN` | 0.1617 ± 0.0423 | 0.5898 ± 0.1561 | 0.5301 ± 0.1669 |
+| **5-Fold CV** | 5 | `Intermediate_TL` | **0.2351 ± 0.0299** | 0.7265 ± 0.0853 | 0.6825 ± 0.1028 |
+| **5-Fold CV** | 5 | `Late_Fusion` | 0.1946 ± 0.0333 | 0.7204 ± 0.0743 | 0.6660 ± 0.0963 |
+| **Random Split** | 5 | `CNN` | 0.2630 ± 0.0296 | 0.7420 ± 0.0330 | 0.6934 ± 0.0375 |
+| **Random Split** | 5 | `Intermediate_TL` | **0.3719 ± 0.0405** | 0.8789 ± 0.0116 | 0.8816 ± 0.0088 |
+| **Random Split** | 5 | `Late_Fusion` | 0.3149 ± 0.0293 | 0.8097 ± 0.0210 | 0.7753 ± 0.0252 |
+
+**Observasi 7-class:**
+- Urutan macro F1: **Random Split (0.26–0.37) > LOSO (0.17–0.31) > 5-Fold CV (0.16–0.24)** — LOSO sedikit lebih tinggi dari CV karena 33-fold rata-ratanya bisa "beruntung" pada beberapa subjek mayoritas-neutral; std LOSO sangat besar (~0.14).
+- `Intermediate_TL` dominan di ketiga strategi → konsisten dengan Section B (best test macro F1 single-split = 0.2917).
+- Weighted F1 dan accuracy LOSO sangat tinggi tetapi std-nya ~0.22 — beberapa user test set 100% neutral sehingga accuracy mendekati 1.0 tetapi macro F1 minoritas tetap rendah.
+
+---
+
+### H.3 Perbandingan dengan Single-Split (Section A/B)
+
+| Class | Arch | Single-Split (seed 42) | 5-Fold CV (mean) | LOSO (mean) | Random Split (mean) |
+|:---|:---|:---:|:---:|:---:|:---:|
+| 3c | `FCNN_B1` | 0.5893 | 0.4822 | 0.4490 | 0.6459 |
+| 3c | `Intermediate_TL_B1` | 0.6856 | 0.5518 | 0.4355 | 0.7052 |
+| 3c | `Late_Fusion_TL_B1` | 0.6526 | 0.5010 | 0.4548 | 0.7037 |
+| 7c | `CNN scratch / B1` | 0.2774 | 0.1617 | 0.1695 | 0.2630 |
+| 7c | `Intermediate_TL / B1` | 0.2769 | 0.2351 | 0.3089 | 0.3719 |
+| 7c | `LateFusion scratch / B1` | 0.2701 | 0.1946 | 0.2603 | 0.3149 |
+
+**Implikasi:**
+1. **Single-split optimistik vs LOSO** — gap test macro F1 single-split → LOSO ~0.10–0.23 di 3-class. Single-split seed=42 punya test set 5-user yang relatif "mudah".
+2. **5-Fold CV adalah trade-off terbaik** — std rendah (~0.03–0.06), subject-independent, biaya komputasi 5× single (vs 33× LOSO).
+3. **Random Split tidak layak untuk evaluasi akhir** — angka tinggi karena subject leakage; gunakan hanya sebagai sanity-check upper-bound.
+4. **Rekomendasi pelaporan paper:** angka utama = **5-Fold CV** (mean ± std); LOSO sebagai stress-test subject-independence; Random Split di appendix sebagai upper-bound.
+
+---
