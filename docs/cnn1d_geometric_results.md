@@ -283,6 +283,91 @@ CUDA_VISIBLE_DEVICES=1 python scripts/run_fcnn_faceapi_compare.py
 - 1 seed per kombinasi → ada variance run-to-run (~±0.02 macro-F1). Multi-seed direkomendasikan untuk error bar. Tapi gap face-api.js (+0.09 sampai +0.20) jauh di atas noise floor.
 - Match fallback untuk 13/6795 sampel (0.19%) — dampak negligible.
 
+### Extension B2/B3 (14 Mei 2026, sore)
+
+Comparison B1 di atas hanya cover skenario *no aug, no class weight*. Untuk
+melengkapi matriks dan jawab "apakah lift face-api.js robust di skenario lain?",
+di-run **16 kombinasi tambahan**: 2 models (CNN1D, FCNN) × 2 skemas (3c, 7c) ×
+2 scenarios (B2, B3) × 2 sources (MediaPipe, face-api.js). Setup identik dengan
+B1 compare (subset matched 6795 sampel, seed 42, single split).
+
+#### Hasil — test macro-F1 (full matrix face-api.js comparison)
+
+| Model | Skema | B1 MP | **B1 FA** | Δ | B2 MP | **B2 FA** | Δ | B3 MP | **B3 FA** | Δ |
+|---|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| FCNN | 3c | 0.5087 | **0.7119** | +0.2032 | 0.5205 | **0.7448** | **+0.2243** | 0.6483 | **0.6827** | +0.0344 |
+| FCNN | 7c | 0.2255 | **0.3122** | +0.0867 | **0.3086** | 0.2903 | −0.0183 | 0.2679 | **0.2932** | +0.0253 |
+| CNN1D | 3c | 0.6380 | **0.7524** 🏆 | +0.1144 | 0.5747 | **0.7263** | +0.1516 | 0.6209 | **0.6927** | +0.0717 |
+| CNN1D | 7c | 0.2679 | **0.3036** | +0.0357 | **0.2082** | 0.1383 | **−0.0699** | 0.2747 | **0.2889** | +0.0143 |
+
+Detail (test weighted-F1, accuracy, best epoch, elapsed):
+
+| Config | macro_f1 | weighted_f1 | accuracy | best_epoch | time(s) |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **CNN1D × 3c** | | | | | |
+| MP B2 | 0.5747 | 0.7087 | 0.6598 | 22 | 152 |
+| FA B2 | **0.7263** | **0.8571** | **0.8525** | 25 | 165 |
+| MP B3 | 0.6209 | 0.7644 | 0.7374 | 28 | 444 |
+| FA B3 | **0.6927** | **0.8298** | **0.8310** | 15 | 392 |
+| **CNN1D × 7c** | | | | | |
+| MP B2 | **0.2082** | 0.6319 | 0.5587 | 41 | 260 |
+| FA B2 | 0.1383 | 0.6210 | **0.6868** | 3 | 95 |
+| MP B3 | 0.2747 | 0.7902 | 0.7740 | 17 | 817 |
+| FA B3 | **0.2889** | **0.8076** | **0.7793** | 17 | 852 |
+| **FCNN × 3c** | | | | | |
+| MP B2 | 0.5205 | 0.6523 | 0.6211 | 15 | 61 |
+| FA B2 | **0.7448** 🥈 | **0.8726** | **0.8676** | 10 | 50 |
+| MP B3 | 0.6483 | 0.7901 | 0.7750 | 18 | 164 |
+| FA B3 | **0.6827** | **0.8052** | **0.7783** | 14 | 144 |
+| **FCNN × 7c** | | | | | |
+| MP B2 | **0.3086** | 0.7228 | 0.6975 | 31 | 91 |
+| FA B2 | 0.2903 | **0.7961** | **0.7427** | 13 | 57 |
+| MP B3 | 0.2679 | 0.7515 | 0.7621 | 22 | 419 |
+| FA B3 | **0.2932** | **0.7712** | **0.7740** | 12 | 307 |
+
+#### Best per-skema (raw coords, full ablation)
+
+| Skema | Config | macro_f1 | wF1 | acc |
+|---|---|:---:|:---:|:---:|
+| **3c** | **CNN1D × FA × B1** | **0.7524** 🏆 | **0.8721** | **0.8741** |
+| 3c | FCNN × FA × B2 | 0.7448 | 0.8726 | 0.8676 |
+| 3c | CNN1D × FA × B2 | 0.7263 | 0.8571 | 0.8525 |
+| **7c** | **FCNN × FA × B1** | **0.3122** | 0.8445 | 0.8450 |
+| 7c | FCNN × MP × B2 | 0.3086 | 0.7228 | 0.6975 |
+| 7c | CNN1D × FA × B1 | 0.3036 | 0.8343 | 0.8396 |
+
+Catatan: rekor macro-F1 3c tetap di **CNN1D × FA × B1 = 0.7524**. B2/B3 dengan face-api.js tidak pecahkan rekor di 3c, tapi sangat dekat (FA × B2 untuk FCNN = 0.7448, hanya −0.008). Di 7c, rekor macro-F1 tetap di **FCNN × FA × B1 = 0.3122** (B1-only compare); B2/B3 tidak ada yang melebihi.
+
+#### Interpretasi tambahan
+
+1. **face-api.js lift = robust di 3-class, fragile di 7-class.** Pattern di 3c sangat konsisten: face-api.js menang di **B1 + B2 + B3** untuk **kedua** arsitektur (CNN1D dan FCNN), dengan delta +0.03 sampai +0.22. Di 7c, hasilnya mixed: face-api.js cuma menang konsisten di B1 (+0.04 sampai +0.09) dan B3 (+0.01 sampai +0.03), **tapi kalah di B2** (−0.02 sampai −0.07). Hipotesis: di 7c B2, class weight ekstrem (377× untuk fearful=2 sampel) men-disorder loss landscape sampai-sampai presisi landmark face-api.js justru bikin model over-fit ke 2 sampel fearful itu di train, sementara MediaPipe yang "kurang presisi" malah lebih generalize. Bottleneck di 7c jelas class imbalance, bukan kualitas feature.
+
+2. **Lift terbesar di FCNN 3c B2: +0.224 macro-F1.** Sebelumnya, FCNN B2 dengan MediaPipe (0.5205) **lebih buruk** dari FCNN B1 (0.5087+) marginal. Dengan face-api.js, FCNN B2 melompat ke **0.7448** — lift terbesar di seluruh matrix. Implikasi: class weighting yang "berbahaya" di MediaPipe (karena landmark noisy) menjadi sangat efektif di face-api.js (landmark presisi). Bisa juga karena best epoch FA B2 cuma 10 (vs MP B2 = 15) → FA converge lebih cepat ke local optimum yang lebih baik.
+
+3. **B2/B3 di 7c tetap collapse pattern.** CNN1D × FA × B2 = 0.1383, best epoch 3 → model praktis langsung gagal converge ke macro-F1 yang oke. Ini lebih parah dari CNN1D × MP × B2 (0.2082, best ep 41). Sebaliknya, di FCNN × FA × B2 macro-F1 cuma 0.29 tapi accuracy 0.74 → model masih reasonable di majority class, hanya gagal di minority. Pola ini reinforce kesimpulan sebelumnya bahwa **`class_weight='balanced'` adalah strategi salah untuk imbalance 2263:1**, regardless of landmark source.
+
+4. **Best epoch konsisten lebih cepat dengan face-api.js.** Median best_epoch FA = 13, MP = 22 (di B2/B3, ex 7c B3 mediapipe yang 17). Konsisten dengan hipotesis "loss landscape lebih clean dengan landmark presisi" → optimizer cepat sampai ke minimum. Side benefit: training time FA ~10-25% lebih cepat per run.
+
+5. **No new champion.** Rekor 3c (0.7524, CNN1D × FA × B1) dan 7c (0.3122, FCNN × FA × B1) tidak pecah dengan B2/B3. Ini menarik karena di MediaPipe-only world, B2/B3 sering jadi best-of-scenarios. Hipotesis: face-api.js B1 sudah cukup "powerful" tanpa augmentation/weighting, sehingga overhead B2/B3 (loss landscape distortion, augmented samples kurang valid karena hflip-tanpa-index-swap) malah mengurangi performa.
+
+#### Output files (extension)
+
+```
+models/frontonly_conf60/3class/CNN1D_geom_compare/compare_landmark_source_b2b3.json
+models/frontonly_conf60/7class/CNN1D_geom_compare/compare_landmark_source_b2b3.json
+models/frontonly_conf60/3class/FCNN_compare/compare_landmark_source_b2b3.json
+models/frontonly_conf60/7class/FCNN_compare/compare_landmark_source_b2b3.json
+logs/faceapi_b2b3_compare.log
+scripts/run_faceapi_b2b3_compare.py
+```
+
+#### Cara reproduce (extension)
+
+```bash
+CUDA_VISIBLE_DEVICES=1 python scripts/run_faceapi_b2b3_compare.py
+# Output: 16 runs (2 models × 2 schemes × 2 scenarios × 2 sources), 4 JSON files.
+```
+
 ---
 
 ## Eksperimen FACS-decomposed Euclidean distance (14 Mei 2026)

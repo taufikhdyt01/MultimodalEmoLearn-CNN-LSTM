@@ -189,6 +189,52 @@ class EmotionCNN1D_FACS(nn.Module):
         return self.classifier(x)
 
 
+class MultiStackedCNN_Bachtiar(nn.Module):
+    """Replikasi arsitektur 'Multi-stacked CNN' dari Bachtiar et al. (2024)
+    "Engagement Level Detection Using Facial Extraction and Multi-stacked
+    Convolutional Neural Network in e-Learning Settings" (EECCIS 2024).
+
+    Spesifikasi paper: 3 CNN layers + Batch Normalization + 2 linear layers
+    dengan dropout. Best hyperparams: batch=16, lr=0.001, epoch=10.
+
+    Input: feature vector hand-crafted (FL + AU + HE + DE, e.g. 1490-dim atau
+    subset). Treated sebagai 1D sequence dengan 1 channel.
+
+    Channels & kernels diestimasi sesuai konvensi paper (Fig. 3) — paper tidak
+    spesifikasi exact dim, jadi pakai default reasonable:
+      Conv1d(1, 32, k=5) -> BN -> Conv1d(32, 64, k=5) -> Conv1d(64, 128, k=3)
+      -> Flatten + GAP -> Linear(128, 64) -> Dropout(0.3) -> Linear(64, num_classes)
+    """
+
+    def __init__(self, num_classes=7, in_dim=259):
+        super().__init__()
+        self.in_dim = in_dim
+
+        # 3 CNN layers, dengan BN antara conv1 & conv2 (sesuai Fig. 3)
+        self.conv1 = nn.Conv1d(1, 32, kernel_size=5, padding=2)
+        self.bn1 = nn.BatchNorm1d(32)
+        self.conv2 = nn.Conv1d(32, 64, kernel_size=5, padding=2)
+        self.conv3 = nn.Conv1d(64, 128, kernel_size=3, padding=1)
+
+        # 2 linear layers + dropout (Fig. 3)
+        self.gap = nn.AdaptiveAvgPool1d(1)
+        self.fc1 = nn.Linear(128, 64)
+        self.dropout = nn.Dropout(0.3)
+        self.fc2 = nn.Linear(64, num_classes)
+
+    def forward(self, x):
+        # Accept (B, D) → unsqueeze to (B, 1, D)
+        if x.dim() == 2:
+            x = x.unsqueeze(1)
+        x = torch.relu(self.bn1(self.conv1(x)))
+        x = torch.relu(self.conv2(x))
+        x = torch.relu(self.conv3(x))
+        x = self.gap(x).squeeze(-1)  # (B, 128)
+        x = torch.relu(self.fc1(x))
+        x = self.dropout(x)
+        return self.fc2(x)
+
+
 class EmotionFCNN(nn.Module):
     """FCNN untuk fitur geometrik (68 landmarks = 136 fitur).
 
@@ -275,6 +321,137 @@ class EmotionEarlyFusion(nn.Module):
         x = self.features(x)
         x = self.classifier(x)
         return self.head(x)
+
+
+class _SpatialGate(nn.Module):
+    """Spatial gating module untuk Gated Early Fusion.
+
+    Input: 4-channel tensor (RGB + heatmap) (B, 4, H, W)
+    Output: (rgb_gated, heatmap_gated, gate_map_2ch) di mana
+        rgb_gated = RGB ⊙ g_rgb (broadcast g_rgb dari (B,1,H,W) ke 3 channel)
+        heatmap_gated = heatmap ⊙ g_heatmap
+        gate_map_2ch = (B, 2, H, W) untuk inspeksi/visualisasi
+
+    Gate dihitung dari concat input via small Conv2d (3x3 → 1x1 → Sigmoid).
+    Gate per pixel ∈ [0,1] per modality (RGB & heatmap punya gate independen,
+    bukan softmax — supaya bisa simultaneous-attend atau simultaneous-suppress
+    di region tertentu).
+    """
+
+    def __init__(self, hidden_ch: int = 8):
+        super().__init__()
+        self.gate_net = nn.Sequential(
+            nn.Conv2d(4, hidden_ch, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(hidden_ch, 2, kernel_size=1),
+            nn.Sigmoid(),
+        )
+
+    def forward(self, x_concat):
+        # x_concat: (B, 4, H, W)
+        gates = self.gate_net(x_concat)  # (B, 2, H, W)
+        g_rgb = gates[:, 0:1, :, :]      # (B, 1, H, W)
+        g_heat = gates[:, 1:2, :, :]     # (B, 1, H, W)
+        rgb = x_concat[:, :3, :, :] * g_rgb
+        heatmap = x_concat[:, 3:4, :, :] * g_heat
+        return torch.cat([rgb, heatmap], dim=1), gates
+
+
+class EmotionEarlyFusionGated(nn.Module):
+    """Gated Early Fusion (scratch): spatial sigmoid gating sebelum CNN backbone.
+
+    Berbeda dengan EmotionEarlyFusion (concat) yang treat semua 4 channel sama,
+    versi gated punya `_SpatialGate` learnable module yang memprediksi spatial
+    weight per modality berdasarkan input itu sendiri. Model bisa attend ke
+    region berbeda untuk RGB vs heatmap.
+
+    Backbone CNN sama persis dengan EmotionEarlyFusion supaya fair-compare.
+    Parameter overhead: ~314 (Conv 4→8 3x3 + Conv 8→2 1x1 + biases).
+    """
+
+    def __init__(self, num_classes=7, gate_hidden_ch: int = 8):
+        super().__init__()
+        self.gate = _SpatialGate(hidden_ch=gate_hidden_ch)
+
+        self.features = nn.Sequential(
+            nn.Conv2d(4, 32, 3, padding=1), nn.BatchNorm2d(32), nn.ReLU(),
+            nn.Conv2d(32, 32, 3, padding=1), nn.BatchNorm2d(32), nn.ReLU(),
+            nn.MaxPool2d(2), nn.Dropout2d(0.25),
+
+            nn.Conv2d(32, 64, 3, padding=1), nn.BatchNorm2d(64), nn.ReLU(),
+            nn.Conv2d(64, 64, 3, padding=1), nn.BatchNorm2d(64), nn.ReLU(),
+            nn.MaxPool2d(2), nn.Dropout2d(0.25),
+
+            nn.Conv2d(64, 128, 3, padding=1), nn.BatchNorm2d(128), nn.ReLU(),
+            nn.Conv2d(128, 128, 3, padding=1), nn.BatchNorm2d(128), nn.ReLU(),
+            nn.MaxPool2d(2), nn.Dropout2d(0.25),
+
+            nn.Conv2d(128, 256, 3, padding=1), nn.BatchNorm2d(256), nn.ReLU(),
+            nn.Conv2d(256, 256, 3, padding=1), nn.BatchNorm2d(256), nn.ReLU(),
+            nn.MaxPool2d(2), nn.Dropout2d(0.25),
+        )
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(256 * 14 * 14, 512),
+            nn.BatchNorm1d(512), nn.ReLU(), nn.Dropout(0.5),
+            nn.Linear(512, 256),
+            nn.BatchNorm1d(256), nn.ReLU(), nn.Dropout(0.5),
+        )
+        self.head = nn.Linear(256, num_classes)
+
+    def forward(self, x, return_gates: bool = False):
+        x_gated, gates = self.gate(x)
+        feat = self.features(x_gated)
+        feat = self.classifier(feat)
+        logits = self.head(feat)
+        if return_gates:
+            return logits, gates
+        return logits
+
+
+class EmotionEarlyFusionTransferGated(nn.Module):
+    """Gated Early Fusion TL: spatial gating + ResNet18 pretrained backbone.
+
+    First conv ResNet18 di-extend ke 4 channel dengan inisialisasi yang sama
+    dengan EmotionEarlyFusionTransfer (RGB di-copy dari pretrained, 4th channel
+    diinisialisasi dari mean RGB pretrained weights). Gate ditambahkan sebelum
+    conv pertama.
+    """
+
+    def __init__(self, num_classes=7, pretrained=True, gate_hidden_ch: int = 8):
+        super().__init__()
+        self.gate = _SpatialGate(hidden_ch=gate_hidden_ch)
+
+        weights = tv_models.ResNet18_Weights.DEFAULT if pretrained else None
+        resnet = tv_models.resnet18(weights=weights)
+        old_conv = resnet.conv1
+        new_conv = nn.Conv2d(
+            in_channels=4, out_channels=old_conv.out_channels,
+            kernel_size=old_conv.kernel_size, stride=old_conv.stride,
+            padding=old_conv.padding, bias=(old_conv.bias is not None),
+        )
+        if pretrained:
+            with torch.no_grad():
+                new_conv.weight[:, :3, :, :] = old_conv.weight
+                new_conv.weight[:, 3:4, :, :] = old_conv.weight.mean(dim=1, keepdim=True)
+        resnet.conv1 = new_conv
+        self.features = nn.Sequential(*list(resnet.children())[:-1])
+
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(512, 256),
+            nn.BatchNorm1d(256), nn.ReLU(), nn.Dropout(0.5),
+        )
+        self.head = nn.Linear(256, num_classes)
+
+    def forward(self, x, return_gates: bool = False):
+        x_gated, gates = self.gate(x)
+        feat = self.features(x_gated)
+        feat = self.classifier(feat)
+        logits = self.head(feat)
+        if return_gates:
+            return logits, gates
+        return logits
 
 
 class EmotionEarlyFusionTransfer(nn.Module):
