@@ -2,17 +2,21 @@
 Robustness Evaluation — Unified Top-3 (Primer conf60)
 ======================================================
 
-LOSO + 5-Fold CV (subject-wise) untuk top-3 baru per scheme dari unified sweep:
+LOSO + 5-Fold CV (subject-wise) untuk top-3 modality per scheme (modality-unique),
+dipilih berdasarkan macro_f1 tertinggi di scenario B1 (docs/all_metrics_tables.md):
 
 3-class (positive / neutral / negative), scenario B1:
-  - A. Landmark FCNN (facs_28, FA)
-  - B. Intermediate Fusion scratch (facs_28, FA)
-  - C. Late Fusion TL (facs_28, FA)  ← image_branch=cnn_tl, landmark_branch=fcnn_facs_28_fa
+  - A. Landmark FCNN (facs_28, FA)               mf1=0.7585  (top Landmark)
+  - B. Intermediate Fusion scratch (facs_28, FA) mf1=0.7581  (top Intermediate)
+  - C. Late Fusion TL (facs_28, FA)              mf1=0.7604  (top Late)
 
 7-class (neutral/happy/sad/angry/fearful/disgusted/surprised), scenario B1:
-  - D. Landmark FCNN (facs_plus_bs_80, FA-hybrid)
-  - E. Intermediate Fusion scratch (facs_28, FA)
-  - F. Late Fusion TL (facs_plus_bs_80, FA-hybrid)
+  - D. Landmark CNN1D (facs_plus_bs_80, FA)      mf1=0.3279  (top Landmark)
+  - E. Intermediate Fusion scratch (facs_28, FA) mf1=0.3363  (top Intermediate)
+  - F. Late Fusion TL (raw_136, FA)              mf1=0.3159  (top Late)
+
+Image unimodal & Early Fusion modality di-eliminasi karena mf1-nya konsisten
+lebih rendah dari Landmark/Intermediate/Late di B1.
 
 Usage:
   python scripts/run_robustness_unified.py --strategy loso
@@ -43,8 +47,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from training.models import (  # noqa: E402
-    EmotionCNN, EmotionFCNN, IntermediateFusion,
+    EmotionCNN, EmotionFCNN, EmotionCNN1D_FACS, IntermediateFusion,
     EmotionCNNTransfer, IntermediateFusionTransfer,
+    EmotionEarlyFusionTransfer, EmotionEarlyFusionTransferGated,
 )
 
 # ── DATA & CONFIG ────────────────────────────────────────
@@ -103,16 +108,18 @@ def compute_facs_distances(landmarks_flat):
 
 def load_all():
     """Load all primer data (concatenated across train/val/test) for fold splitting."""
-    parts_img, parts_fa, parts_bs, parts_y = [], [], [], []
+    parts_img, parts_fa, parts_bs, parts_hm, parts_y = [], [], [], [], []
     for sp in ("train", "val", "test"):
         parts_img.append(np.load(DATA_DIR / f"X_{sp}_images.npy"))
         parts_fa.append(np.load(DATA_DIR / f"X_{sp}_faceapi_landmarks.npy").astype(np.float32))
         parts_bs.append(np.load(DATA_DIR / f"X_{sp}_mp_blendshapes.npy").astype(np.float32))
+        parts_hm.append(np.load(DATA_DIR / f"X_{sp}_heatmaps.npy").astype(np.float32))
         parts_y.append(np.load(DATA_DIR / f"y_{sp}.npy").astype(np.int64))
 
     images = np.concatenate(parts_img, axis=0)
     fa_lm = np.concatenate(parts_fa, axis=0)        # (N, 136) FA landmarks
     bs = np.concatenate(parts_bs, axis=0)           # (N, 52) blendshapes (MP)
+    hm = np.concatenate(parts_hm, axis=0)           # (N, H, W) MP landmark heatmap
     y7 = np.concatenate(parts_y, axis=0)            # (N,) 7-class labels
     uids = np.load(DATA_DIR / "user_ids_all.npy", allow_pickle=True)
 
@@ -120,10 +127,10 @@ def load_all():
     facs28 = compute_facs_distances(fa_lm)          # (N, 28) FA-derived FACS distances
     fb80 = np.concatenate([facs28, bs], axis=1)     # (N, 80) FACS + blendshape
 
-    assert len(images) == len(uids) == len(y7) == len(facs28) == len(fb80)
+    assert len(images) == len(uids) == len(y7) == len(facs28) == len(fb80) == len(hm)
     return {
         "images": images, "fa_lm": fa_lm, "facs28": facs28, "bs": bs, "fb80": fb80,
-        "y7": y7, "uids": uids,
+        "heatmaps": hm, "y7": y7, "uids": uids,
     }
 
 
@@ -138,12 +145,12 @@ CONFIGS = {
     "C": {"scheme": "3c", "arch": "late_tl",      "feature": "facs_28", "source": "FA",
           "input_dim": 28, "input_kind": "facs28", "label": "Late Fusion TL (facs_28, FA)"},
     # 7-class
-    "D": {"scheme": "7c", "arch": "fcnn",         "feature": "facs_plus_bs_80", "source": "FA-hybrid",
-          "input_dim": 80, "input_kind": "fb80",   "label": "Landmark FCNN (FB80, FA-hybrid)"},
+    "D": {"scheme": "7c", "arch": "cnn1d",        "feature": "facs_plus_bs_80", "source": "FA",
+          "input_dim": 80, "input_kind": "fb80",   "label": "Landmark CNN1D (FB80, FA)"},
     "E": {"scheme": "7c", "arch": "intermediate", "feature": "facs_28", "source": "FA",
           "input_dim": 28, "input_kind": "facs28", "label": "Intermediate scratch (facs_28, FA)"},
-    "F": {"scheme": "7c", "arch": "late_tl",      "feature": "facs_plus_bs_80", "source": "FA-hybrid",
-          "input_dim": 80, "input_kind": "fb80",   "label": "Late Fusion TL (FB80, FA-hybrid)"},
+    "F": {"scheme": "7c", "arch": "late_tl",      "feature": "raw_136", "source": "FA",
+          "input_dim": 136, "input_kind": "raw_fa", "label": "Late Fusion TL (raw_136, FA)"},
 }
 
 
@@ -248,18 +255,25 @@ def fit_config_fold(cfg, data, tr_idx, val_idx, te_idx, num_classes, device):
     else:
         y_all = data["y7"]
 
-    if input_kind == "facs28":
-        lm_feat = data["facs28"]
-    elif input_kind == "fb80":
-        lm_feat = data["fb80"]
-    else:
-        raise ValueError(input_kind)
-
-    lm_t = torch.from_numpy(lm_feat)
     y_t = torch.from_numpy(y_all)
 
-    if arch in ("fcnn", "intermediate") or arch == "late_tl":
+    if input_kind in ("facs28", "fb80", "raw_fa"):
+        lm_map = {"facs28": "facs28", "fb80": "fb80", "raw_fa": "fa_lm"}
+        lm_t = torch.from_numpy(data[lm_map[input_kind]])
+    else:
+        lm_t = None
+
+    if arch in ("fcnn", "cnn1d"):
+        img_t = None
+    else:
         img_t = torch.from_numpy(data["images"]).permute(0, 3, 1, 2).float()
+
+    if input_kind == "image_hm":
+        # Build 4-channel tensor: (RGB, heatmap)
+        hm_t = torch.from_numpy(data["heatmaps"]).unsqueeze(1)  # (N,1,H,W)
+        fused_t = torch.cat([img_t, hm_t], dim=1)               # (N,4,H,W)
+    else:
+        fused_t = None
 
     def slice_idx(idx):
         return idx
@@ -271,6 +285,18 @@ def fit_config_fold(cfg, data, tr_idx, val_idx, te_idx, num_classes, device):
         va_loader = make_loader(lm_t[val_idx], y_t[val_idx])
         te_loader = make_loader(lm_t[te_idx], y_t[te_idx])
         model = build_landmark_model(in_dim, num_classes).to(device)
+        opt = torch.optim.Adam(model.parameters(), lr=0.0001)
+        crit = nn.CrossEntropyLoss()
+        model, best_val, _ = train_one(model, tr_loader, va_loader, crit, opt, device)
+        result = evaluate(model, te_loader, device)
+        return _strip(result, best_val)
+
+    if arch == "cnn1d":
+        lm_cnn = lm_t.unsqueeze(1)  # (N, D) → (N, 1, D) for EmotionCNN1D_FACS
+        tr_loader = make_loader(lm_cnn[tr_idx], y_t[tr_idx], shuffle=True)
+        va_loader = make_loader(lm_cnn[val_idx], y_t[val_idx])
+        te_loader = make_loader(lm_cnn[te_idx], y_t[te_idx])
+        model = EmotionCNN1D_FACS(num_classes=num_classes, in_dim=in_dim, in_channels=1).to(device)
         opt = torch.optim.Adam(model.parameters(), lr=0.0001)
         crit = nn.CrossEntropyLoss()
         model, best_val, _ = train_one(model, tr_loader, va_loader, crit, opt, device)
@@ -329,6 +355,31 @@ def fit_config_fold(cfg, data, tr_idx, val_idx, te_idx, num_classes, device):
             "weighted_f1": float(f1_score(y_te, p_te, average="weighted", zero_division=0)),
             "best_w_image": best_w, "val_mf1_at_best_w": float(best_v_mf1),
         }
+
+    if arch == "image_tl":
+        tr_loader = make_loader(img_t[tr_idx], y_t[tr_idx], shuffle=True)
+        va_loader = make_loader(img_t[val_idx], y_t[val_idx])
+        te_loader = make_loader(img_t[te_idx], y_t[te_idx])
+        model = EmotionCNNTransfer(num_classes=num_classes, pretrained=True).to(device)
+        opt = torch.optim.Adam(model.parameters(), lr=0.00005)
+        crit = nn.CrossEntropyLoss()
+        model, best_val, _ = train_one(model, tr_loader, va_loader, crit, opt, device)
+        result = evaluate(model, te_loader, device)
+        return _strip(result, best_val)
+
+    if arch in ("early_concat_tl", "early_gated_tl"):
+        tr_loader = make_loader(fused_t[tr_idx], y_t[tr_idx], shuffle=True)
+        va_loader = make_loader(fused_t[val_idx], y_t[val_idx])
+        te_loader = make_loader(fused_t[te_idx], y_t[te_idx])
+        if arch == "early_gated_tl":
+            model = EmotionEarlyFusionTransferGated(num_classes=num_classes, pretrained=True).to(device)
+        else:
+            model = EmotionEarlyFusionTransfer(num_classes=num_classes, pretrained=True).to(device)
+        opt = torch.optim.Adam(model.parameters(), lr=0.00005)
+        crit = nn.CrossEntropyLoss()
+        model, best_val, _ = train_one(model, tr_loader, va_loader, crit, opt, device)
+        result = evaluate(model, te_loader, device)
+        return _strip(result, best_val)
 
     raise ValueError(arch)
 

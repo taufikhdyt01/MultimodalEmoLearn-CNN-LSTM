@@ -681,48 +681,48 @@ Source data: `models/benchmark/rafdb_7class/{3,7}class/Unified/`.
 | intermediate | scratch | raw_136 | MP | 7c | B2 | 0.6383 | 0.7300 | 0.7193 |
 | intermediate | scratch | raw_136 | MP | 3c | B3 | 0.8025 | 0.8279 | 0.8277 |
 | intermediate | scratch | raw_136 | MP | 7c | B3 | 0.7088 | 0.7909 | 0.7899 |
-| intermediate | scratch | facs_28 | MP | 3c | B1 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | facs_28 | MP | 7c | B1 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | facs_28 | MP | 3c | B2 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | facs_28 | MP | 7c | B2 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | facs_28 | MP | 3c | B3 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | facs_28 | MP | 7c | B3 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | blendshape_52 | MP | 3c | B1 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | blendshape_52 | MP | 7c | B1 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | blendshape_52 | MP | 3c | B2 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | blendshape_52 | MP | 7c | B2 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | blendshape_52 | MP | 3c | B3 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | blendshape_52 | MP | 7c | B3 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | facs_plus_bs_80 | MP | 3c | B1 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | facs_plus_bs_80 | MP | 7c | B1 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | facs_plus_bs_80 | MP | 3c | B2 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | facs_plus_bs_80 | MP | 7c | B2 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | facs_plus_bs_80 | MP | 3c | B3 | ⏳ | ⏳ | ⏳ |
-| intermediate | scratch | facs_plus_bs_80 | MP | 7c | B3 | ⏳ | ⏳ | ⏳ |
+| intermediate | scratch | facs_28 | MP | 3c | B1 | 0.7710 | 0.8000 | 0.8014 |
+| intermediate | scratch | facs_28 | MP | 7c | B1 | 0.6736 | 0.7633 | 0.7653 |
+| intermediate | scratch | facs_28 | MP | 3c | B2 | 0.7667 | 0.7914 | 0.7909 |
+| intermediate | scratch | facs_28 | MP | 7c | B2 | 0.6666 | 0.7591 | 0.7616 |
+| intermediate | scratch | facs_28 | MP | 3c | B3 | 0.7686 | 0.7954 | 0.7939 |
+| intermediate | scratch | facs_28 | MP | 7c | B3 | 0.6624 | 0.7577 | 0.7592 |
+| intermediate | scratch | blendshape_52 | MP | 3c | B1 | 0.7667 | 0.7946 | 0.7950 |
+| intermediate | scratch | blendshape_52 | MP | 7c | B1 | 0.6663 | 0.7683 | 0.7715 |
+| intermediate | scratch | blendshape_52 | MP | 3c | B2 | 0.7637 | 0.7901 | 0.7881 |
+| intermediate | scratch | blendshape_52 | MP | 7c | B2 | 0.6677 | 0.7639 | 0.7670 |
+| intermediate | scratch | blendshape_52 | MP | 3c | B3 | 0.7655 | 0.7923 | 0.7943 |
+| intermediate | scratch | blendshape_52 | MP | 7c | B3 | 0.6699 | 0.7603 | 0.7609 |
+| intermediate | scratch | facs_plus_bs_80 | MP | 3c | B1 | 0.7578 | 0.7860 | 0.7851 |
+| intermediate | scratch | facs_plus_bs_80 | MP | 7c | B1 | 0.6625 | 0.7706 | 0.7694 |
+| intermediate | scratch | facs_plus_bs_80 | MP | 3c | B2 | 0.7617 | 0.7874 | 0.7875 |
+| intermediate | scratch | facs_plus_bs_80 | MP | 7c | B2 | 0.6745 | 0.7626 | 0.7653 |
+| intermediate | scratch | facs_plus_bs_80 | MP | 3c | B3 | 0.7675 | 0.7944 | 0.7929 |
+| intermediate | scratch | facs_plus_bs_80 | MP | 7c | B3 | 0.6514 | 0.7503 | 0.7500 |
 | intermediate | tl | raw_136 | MP | 3c | B1 | 0.8273 | 0.8473 | 0.8474 |
 | intermediate | tl | raw_136 | MP | 7c | B1 | 0.7204 | 0.8112 | 0.8110 |
 | intermediate | tl | raw_136 | MP | 3c | B2 | 0.8019 | 0.8248 | 0.8239 |
 | intermediate | tl | raw_136 | MP | 7c | B2 | 0.7222 | 0.8151 | 0.8164 |
 | intermediate | tl | raw_136 | MP | 3c | B3 | 0.8362 | 0.8547 | 0.8546 |
 | intermediate | tl | raw_136 | MP | 7c | B3 | 0.7377 | 0.8185 | 0.8188 |
-| intermediate | tl | facs_28 | MP | 3c | B1 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | facs_28 | MP | 7c | B1 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | facs_28 | MP | 3c | B2 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | facs_28 | MP | 7c | B2 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | facs_28 | MP | 3c | B3 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | facs_28 | MP | 7c | B3 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | blendshape_52 | MP | 3c | B1 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | blendshape_52 | MP | 7c | B1 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | blendshape_52 | MP | 3c | B2 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | blendshape_52 | MP | 7c | B2 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | blendshape_52 | MP | 3c | B3 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | blendshape_52 | MP | 7c | B3 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | facs_plus_bs_80 | MP | 3c | B1 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | facs_plus_bs_80 | MP | 7c | B1 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | facs_plus_bs_80 | MP | 3c | B2 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | facs_plus_bs_80 | MP | 7c | B2 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | facs_plus_bs_80 | MP | 3c | B3 | ⏳ | ⏳ | ⏳ |
-| intermediate | tl | facs_plus_bs_80 | MP | 7c | B3 | ⏳ | ⏳ | ⏳ |
+| intermediate | tl | facs_28 | MP | 3c | B1 | 0.8295 | 0.8508 | 0.8508 |
+| intermediate | tl | facs_28 | MP | 7c | B1 | 0.7188 | 0.8051 | 0.8042 |
+| intermediate | tl | facs_28 | MP | 3c | B2 | 0.8218 | 0.8415 | 0.8420 |
+| intermediate | tl | facs_28 | MP | 7c | B2 | 0.7263 | 0.8171 | 0.8202 |
+| intermediate | tl | facs_28 | MP | 3c | B3 | 0.8192 | 0.8403 | 0.8403 |
+| intermediate | tl | facs_28 | MP | 7c | B3 | 0.7234 | 0.8054 | 0.8052 |
+| intermediate | tl | blendshape_52 | MP | 3c | B1 | 0.8151 | 0.8380 | 0.8389 |
+| intermediate | tl | blendshape_52 | MP | 7c | B1 | 0.7200 | 0.8072 | 0.8103 |
+| intermediate | tl | blendshape_52 | MP | 3c | B2 | 0.8179 | 0.8393 | 0.8406 |
+| intermediate | tl | blendshape_52 | MP | 7c | B2 | 0.7270 | 0.8124 | 0.8157 |
+| intermediate | tl | blendshape_52 | MP | 3c | B3 | 0.8212 | 0.8423 | 0.8423 |
+| intermediate | tl | blendshape_52 | MP | 7c | B3 | 0.7168 | 0.8006 | 0.7987 |
+| intermediate | tl | facs_plus_bs_80 | MP | 3c | B1 | 0.8131 | 0.8338 | 0.8324 |
+| intermediate | tl | facs_plus_bs_80 | MP | 7c | B1 | 0.7264 | 0.8169 | 0.8202 |
+| intermediate | tl | facs_plus_bs_80 | MP | 3c | B2 | 0.8187 | 0.8392 | 0.8399 |
+| intermediate | tl | facs_plus_bs_80 | MP | 7c | B2 | 0.7264 | 0.8167 | 0.8178 |
+| intermediate | tl | facs_plus_bs_80 | MP | 3c | B3 | 0.8243 | 0.8432 | 0.8430 |
+| intermediate | tl | facs_plus_bs_80 | MP | 7c | B3 | 0.7309 | 0.8106 | 0.8120 |
 
 ### 4.5 Late Fusion (semua feature × variant, MP source)
 
@@ -1207,7 +1207,7 @@ Source data: `models/benchmark/jaffe_7class/{3,7}class/Unified/`.
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | Primer | 84 | 84 | 12 | 12 | 216 | 216 |
 | KDEF 7c | 48 | 48 | 12 | 12 | 120 | 120 |
-| RAF-DB 7c | 48 | 48 | 12 | 12 | 120 | 84 |
+| RAF-DB 7c | 48 | 48 | 12 | 12 | 120 | 120 |
 | CK+ 7c | 48 | 48 | 12 | 12 | 120 | 120 |
 | JAFFE 7c | 48 | 48 | 12 | 12 | 120 | 120 |
 
