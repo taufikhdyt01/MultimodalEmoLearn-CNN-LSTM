@@ -29,9 +29,40 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from training.models import (
     EmotionCNNTransfer,
     EmotionEarlyFusionTransfer,
+    EmotionEarlyFusionTransferGated,
     EmotionFCNN,
     IntermediateFusionTransfer,
 )
+
+# FACS pair definitions (mirror scripts/run_unified_landmark.py)
+FACS_PAIRS = [
+    ("AU1_left",  17, 21), ("AU1_right", 22, 26),
+    ("AU2_left",  20, 39), ("AU2_right", 23, 42),
+    ("AU4_left",  21, 39), ("AU4_right", 22, 42),
+    ("AU5_left",  37, 41), ("AU5_right", 43, 47),
+    ("AU6_left",   1, 41), ("AU6_right", 15, 47),
+    ("AU7_left",  37, 40), ("AU7_right", 43, 46),
+    ("AU9_left",  31, 39), ("AU9_right", 35, 42),
+    ("AU10_top",  33, 51), ("AU10_left", 31, 48), ("AU10_right", 35, 54),
+    ("AU12_left", 48, 36), ("AU12_right", 54, 45),
+    ("AU15_left", 48,  4), ("AU15_right", 54, 12),
+    ("AU17_left",  8, 57), ("AU17_right",  8, 51),
+    ("AU20_left", 48, 60), ("AU20_right", 54, 64),
+    ("AU23_outer", 48, 54), ("AU24_top",   51, 57),
+    ("AU25",       62, 66),
+]
+INTEROCULAR_PAIR = (36, 45)
+
+
+def compute_facs28(lm_136):
+    pts = lm_136.reshape(-1, 68, 2)
+    a, b = INTEROCULAR_PAIR
+    iod = np.maximum(np.linalg.norm(pts[:, a] - pts[:, b], axis=1), 1e-6)
+    out = np.zeros((len(pts), len(FACS_PAIRS)), dtype=np.float32)
+    for i, (_, p1, p2) in enumerate(FACS_PAIRS):
+        d = np.linalg.norm(pts[:, p1] - pts[:, p2], axis=1)
+        out[:, i] = (d / iod).astype(np.float32)
+    return out
 
 DATA_DIR  = PROJECT_ROOT / "data" / "dataset_frontonly_conf60"
 CKPT_DIR  = PROJECT_ROOT / "models" / "frontonly_conf60" / "gradcam_ckpts"
@@ -56,9 +87,12 @@ def load_split(split):
     img = np.load(DATA_DIR / f"X_{split}_images.npy").astype(np.float32)
     lm  = np.load(DATA_DIR / f"X_{split}_landmarks.npy").astype(np.float32)
     hm  = np.load(DATA_DIR / f"X_{split}_heatmaps.npy").astype(np.float32)
+    # FA landmarks → derive facs_28 for top fusion configs
+    lm_fa = np.load(DATA_DIR / f"X_{split}_faceapi_landmarks.npy").astype(np.float32)
+    facs28 = compute_facs28(lm_fa)
     y7  = np.load(DATA_DIR / f"y_{split}.npy")
     y   = REMAP_3[y7].astype(np.int64)
-    return img, lm, hm, y
+    return img, lm, hm, facs28, y
 
 
 def class_weights(y):
@@ -151,9 +185,9 @@ def main():
         torch.cuda.manual_seed_all(SEED)
     print(f"Device: {device}")
 
-    img_tr, lm_tr, hm_tr, y_tr = load_split("train")
-    img_va, lm_va, hm_va, y_va = load_split("val")
-    img_te, lm_te, hm_te, y_te = load_split("test")
+    img_tr, lm_tr, hm_tr, facs28_tr, y_tr = load_split("train")
+    img_va, lm_va, hm_va, facs28_va, y_va = load_split("val")
+    img_te, lm_te, hm_te, facs28_te, y_te = load_split("test")
     print(f"Train={len(y_tr)}  Val={len(y_va)}  Test={len(y_te)}")
     print(f"Class dist train: {np.bincount(y_tr, minlength=NUM_CLASSES).tolist()}")
 
@@ -180,15 +214,16 @@ def main():
         results[name] = m
         print(f"  val={best_val:.4f}  test_macro={m['test_macro_f1']:.4f}  ({m['elapsed_sec']}s)")
 
-    # ── 2. EarlyFusion_TL (B1: no class weights) ─────────────────────────────
+    # ── 2. EarlyFusion_TL_Gated (B1: no class weights) ───────────────────────
+    # Updated to use Gated variant (top early fusion per all_metrics_tables.md B1)
     name = "early_fusion_tl"
     ckpt = CKPT_DIR / f"{name}.pth"
     if ckpt.exists():
         print(f"\n[{name}] checkpoint already exists, skip retrain")
     else:
-        print(f"\n[{name}] training...")
+        print(f"\n[{name}] training (gated variant)...")
         t0 = time.time()
-        model = EmotionEarlyFusionTransfer(num_classes=NUM_CLASSES).to(device)
+        model = EmotionEarlyFusionTransferGated(num_classes=NUM_CLASSES).to(device)
         crit  = nn.CrossEntropyLoss()   # B1: no class weights
         tr_l  = make_loader("early_fusion", img_tr, lm_tr, hm_tr, y_tr, shuffle=True)
         va_l  = make_loader("early_fusion", img_va, lm_va, hm_va, y_va)
@@ -201,19 +236,21 @@ def main():
         results[name] = m
         print(f"  val={best_val:.4f}  test_macro={m['test_macro_f1']:.4f}  ({m['elapsed_sec']}s)")
 
-    # ── 3. Intermediate_TL (B2: class weights) ───────────────────────────────
+    # ── 3. Intermediate_TL — facs_28 FA (top 3c B1 mf1=0.7581) ─────────────
+    # Updated: landmark branch uses FACS-28 derived from face-api.js landmarks
     name = "intermediate_tl"
     ckpt = CKPT_DIR / f"{name}.pth"
     if ckpt.exists():
         print(f"\n[{name}] checkpoint already exists, skip retrain")
     else:
-        print(f"\n[{name}] training...")
+        print(f"\n[{name}] training (landmark=facs_28 FA, landmark_dim=28)...")
         t0 = time.time()
-        model = IntermediateFusionTransfer(num_classes=NUM_CLASSES).to(device)
+        model = IntermediateFusionTransfer(num_classes=NUM_CLASSES,
+                                            landmark_dim=28).to(device)
         crit  = nn.CrossEntropyLoss(weight=class_weights(y_tr))
-        tr_l  = make_loader("fusion", img_tr, lm_tr, hm_tr, y_tr, shuffle=True)
-        va_l  = make_loader("fusion", img_va, lm_va, hm_va, y_va)
-        te_l  = make_loader("fusion", img_te, lm_te, hm_te, y_te)
+        tr_l  = make_loader("fusion", img_tr, facs28_tr, hm_tr, y_tr, shuffle=True)
+        va_l  = make_loader("fusion", img_va, facs28_va, hm_va, y_va)
+        te_l  = make_loader("fusion", img_te, facs28_te, hm_te, y_te)
         best_val = train_model(model, "fusion", tr_l, va_l, crit, LR_TL, ckpt)
         model.load_state_dict(torch.load(ckpt, map_location=device, weights_only=True))
         m = evaluate(model, "fusion", te_l)
@@ -241,10 +278,10 @@ def main():
         val_cnn = train_model(cnn, "cnn", tr_l, va_l, crit, LR_TL, ckpt_cnn)
         print(f"  CNN branch val={val_cnn:.4f}")
 
-        print(f"\n[late_fusion_tl] training FCNN branch...")
-        fcnn  = EmotionFCNN(num_classes=NUM_CLASSES).to(device)
-        tr_lf = make_loader("fcnn", img_tr, lm_tr, hm_tr, y_tr, shuffle=True)
-        va_lf = make_loader("fcnn", img_va, lm_va, hm_va, y_va)
+        print(f"\n[late_fusion_tl] training FCNN branch (input=facs_28 FA, dim=28)...")
+        fcnn  = EmotionFCNN(input_dim=28, num_classes=NUM_CLASSES).to(device)
+        tr_lf = make_loader("fcnn", img_tr, facs28_tr, hm_tr, y_tr, shuffle=True)
+        va_lf = make_loader("fcnn", img_va, facs28_va, hm_va, y_va)
         val_fcnn = train_model(fcnn, "fcnn", tr_lf, va_lf, crit, LR_SCRATCH, ckpt_fcnn)
         print(f"  FCNN branch val={val_fcnn:.4f}")
 
@@ -254,9 +291,9 @@ def main():
         cnn.eval(); fcnn.eval()
 
         va_l2 = make_loader("cnn",  img_va, lm_va, hm_va, y_va)
-        va_lf2= make_loader("fcnn", img_va, lm_va, hm_va, y_va)
+        va_lf2= make_loader("fcnn", img_va, facs28_va, hm_va, y_va)
         te_l2 = make_loader("cnn",  img_te, lm_te, hm_te, y_te)
-        te_lf2= make_loader("fcnn", img_te, lm_te, hm_te, y_te)
+        te_lf2= make_loader("fcnn", img_te, facs28_te, hm_te, y_te)
 
         def get_probs(model, arch, loader):
             probs = []

@@ -1,0 +1,256 @@
+[2026-05-21T20:31:37+07:00] Retrain Grad-CAM v2 — 3c first, then 7c
+Device: cuda
+Train=5287  Val=579  Test=929
+Class dist train: [432, 4526, 329]
+
+[cnn_tl] training...
+  val=0.5315  test_macro=0.6207  (454.3s)
+
+[early_fusion_tl] training (gated variant)...
+  val=0.4716  test_macro=0.6070  (568.2s)
+
+[intermediate_tl] training (landmark=facs_28 FA, landmark_dim=28)...
+  val=0.6243  test_macro=0.6669  (914.0s)
+
+[late_fusion_tl] training CNN branch...
+  CNN branch val=0.5385
+
+[late_fusion_tl] training FCNN branch (input=facs_28 FA, dim=28)...
+  FCNN branch val=0.7779
+  val=0.7844  test_macro=0.7615  best_w_cnn=0.30  (583.1s)
+
+=== Checkpoints saved to: /mnt/extended-home/fitra_dosen/2025_iris_fer_taufik/MultimodalEmoLearn/models/frontonly_conf60/gradcam_ckpts
+  cnn_tl.pth
+  early_fusion_tl.pth
+  intermediate_tl.pth
+  late_fusion_tl_cnn.pth
+  late_fusion_tl_fcnn.pth
+[2026-05-21T21:14:41+07:00] === 3c retrain done, starting 7c ===
+Device: cuda
+Train=5287  Val=579  Test=929
+Class dist train: [4526, 416, 287, 27, 2, 13, 16]
+
+[cnn] training...
+  val=0.2440  test_macro=0.2697  (1988.5s)
+
+[early_fusion_tl] training...
+  val=0.2332  test_macro=0.2565  (422.4s)
+
+[intermediate_tl] training (landmark=facs_28 FA, landmark_dim=28)...
+  val=0.2705  test_macro=0.2975  (856.8s)
+
+[late_fusion] training CNN branch...
+  CNN val=0.2175
+
+[late_fusion] training FCNN branch (input=raw_136 FA, dim=136)...
+  FCNN val=0.3556
+  ensemble val=0.3567  test_macro=0.3299  best_w_cnn=0.10
+
+=== Checkpoints saved to: /mnt/extended-home/fitra_dosen/2025_iris_fer_taufik/MultimodalEmoLearn/models/frontonly_conf60/gradcam_ckpts_7c
+  cnn.pth
+  early_fusion_tl.pth
+  intermediate_tl.pth
+  late_fusion_cnn.pth
+  late_fusion_fcnn.pth
+[2026-05-21T22:48:50+07:00] === 7c retrain done, running Grad-CAM 3c ===
+Device: cuda
+Train=5287  Val=579  Test=929
+Test class dist: [186, 688, 55]
+
+Loading models...
+All checkpoints loaded.
+LateFusion best_w_cnn = 0.30
+
+Computing test predictions...
+
+=== Test Metrics ===
+  CNN_TL              : macro=0.6207  weighted=0.7188
+  EarlyFusion_TL      : macro=0.6070  weighted=0.7724
+  Intermediate_TL     : macro=0.6677  weighted=0.8184
+  LateFusion_TL       : macro=0.7615  weighted=0.8740
+
+=== Generating per-model Grad-CAM plots ===
+  Saved: gradcam_cnn_tl_error.png
+  Saved: gradcam_earlyfusion_tl_error.png
+  Saved: gradcam_intermediate_tl_error.png
+  Saved: gradcam_latefusion_tl_error.png
+
+=== Generating cross-model comparison plots ===
+Sampel salah di semua 4 model: 48
+  Saved: gradcam_comparison_cls0_sample850.png
+  Saved: gradcam_comparison_cls0_sample836.png
+  Saved: gradcam_comparison_cls0_sample842.png
+  Saved: gradcam_comparison_cls1_sample909.png
+  Saved: gradcam_comparison_cls1_sample766.png
+  Saved: gradcam_comparison_cls1_sample257.png
+  Saved: gradcam_comparison_cls2_sample338.png
+  Saved: gradcam_comparison_cls2_sample657.png
+  Saved: gradcam_comparison_cls2_sample337.png
+
+============================================================
+RINGKASAN METRICS — 3-class Primer test set
+============================================================
+
+CNN_TL  macro_f1=0.6207  weighted_f1=0.7188
+              precision    recall  f1-score   support
+
+    positive       0.47      0.90      0.62       186
+     neutral       0.97      0.63      0.76       688
+    negative       0.34      0.80      0.48        55
+
+    accuracy                           0.69       929
+   macro avg       0.60      0.78      0.62       929
+weighted avg       0.84      0.69      0.72       929
+
+
+EarlyFusion_TL  macro_f1=0.6070  weighted_f1=0.7724
+              precision    recall  f1-score   support
+
+    positive       0.65      0.49      0.56       186
+     neutral       0.85      0.87      0.86       688
+    negative       0.34      0.49      0.40        55
+
+    accuracy                           0.77       929
+   macro avg       0.61      0.62      0.61       929
+weighted avg       0.78      0.77      0.77       929
+
+
+Intermediate_TL  macro_f1=0.6677  weighted_f1=0.8184
+              precision    recall  f1-score   support
+
+    positive       0.64      0.89      0.74       186
+     neutral       0.94      0.82      0.87       688
+    negative       0.35      0.44      0.39        55
+
+    accuracy                           0.81       929
+   macro avg       0.64      0.72      0.67       929
+weighted avg       0.84      0.81      0.82       929
+
+
+LateFusion_TL  macro_f1=0.7615  weighted_f1=0.8740
+              precision    recall  f1-score   support
+
+    positive       0.74      0.96      0.83       186
+     neutral       0.98      0.85      0.91       688
+    negative       0.44      0.69      0.54        55
+
+    accuracy                           0.87       929
+   macro avg       0.72      0.83      0.76       929
+weighted avg       0.90      0.87      0.87       929
+
+
+Semua output disimpan di: /mnt/extended-home/fitra_dosen/2025_iris_fer_taufik/MultimodalEmoLearn/outputs/gradcam
+Done.
+[2026-05-21T22:50:06+07:00] === Grad-CAM 3c done, running Grad-CAM 7c ===
+Device: cuda
+Val=579  Test=929
+Test class dist: [688, 183, 50, 2, 1, 2, 3]
+
+Loading models...
+All checkpoints loaded.
+LateFusion best_w_cnn = 0.10
+
+Computing test predictions...
+
+=== Test Metrics ===
+  CNN                 : macro=0.2697  weighted=0.8046
+  EarlyFusion_TL      : macro=0.2565  weighted=0.7608
+  Intermediate_TL     : macro=0.2975  weighted=0.8129
+  LateFusion          : macro=0.3299  weighted=0.8942
+
+=== Generating per-model Grad-CAM plots ===
+  [CNN] kelas aktif (≥5 sampel, ada benar+salah): ['angry', 'disgust', 'fear']
+  Saved: gradcam_cnn_error.png
+  [EarlyFusion_TL] kelas aktif (≥5 sampel, ada benar+salah): ['angry', 'disgust', 'fear']
+  Saved: gradcam_earlyfusion_tl_error.png
+  [Intermediate_TL] kelas aktif (≥5 sampel, ada benar+salah): ['angry', 'disgust', 'fear']
+  Saved: gradcam_intermediate_tl_error.png
+  [LateFusion] kelas aktif (≥5 sampel, ada benar+salah): ['angry', 'disgust', 'fear']
+  Saved: gradcam_latefusion_error.png
+
+=== Generating cross-model comparison plots ===
+Sampel salah di semua 4 model: 33
+  Saved: gradcam_comparison_angry_s276.png
+  Saved: gradcam_comparison_angry_s889.png
+  Saved: gradcam_comparison_disgust_s367.png
+  Saved: gradcam_comparison_fear_s657.png
+  Saved: gradcam_comparison_fear_s658.png
+  Saved: gradcam_comparison_happy_s762.png
+  Saved: gradcam_comparison_happy_s828.png
+  Saved: gradcam_comparison_neutral_s851.png
+  Saved: gradcam_comparison_sad_s337.png
+  Saved: gradcam_comparison_sad_s338.png
+  Saved: gradcam_comparison_surprise_s894.png
+  Saved: gradcam_comparison_surprise_s449.png
+
+============================================================
+RINGKASAN METRICS — 7-class Primer test set
+============================================================
+
+CNN  macro_f1=0.2697  weighted_f1=0.8046
+              precision    recall  f1-score   support
+
+       angry       0.90      0.86      0.88       688
+     disgust       0.63      0.77      0.69       183
+        fear       0.31      0.32      0.32        50
+       happy       0.00      0.00      0.00         2
+     neutral       0.00      0.00      0.00         1
+         sad       0.00      0.00      0.00         2
+    surprise       0.00      0.00      0.00         3
+
+    accuracy                           0.80       929
+   macro avg       0.26      0.28      0.27       929
+weighted avg       0.81      0.80      0.80       929
+
+
+EarlyFusion_TL  macro_f1=0.2565  weighted_f1=0.7608
+              precision    recall  f1-score   support
+
+       angry       0.85      0.87      0.86       688
+     disgust       0.68      0.44      0.53       183
+        fear       0.30      0.64      0.41        50
+       happy       0.00      0.00      0.00         2
+     neutral       0.00      0.00      0.00         1
+         sad       0.00      0.00      0.00         2
+    surprise       0.00      0.00      0.00         3
+
+    accuracy                           0.76       929
+   macro avg       0.26      0.28      0.26       929
+weighted avg       0.78      0.76      0.76       929
+
+
+Intermediate_TL  macro_f1=0.2975  weighted_f1=0.8129
+              precision    recall  f1-score   support
+
+       angry       0.96      0.78      0.86       688
+     disgust       0.64      0.95      0.77       183
+        fear       0.34      0.68      0.46        50
+       happy       0.00      0.00      0.00         2
+     neutral       0.00      0.00      0.00         1
+         sad       0.00      0.00      0.00         2
+    surprise       0.00      0.00      0.00         3
+
+    accuracy                           0.80       929
+   macro avg       0.28      0.34      0.30       929
+weighted avg       0.86      0.80      0.81       929
+
+
+LateFusion  macro_f1=0.3299  weighted_f1=0.8942
+              precision    recall  f1-score   support
+
+       angry       0.95      0.91      0.93       688
+     disgust       0.86      0.95      0.90       183
+        fear       0.41      0.56      0.47        50
+       happy       0.00      0.00      0.00         2
+     neutral       0.00      0.00      0.00         1
+         sad       0.00      0.00      0.00         2
+    surprise       0.00      0.00      0.00         3
+
+    accuracy                           0.89       929
+   macro avg       0.32      0.35      0.33       929
+weighted avg       0.90      0.89      0.89       929
+
+
+Semua output disimpan di: /mnt/extended-home/fitra_dosen/2025_iris_fer_taufik/MultimodalEmoLearn/outputs/gradcam_7c
+Done.
+[2026-05-21T22:51:21+07:00] === ALL Grad-CAM v2 done ===

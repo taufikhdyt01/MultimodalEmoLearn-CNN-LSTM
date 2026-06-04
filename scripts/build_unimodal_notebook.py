@@ -207,6 +207,196 @@ md("""## 4. Visualisasi
 
 Semua figure dihasilkan oleh `scripts/build_unimodal_figures.py`. Untuk regenerate setelah eksperimen baru selesai, jalankan ulang script tersebut — cell di bawah ini sekadar menampilkan PNG yang sudah ada.
 
+### 4.0 Pembahasan Research Questions
+
+**Mapping section figure ke RQ tesis:**
+
+| Research Question | Figure utama untuk pembahasan |
+|---|---|
+| **RQ1** — kinerja CNN-image vs FCNN-landmark, modalitas mana lebih informatif | §4.0.1 (RQ1 modality contribution) + §4.10 (resource trade-off) + §4.7 (confusion) |
+| **RQ2** — pengaruh dekomposisi FACS / Blendshape vs raw landmark | §4.0.2 (RQ2 Δ vs raw_136) + §4.5 (feature comparison) + §4.6 (arch FCNN/CNN1D) |
+| **RQ3** — 3 strategi fusion + 2 mode Early Fusion (concat/gated) | dibahas di notebook multimodal (`88_multimodal_documentation.ipynb`) |
+
+#### 4.0.1 RQ1 — Unimodal raw feature: CNN vs FCNN/CNN1D landmark
+
+Scope RQ1 (sesuai tesis): unimodal dengan **raw feature** — yaitu citra wajah (CNN_SCRATCH / CNN_TL) dan facial landmark **raw 2D coordinates 136-dim** dari 2 source (MP & FA) dengan 2 arch (FCNN & CNN1D). Total 6 kategori per scenario. Dekomposisi feature (FACS/Blendshape) **tidak masuk** di sini — itu wilayah RQ2.
+""")
+
+code("""display(Image(filename=str(FIG_ROOT/'comparisons'/'rq1_modality_contribution_3c.png')))
+display(Image(filename=str(FIG_ROOT/'comparisons'/'rq1_modality_contribution_7c.png')))""")
+
+md("""**Tabel ringkas RQ1** — mean + max mf1 per modality (Primer, raw feature, semua arch × source × scenario):
+""")
+
+code("""# RQ1 summary — Image (all arch) vs Landmark raw_136 (all arch × source)
+rows = []
+for scheme in ('3c','7c'):
+    # Landmark raw_136 — FCNN + CNN1D × MP + FA
+    lm = []
+    for r in primer[scheme]:
+        rk = r['_run_key']; parts = rk.split('_')
+        if parts[0] not in ('mediapipe','faceapi'): continue
+        feat = '_'.join(parts[1:-3]); arch = parts[-3]; r_scheme = parts[-1]
+        mf1 = r.get('test',{}).get('macro_f1')
+        if feat=='raw_136' and arch in ('fcnn','cnn1d') and r_scheme==scheme and mf1 is not None:
+            lm.append(mf1)
+    # Image — CNN_SCRATCH + CNN_TL
+    img = [r['test']['macro_f1'] for r in primer[scheme]
+           if r.get('_method_dir') in ('cnn_scratch','cnn_tl')
+           and r.get('_run_key','').endswith(scheme)
+           and r.get('test',{}).get('macro_f1') is not None]
+    if lm:
+        rows.append({'scheme':scheme,'modality':'Landmark raw_136 (FCNN+CNN1D × MP+FA)',
+                     'mean_mf1':float(np.mean(lm)),'max_mf1':float(max(lm)),'n':len(lm)})
+    if img:
+        rows.append({'scheme':scheme,'modality':'Image (CNN_SCRATCH+CNN_TL)',
+                     'mean_mf1':float(np.mean(img)),'max_mf1':float(max(img)),'n':len(img)})
+rq1_df = pd.DataFrame(rows)
+rq1_df.style.format({'mean_mf1':'{:.4f}','max_mf1':'{:.4f}'})""")
+
+md("""#### 4.0.2 RQ2 — Pengaruh dekomposisi feature landmark: Δ vs raw_136 baseline
+
+Scope RQ2: **unimodal landmark** dengan multiple feature representation:
+- `raw_136` — koordinat 2D 68 titik (baseline)
+- `facs_28` — Euclidean distance antar landmark berbasis FACS-AU
+- `blendshape_52` — koefisien ARKit Blendshape (MP only)
+- `facs_plus_bs_80` — concat (FACS_28 + Blendshape_52)
+
+Mean macro_f1 (atas **arch (FCNN+CNN1D) × scenario**) untuk tiap feature dibandingkan baseline raw_136, dipisah per source. Positive Δ = dekomposisi memberi improvement.
+""")
+
+code("""display(Image(filename=str(FIG_ROOT/'comparisons'/'rq2_feature_decomposition_delta_3c.png')))
+display(Image(filename=str(FIG_ROOT/'comparisons'/'rq2_feature_decomposition_delta_7c.png')))""")
+
+md("""**Tabel ringkas RQ2** — mean mf1 + Δ vs raw_136 baseline per (feature × source × scheme):
+""")
+
+code("""rq2_rows = []
+for scheme in ('3c','7c'):
+    runs = primer[scheme]
+    for src in ('MP','FA'):
+        # baseline: raw_136 FCNN+CNN1D mean
+        base = []
+        for r in runs:
+            rk = r['_run_key']; parts = rk.split('_')
+            if parts[0] not in ('mediapipe','faceapi'): continue
+            r_src = 'MP' if parts[0]=='mediapipe' else 'FA'
+            r_feat = '_'.join(parts[1:-3]); r_scheme = parts[-1]
+            mf1 = r.get('test',{}).get('macro_f1')
+            if r_src == src and r_feat == 'raw_136' and r_scheme == scheme and mf1 is not None:
+                base.append(mf1)
+        if not base: continue
+        base_mean = float(np.mean(base))
+        for feat in ('raw_136','facs_28','blendshape_52','facs_plus_bs_80'):
+            vals = []
+            for r in runs:
+                rk = r['_run_key']; parts = rk.split('_')
+                if parts[0] not in ('mediapipe','faceapi'): continue
+                r_src = 'MP' if parts[0]=='mediapipe' else 'FA'
+                r_feat = '_'.join(parts[1:-3]); r_scheme = parts[-1]
+                mf1 = r.get('test',{}).get('macro_f1')
+                if r_src == src and r_feat == feat and r_scheme == scheme and mf1 is not None:
+                    vals.append(mf1)
+            if not vals: continue
+            m = float(np.mean(vals))
+            rq2_rows.append({'scheme':scheme,'feature':feat,'source':src,
+                             'mean_mf1':m,'delta_vs_raw':m-base_mean,'n':len(vals)})
+rq2_df = pd.DataFrame(rq2_rows)
+rq2_df.style.format({'mean_mf1':'{:.4f}','delta_vs_raw':'{:+.4f}'}, na_rep='-') \\
+            .background_gradient(subset=['delta_vs_raw'], cmap='RdYlGn', vmin=-0.05, vmax=0.05)""")
+
+md("""#### 4.0.3 Multi-metric summary — accuracy, macro_f1, weighted_f1
+
+Pelengkap RQ1/RQ2: best run per kategori unimodal dievaluasi dengan **3 metrik sekaligus** (accuracy, macro_f1, weighted_f1) untuk validasi konsistensi ranking.
+""")
+
+code("""display(Image(filename=str(FIG_ROOT/'comparisons'/'multi_metric_unimodal_3c.png')))
+display(Image(filename=str(FIG_ROOT/'comparisons'/'multi_metric_unimodal_7c.png')))""")
+
+md("""#### 4.0.4 Inference throughput per arch (samples/sec)
+
+Relevan untuk klaim *applicability* / deployment trade-off — landmark-based model jauh lebih cepat dibandingkan image CNN (no convolution heavy).
+""")
+
+code("""display(Image(filename=str(FIG_ROOT/'resources'/'inference_throughput_3c.png')))
+display(Image(filename=str(FIG_ROOT/'resources'/'inference_throughput_7c.png')))""")
+
+md("""#### 4.0.5 Per-class Precision / Recall / F1 — top models per RQ kategori
+
+Heatmap per-class metric untuk model terbaik di setiap kategori RQ. Berguna untuk pembahasan *class-wise behavior*, terutama di 7c dengan minority class.
+""")
+
+code("""display(Image(filename=str(FIG_ROOT/'per_class'/'per_class_metrics_top_3c.png')))
+display(Image(filename=str(FIG_ROOT/'per_class'/'per_class_metrics_top_7c.png')))""")
+
+md("""**Tabel per-class precision/recall/f1 — top unimodal models (Primer):**
+""")
+
+code("""# Per-class table for top model (overall) per scheme
+rows = []
+for scheme in ('3c','7c'):
+    cands = [(r['test']['macro_f1'], r) for r in primer[scheme]
+             if r.get('test',{}).get('macro_f1') is not None]
+    if not cands: continue
+    cands.sort(key=lambda t: -t[0])
+    for rank, (mf1, r) in enumerate(cands[:3], start=1):
+        rep = r.get('test',{}).get('classification_report', {})
+        drop = {'accuracy','macro avg','weighted avg'}
+        for cls, m in rep.items():
+            if cls in drop or not isinstance(m, dict): continue
+            rows.append({'scheme':scheme,'rank':rank,
+                         'method':r.get('_run_key',''),
+                         'class':cls,
+                         'precision':m.get('precision'),
+                         'recall':m.get('recall'),
+                         'f1':m.get('f1-score'),
+                         'support':int(m.get('support',0))})
+per_class_df = pd.DataFrame(rows)
+per_class_df.style.format({'precision':'{:.3f}','recall':'{:.3f}','f1':'{:.3f}'}, na_rep='-') \\
+                  .background_gradient(subset=['precision','recall','f1'], cmap='RdYlGn', vmin=0, vmax=1)""")
+
+md("""#### 4.0.6 Grad-CAM — Interpretability CNN image branch
+
+Grad-CAM (Gradient-weighted Class Activation Mapping) untuk **CNN_TL** menunjukkan region citra yang paling kontribusi ke prediksi. Validasi kualitatif bahwa model **menatap region wajah relevan** (mata, mulut, alis) — bukan background. Side-by-side dengan kompetitornya di fusion (lihat notebook multimodal §4.0.9).
+
+> **Sumber:** existing outputs di `outputs/gradcam/` (3c) dan `outputs/gradcam_7c/` (7c) dari `scripts/run_gradcam_3c.py` & `scripts/run_gradcam_7c.py`. Deep-dive analisis ada di `notebooks/73_gradcam_analysis.ipynb` (overview) dan `notebooks/86_gradcam_error_analysis.ipynb` (error case).
+
+**Side-by-side comparison (CNN_TL vs fusion variants), 3c — 1 sample per kelas:**
+""")
+
+code("""GRADCAM_3C = PROJECT/'outputs'/'gradcam'
+for f in ['gradcam_comparison_cls0_sample273.png',
+          'gradcam_comparison_cls1_sample129.png',
+          'gradcam_comparison_cls2_sample337.png']:
+    print(f'--- {f} ---')
+    display(Image(filename=str(GRADCAM_3C/f)))""")
+
+md("""**Side-by-side comparison, 7c — 1 sample per kelas:**
+""")
+
+code("""GRADCAM_7C = PROJECT/'outputs'/'gradcam_7c'
+for f in ['gradcam_comparison_angry_s339.png',
+          'gradcam_comparison_disgust_s25.png',
+          'gradcam_comparison_fear_s562.png',
+          'gradcam_comparison_happy_s762.png',
+          'gradcam_comparison_neutral_s851.png',
+          'gradcam_comparison_sad_s337.png',
+          'gradcam_comparison_surprise_s289.png']:
+    print(f'--- {f} ---')
+    display(Image(filename=str(GRADCAM_7C/f)))""")
+
+md("""**Error case analysis — CNN_TL (3c):**
+
+Sample yang misclassified — Grad-CAM menunjukkan model menatap region yang salah / kurang informatif.
+""")
+
+code("""display(Image(filename=str(GRADCAM_3C/'gradcam_cnn_tl_error.png')))""")
+
+md("""**Insight Grad-CAM untuk RQ1:**
+- CNN_TL biasanya **menatap region wajah** (terutama mata + mulut) untuk decision — ini validasi bahwa ResNet-18 pretrained ImageNet sudah berhasil di-finetune untuk semantik wajah.
+- Untuk minority class 7c (disgust/fear), Grad-CAM cenderung **diffuse** (tidak fokus ke satu region) → tantangan untuk model image-only di kelas dengan few-shot.
+- Bandingkan dengan fusion (multimodal notebook): apakah landmark guidance membuat attention map lebih fokus?
+
 ### 4.1 Heatmap Master Table
 """)
 
@@ -289,20 +479,44 @@ Training time, model size (params), dan peak VRAM untuk tiap metode (mean across
 code("""display(Image(filename=str(FIG_ROOT/'resources'/'resource_compare_3c.png')))
 display(Image(filename=str(FIG_ROOT/'resources'/'resource_compare_7c.png')))""")
 
-md("""### 4.11 Class Distribution: Primer vs KDEF
+md("""### 4.11 Class Distribution: Primer + semua benchmark
 
-Primer punya class imbalance ekstrem (~2263:1 di 7c), KDEF perfectly balanced (~334-338/class).
+Distribusi kelas (train split) untuk Primer dan 4 benchmark (KDEF, RAF-DB, CK+, JAFFE).
+Primer punya class imbalance ekstrem; benchmark bervariasi (KDEF perfectly balanced;
+CK+/JAFFE relatif balanced; RAF-DB skewed seperti dataset in-the-wild).
 """)
 
 code("""display(Image(filename=str(FIG_ROOT/'dataset'/'class_distribution.png')))""")
 
-md("""### 4.12 Cross-dataset: Primer vs KDEF
+md("""### 4.12 Cross-dataset: Primer vs setiap benchmark
 
-Apakah ranking method konsisten antara dataset Primer (in-the-wild, imbalanced) dan KDEF (controlled lab, balanced)? Comparison di scenario B1, source MediaPipe.
+Apakah ranking method konsisten antara Primer (in-the-wild) dan tiap benchmark? Comparison di scenario B1, source MediaPipe.
 """)
 
 code("""display(Image(filename=str(FIG_ROOT/'comparisons'/'primer_vs_kdef_3c.png')))
-display(Image(filename=str(FIG_ROOT/'comparisons'/'primer_vs_kdef_7c.png')))""")
+display(Image(filename=str(FIG_ROOT/'comparisons'/'primer_vs_kdef_7c.png')))
+display(Image(filename=str(FIG_ROOT/'comparisons'/'primer_vs_rafdb_3c.png')))
+display(Image(filename=str(FIG_ROOT/'comparisons'/'primer_vs_rafdb_7c.png')))
+display(Image(filename=str(FIG_ROOT/'comparisons'/'primer_vs_ckplus_3c.png')))
+display(Image(filename=str(FIG_ROOT/'comparisons'/'primer_vs_ckplus_7c.png')))
+display(Image(filename=str(FIG_ROOT/'comparisons'/'primer_vs_jaffe_3c.png')))
+display(Image(filename=str(FIG_ROOT/'comparisons'/'primer_vs_jaffe_7c.png')))""")
+
+md("""### 4.13 Cross-dataset: Primer vs SEMUA benchmark (sekali tampil)
+
+Ringkasan visual semua dataset side-by-side dalam satu chart per scheme.
+""")
+
+code("""display(Image(filename=str(FIG_ROOT/'comparisons'/'primer_vs_all_benchmarks_3c.png')))
+display(Image(filename=str(FIG_ROOT/'comparisons'/'primer_vs_all_benchmarks_7c.png')))""")
+
+md("""### 4.14 Top-5 Leaderboard per Dataset (cross-dataset)
+
+Top-5 model unimodal per dataset (Primer + 4 benchmark) berdasarkan macro_f1 di B1.
+""")
+
+code("""display(Image(filename=str(FIG_ROOT/'leaderboards'/'benchmark_top5_3c.png')))
+display(Image(filename=str(FIG_ROOT/'leaderboards'/'benchmark_top5_7c.png')))""")
 
 md("""## 5. Insight Utama
 

@@ -30,6 +30,32 @@ from training.models import (
     IntermediateFusionTransfer,
 )
 
+# FACS-28 helper (mirror retrain_for_gradcam_7c.py)
+FACS_PAIRS = [
+    ("AU1_left", 17, 21), ("AU1_right", 22, 26), ("AU2_left", 20, 39),
+    ("AU2_right", 23, 42), ("AU4_left", 21, 39), ("AU4_right", 22, 42),
+    ("AU5_left", 37, 41), ("AU5_right", 43, 47), ("AU6_left", 1, 41),
+    ("AU6_right", 15, 47), ("AU7_left", 37, 40), ("AU7_right", 43, 46),
+    ("AU9_left", 31, 39), ("AU9_right", 35, 42), ("AU10_top", 33, 51),
+    ("AU10_left", 31, 48), ("AU10_right", 35, 54), ("AU12_left", 48, 36),
+    ("AU12_right", 54, 45), ("AU15_left", 48, 4), ("AU15_right", 54, 12),
+    ("AU17_left", 8, 57), ("AU17_right", 8, 51), ("AU20_left", 48, 60),
+    ("AU20_right", 54, 64), ("AU23_outer", 48, 54), ("AU24_top", 51, 57),
+    ("AU25", 62, 66),
+]
+INTEROCULAR_PAIR = (36, 45)
+
+
+def compute_facs28(lm_136):
+    pts = lm_136.reshape(-1, 68, 2)
+    a, b = INTEROCULAR_PAIR
+    iod = np.maximum(np.linalg.norm(pts[:, a] - pts[:, b], axis=1), 1e-6)
+    out = np.zeros((len(pts), len(FACS_PAIRS)), dtype=np.float32)
+    for i, (_, p1, p2) in enumerate(FACS_PAIRS):
+        d = np.linalg.norm(pts[:, p1] - pts[:, p2], axis=1)
+        out[:, i] = (d / iod).astype(np.float32)
+    return out
+
 DATA_DIR  = PROJECT_ROOT / "data" / "dataset_frontonly_conf60"
 CKPT_DIR  = PROJECT_ROOT / "models" / "frontonly_conf60" / "gradcam_ckpts_7c"
 OUT_DIR   = PROJECT_ROOT / "outputs" / "gradcam_7c"
@@ -49,11 +75,14 @@ def load_split(split):
     img = np.load(DATA_DIR / f"X_{split}_images.npy").astype(np.float32)
     lm  = np.load(DATA_DIR / f"X_{split}_landmarks.npy").astype(np.float32)
     hm  = np.load(DATA_DIR / f"X_{split}_heatmaps.npy").astype(np.float32)
+    # FA + facs_28 for v2 configs (Intermediate facs_28 FA; Late Fusion FCNN raw_136 FA)
+    lm_fa = np.load(DATA_DIR / f"X_{split}_faceapi_landmarks.npy").astype(np.float32)
+    facs28 = compute_facs28(lm_fa)
     y   = np.load(DATA_DIR / f"y_{split}.npy").astype(np.int64)
-    return img, lm, hm, y
+    return img, lm, hm, facs28, lm_fa, y
 
-img_va, lm_va, hm_va, y_va = load_split("val")
-img_te, lm_te, hm_te, y_te = load_split("test")
+img_va, lm_va, hm_va, facs28_va, lm_fa_va, y_va = load_split("val")
+img_te, lm_te, hm_te, facs28_te, lm_fa_te, y_te = load_split("test")
 print(f"Val={len(y_va)}  Test={len(y_te)}")
 print(f"Test class dist: {np.bincount(y_te, minlength=NUM_CLASSES).tolist()}")
 
@@ -105,11 +134,14 @@ cnn     = load_ckpt(EmotionCNN(num_classes=NUM_CLASSES).to(DEVICE),
                     CKPT_DIR / "cnn.pth")
 ef_tl   = load_ckpt(EmotionEarlyFusionTransfer(num_classes=NUM_CLASSES).to(DEVICE),
                     CKPT_DIR / "early_fusion_tl.pth")
-itl     = load_ckpt(IntermediateFusionTransfer(num_classes=NUM_CLASSES).to(DEVICE),
+# Intermediate Fusion: facs_28 FA (landmark_dim=28)
+itl     = load_ckpt(IntermediateFusionTransfer(num_classes=NUM_CLASSES,
+                                                landmark_dim=28).to(DEVICE),
                     CKPT_DIR / "intermediate_tl.pth")
 lf_cnn  = load_ckpt(EmotionCNN(num_classes=NUM_CLASSES).to(DEVICE),
                     CKPT_DIR / "late_fusion_cnn.pth")
-lf_fcnn = load_ckpt(EmotionFCNN(num_classes=NUM_CLASSES).to(DEVICE),
+# Late Fusion FCNN: raw_136 FA (input_dim=136)
+lf_fcnn = load_ckpt(EmotionFCNN(input_dim=136, num_classes=NUM_CLASSES).to(DEVICE),
                     CKPT_DIR / "late_fusion_fcnn.pth")
 print("All checkpoints loaded.")
 
@@ -120,11 +152,11 @@ print(f"LateFusion best_w_cnn = {best_w:.2f}")
 
 # ─── Compute all test predictions ─────────────────────────────────────────────
 print("\nComputing test predictions...")
-_, p_cnn   = get_preds(cnn,    "cnn",          img_te, lm_te, hm_te)
-_, p_ef    = get_preds(ef_tl,  "early_fusion",  img_te, lm_te, hm_te)
-_, p_itl   = get_preds(itl,    "fusion",        img_te, lm_te, hm_te)
-_, p_lfc   = get_preds(lf_cnn,  "cnn",          img_te, lm_te, hm_te)
-_, p_lffc  = get_preds(lf_fcnn, "fcnn",         img_te, lm_te, hm_te)
+_, p_cnn   = get_preds(cnn,    "cnn",          img_te, lm_te,    hm_te)
+_, p_ef    = get_preds(ef_tl,  "early_fusion", img_te, lm_te,    hm_te)
+_, p_itl   = get_preds(itl,    "fusion",       img_te, facs28_te, hm_te)  # facs_28 FA
+_, p_lfc   = get_preds(lf_cnn,  "cnn",          img_te, lm_te,    hm_te)
+_, p_lffc  = get_preds(lf_fcnn, "fcnn",         img_te, lm_fa_te,  hm_te)  # raw_136 FA
 p_lf = best_w * p_lfc + (1 - best_w) * p_lffc
 
 MODEL_NAMES   = ["CNN", "EarlyFusion_TL", "Intermediate_TL", "LateFusion"]
@@ -160,7 +192,8 @@ def run_gradcam(model_obj, model_name, sample_idx):
     rgb = np.clip(rgb, 0, 1)
 
     if model_name == "Intermediate_TL":
-        lm_fixed     = lm_t(lm_te, [sample_idx])
+        # Intermediate Fusion now uses facs_28 FA as landmark feature
+        lm_fixed     = lm_t(facs28_te, [sample_idx])
         wrapper      = FusionWrapper(model_obj, lm_fixed)
         target_layer = model_obj.image_features[-2][-1]  # ResNet18 layer4 last block
         cam = GradCAM(model=wrapper, target_layers=[target_layer])
