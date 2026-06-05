@@ -79,7 +79,8 @@ def overlay_landmarks(ax, img, lm_flat):
 
 def main():
     images = np.load(DATA_DIR / "X_train_images.npy")
-    fa_lm  = np.load(DATA_DIR / "X_train_faceapi_landmarks.npy")
+    # Source: MediaPipe 68-point landmarks (478->68 dlib mapping), bukan face-api.js
+    mp_lm  = np.load(DATA_DIR / "X_train_landmarks.npy")
     heatmaps = np.load(DATA_DIR / "X_train_heatmaps.npy")
     y_hard = np.load(DATA_DIR / "y_train.npy")
     soft_p = DATA_DIR / "y_train_soft.npy"
@@ -89,7 +90,7 @@ def main():
     candidates = np.where(y_hard == 0)[0]
     good = []
     for i in candidates:
-        lm = fa_lm[i].reshape(68, 2)
+        lm = mp_lm[i].reshape(68, 2)
         if lm.min() >= 0.05 and lm.max() <= 0.95:
             good.append(i)
     if y_soft is not None:
@@ -98,7 +99,7 @@ def main():
     print(f"Using sample idx={sample_idx}")
 
     img_orig = np.clip(images[sample_idx], 0, 1).astype(np.float32)
-    lm_orig = fa_lm[sample_idx].astype(np.float32)
+    lm_orig = mp_lm[sample_idx].astype(np.float32)
     hm_orig = heatmaps[sample_idx].astype(np.float32)
 
     # ── Apply augmentations ──────────────────────────────────────────────────

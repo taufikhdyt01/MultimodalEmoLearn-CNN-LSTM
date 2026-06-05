@@ -93,7 +93,8 @@ def main():
     args = ap.parse_args()
 
     images = np.load(DATA_DIR / "X_train_images.npy")
-    fa_lm  = np.load(DATA_DIR / "X_train_faceapi_landmarks.npy")
+    fa_lm  = np.load(DATA_DIR / "X_train_faceapi_landmarks.npy")  # dipakai utk seleksi sample (sample tetap sama)
+    mp_lm  = np.load(DATA_DIR / "X_train_landmarks.npy")          # MediaPipe 68-titik — dipakai utk overlay stage 4
     bs_all = np.load(DATA_DIR / "X_train_mp_blendshapes.npy")
     heatmaps = np.load(DATA_DIR / "X_train_heatmaps.npy")
     y_hard = np.load(DATA_DIR / "y_train.npy")
@@ -116,7 +117,7 @@ def main():
     print(f"Using sample idx={sample_idx} (class={y_hard[sample_idx]})")
 
     face_img = np.clip(images[sample_idx], 0, 1)
-    lm = fa_lm[sample_idx]
+    lm = mp_lm[sample_idx]  # overlay stage 4 pakai MediaPipe
     hm = heatmaps[sample_idx]
     H, W = face_img.shape[:2]
 
@@ -146,7 +147,7 @@ def main():
         "frame dari\nrekaman webcam",
         "MediaPipe FaceLandmarker\nbounding box",
         "face crop\nresize ke 224×224",
-        "68 titik face-api.js (FA)\n(MP di-extract paralel)",
+        "68 titik MediaPipe (MP)\n(FA di-extract paralel)",
         "Gaussian blob\nper landmark → channel-4",
     ]
 
