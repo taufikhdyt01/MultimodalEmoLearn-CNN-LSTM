@@ -232,7 +232,12 @@ def main():
     # NAMES_3 = positive(0), neutral(1), negative(2)
     rows3 = []
     # (A) benar: positive & neutral
+    # neutral di-fix ke sampel terpilih (idx 904, user 213, conf~0.88) — lebih jelas
+    A_FIXED_3C = {1: 904}
     for cls in [0, 1]:
+        if cls in A_FIXED_3C and y[A_FIXED_3C[cls]] == cls and pc[A_FIXED_3C[cls]] == cls:
+            rows3.append({"section": "(A) Prediksi benar", "true": cls, "idx": A_FIXED_3C[cls]})
+            continue
         s = pick(pc, y, cls, cls, 1)
         if s: rows3.append({"section": "(A) Prediksi benar", "true": cls, "idx": s[0]})
     # (B) misklasifikasi: neutral<->negative (ekspresi halus)
