@@ -35,7 +35,7 @@ dua versi dataset:
 | Dataset | Skema | N | Protokol | Accuracy |
 |---|---|:---:|---|:---:|
 | CK+ diolah sendiri (neutral in, contempt out) | 7c | 636 | 10-fold CV subject-wise | **93,22%** |
-| **Kaggle CK+48** (contempt in, neutral out) | 7c | **981** | Subject-wise holdout | **89,25%** |
+| **Kaggle CK+48** (contempt in, neutral out) | 7c | **981** | Subject-independent split | **89,25%** |
 
 Selisih ~4% wajar mengingat skema kelas berbeda. Hasil **93,22%** adalah
 hasil terbaik penelitian ini secara keseluruhan. Kaggle CK+48 dipilih
@@ -46,9 +46,9 @@ paper pembanding.
 
 | Protokol | Keterangan |
 |---|---|
-| **Subject-wise holdout** *(protokol utama)* | Tidak ada overlap subjek antara train dan test. Lebih ketat secara ilmiah. |
-| **Holdout sample-level 5× rata-rata** | Kompatibel dengan protokol paper pembanding (Grover, Singh, dll.). |
-| **10-fold CV sample-level** | Paling robust — setiap sampel pernah jadi test set. |
+| **Subject-independent split** *(protokol utama)* | Tidak ada overlap subjek antara train dan test. Lebih ketat secara ilmiah. |
+| **Train/test split 5× rata-rata** | Kompatibel dengan protokol paper pembanding (Grover, Singh, dll.). |
+| **10-fold CV** | Paling robust — setiap sampel pernah jadi test set. |
 
 ---
 
@@ -56,9 +56,9 @@ paper pembanding.
 
 | Protokol | Accuracy | Macro F1 | Weighted F1 |
 |---|:---:|:---:|:---:|
-| **Subject-wise holdout, B3** *(protokol utama)* | **89,25%** | **86,11%** | 89,18% |
-| Holdout 80:20 (5× rata-rata), B3 | **99,09%** | **98,57%** | 99,10% |
-| 10-fold CV sample-level, B3 | **99,39%** | **99,13%** | 99,40% |
+| **Subject-independent split, B3** *(protokol utama)* | **89,25%** | **86,11%** | 89,18% |
+| Train/test split 80:20 (5× rata-rata), B3 | **99,09%** | **98,57%** | 99,10% |
+| 10-fold CV, B3 | **99,39%** | **99,13%** | 99,40% |
 
 File output:
 - `models/benchmark/ckplus_subjectwise/ckplus_kaggle_orig_earlyfusion_b3_subjectwise.json`
@@ -71,20 +71,20 @@ File output:
 
 | Penelitian | Metode | Protokol | Akurasi |
 |---|---|---|:---:|
-| Grover & Bansal (2024) | CNN ringan (citra) | Holdout sample-level | 99,20% |
-| Singh et al. (2025) / MMSAD | CNN ringan citra (modul emosi MMSAD) | Holdout 80:20 sample-level | 99,05% |
-| Gautam & Seeja (2023) | HOG + CNN | Holdout sample-level | 98,48% |
-| Aly et al. (2023) | ResNet-50 + CBAM | Holdout sample-level | 94,58% |
-| Maddu & Murugappan (2024) | IDBN-CNN Hybrid | Holdout 80% sample-level | 92,71% |
-| **Penelitian ini** | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | Holdout 80:20 (5× rata-rata) | **99,09%** |
-| **Penelitian ini** | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | 10-fold CV sample-level | **99,39%** |
-| **Penelitian ini** *(protokol utama)* | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | Subject-wise holdout | **89,25%** |
+| Grover & Bansal (2024) | CNN ringan (citra) | Train/test split (rasio tidak dirinci) | 99,20% |
+| Singh et al. (2025) / MMSAD | CNN ringan citra (modul emosi MMSAD) | Train/test split 80:20 | 99,05% |
+| Gautam & Seeja (2023) | HOG + CNN | Train/test split (rasio tidak dirinci) | 98,48% |
+| Aly et al. (2023) | ResNet-50 + CBAM | Train/test split (rasio tidak dirinci) | 94,58% |
+| Maddu & Murugappan (2024) | IDBN-CNN Hybrid | Train/test split 80:20 | 92,71% |
+| **Penelitian ini** | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | Train/test split 80:20 (5× rata-rata) | **99,09%** |
+| **Penelitian ini** | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | 10-fold CV | **99,39%** |
+| **Penelitian ini** *(protokol utama)* | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | Subject-independent split | **89,25%** |
 | **Penelitian ini** *(hasil terbaik, dataset berbeda)* | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | 10-fold CV subject-wise | **93,22%** |
 
 **Analisis:**
-- Dengan protokol sample-level yang sama, model penelitian ini (**99,09–99,39%**)
+- Dengan protokol yang sama, model penelitian ini (**99,09–99,39%**)
   **melampaui** seluruh paper pembanding termasuk Grover (99,20%) dan Singh (99,05%).
-- Gap antara protokol subject-wise (89,25%) dan sample-level (99,39%) membuktikan
+- Gap antara protokol subject-wise (89,25%) dan (99,39%) membuktikan
   bahwa angka tinggi pada paper pembanding sebagian besar dikontribusi protokol
   evaluasi yang lebih longgar (tidak ada pemisahan subjek).
 - Angka **89,25%** (subject-wise) lebih kredibel secara ilmiah karena model
@@ -102,12 +102,12 @@ File output:
    (shawon10/ckplus, 981 gambar, 7 kelas tanpa neutral) — identik dengan
    dataset yang digunakan seluruh paper pembanding.
 
-2. **Protokol utama:** Subject-wise holdout — tidak ada overlap subjek
+2. **Protokol utama:** Subject-independent split — tidak ada overlap subjek
    antara train dan test. Dipilih karena lebih ketat secara metodologi.
 
 3. **Konteks gap:** Gap ~10% antara protokol subject-wise (89,25%) dan
    paper pembanding (92–99%) terutama disebabkan perbedaan protokol evaluasi.
-   Ketika protokol disamakan (sample-level), model ini mencapai 99,39% —
+   Ketika protokol disamakan (random split), model ini mencapai 99,39% —
    melampaui seluruh paper pembanding.
 
 4. **Kontribusi:** Keunggulan penelitian ini bukan pada akurasi CK+ semata,
@@ -123,9 +123,9 @@ Model: Early Fusion concat TL B3.
 
 | Protokol | Accuracy | Macro F1 | Weighted F1 |
 |---|:---:|:---:|:---:|
-| Subject-wise holdout | 89,25% | 86,11% | 89,18% |
-| Holdout 80:20 (5× rata-rata) | 99,09% ± 0,59% | 98,57% ± 1,02% | 99,10% |
-| 10-fold CV sample-level | 99,39% ± 0,82% | 99,13% ± 1,14% | 99,40% |
+| Subject-independent split | 89,25% | 86,11% | 89,18% |
+| Train/test split 80:20 (5× rata-rata) | 99,09% ± 0,59% | 98,57% ± 1,02% | 99,10% |
+| 10-fold CV | 99,39% ± 0,82% | 99,13% ± 1,14% | 99,40% |
 
 ---
 

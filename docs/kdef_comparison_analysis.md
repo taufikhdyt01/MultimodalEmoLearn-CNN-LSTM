@@ -43,14 +43,14 @@
 
 ## 3. Hasil Penelitian Ini pada KDEF
 
-### 3.1 Subject-wise Holdout — Protokol Utama
+### 3.1 Subject-wise Train/test split — Protokol Utama
 
 Sumber: `docs/all_metrics_tables.md` §3.
 Dataset: `kdef_7class` (2941 sampel), split subject-wise 80:10:10.
 
 | Protokol | Accuracy | Macro F1 | Weighted F1 |
 |---|:---:|:---:|:---:|
-| Subject-wise holdout, B1 *(protokol utama)* | **91,50%** | **91,40%** | 91,40% |
+| Subject-independent split, B1 *(protokol utama)* | **91,50%** | **91,40%** | 91,40% |
 
 ### 3.2 Sample-level — Tiga Protokol
 
@@ -60,9 +60,9 @@ Log: `logs/benchmark_kdef_samplelevel_ef_b1.log`
 
 | Protokol | Comparable dengan | Accuracy | Macro F1 | Weighted F1 |
 |---|---|:---:|:---:|:---:|
-| Holdout 80:20 (5× rata-rata), B1 | Grover & Bansal (2024) | **90,36% ± 1,12%** | **90,29% ± 1,14%** | 90,28% |
-| Holdout 70:30 (5× rata-rata), B1 | Singh et al. (2025) | **88,27% ± 1,18%** | **88,15% ± 1,21%** | 88,14% |
-| 10-fold CV sample-level, B1 | Akhand et al. (2021) | **91,57% ± 1,22%** | **91,51% ± 1,27%** | 91,51% |
+| Train/test split 80:20 (5× rata-rata), B1 | Grover & Bansal (2024) | **90,36% ± 1,12%** | **90,29% ± 1,14%** | 90,28% |
+| Train/test split 70:30 (5× rata-rata), B1 | Singh et al. (2025) | **88,27% ± 1,18%** | **88,15% ± 1,21%** | 88,14% |
+| 10-fold CV, B1 | Akhand et al. (2021) | **91,57% ± 1,22%** | **91,51% ± 1,27%** | 91,51% |
 
 ---
 
@@ -70,16 +70,16 @@ Log: `logs/benchmark_kdef_samplelevel_ef_b1.log`
 
 | Penelitian | Metode | Protokol | Akurasi |
 |---|---|---|:---:|
-| Lasri et al. (2022) | VGG-16, Transfer Learning | 10-fold CV sample-level | 99,00% |
-| Akhand et al. (2021) | DenseNet-161, Transfer Learning | 10-fold CV sample-level | 96,51% |
-| Grover & Bansal (2024) | CNN ringan (citra) | Holdout sample-level | 94,00% |
-| Singh et al. (2025) / MMSAD | CNN ringan citra (modul emosi MMSAD) | Holdout 70:30 sample-level | 88,01% |
-| Lasri et al. (2022) | VGG-16, Transfer Learning | Holdout 80:20 sample-level | 86,33% |
-| Kurniawardhani et al. (2022) | CNN (frontal only, 490 img) | Holdout 80:10:10 sample-level | 82,00% |
-| **Penelitian ini** | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | Subject-wise holdout | **91,50%** |
-| **Penelitian ini** | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | 10-fold CV sample-level | **91,57%** |
-| **Penelitian ini** | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | Holdout 80:20 (5× rata-rata) | **90,36%** |
-| **Penelitian ini** | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | Holdout 70:30 (5× rata-rata) | **88,27%** |
+| Lasri et al. (2022) | VGG-16, Transfer Learning | 10-fold CV | 99,00% |
+| Akhand et al. (2021) | DenseNet-161, Transfer Learning | 10-fold CV | 96,51% |
+| Grover & Bansal (2024) | CNN ringan (citra) | Train/test split (rasio tidak dirinci) | 94,00% |
+| Singh et al. (2025) / MMSAD | CNN ringan citra (modul emosi MMSAD) | Train/test split 70:30 | 88,01% |
+| Lasri et al. (2022) | VGG-16, Transfer Learning | Train/test split 80:20 | 86,33% |
+| Kurniawardhani et al. (2022) | CNN (frontal only, 490 img) | Train/test split 80:10:10 | 82,00% |
+| **Penelitian ini** | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | Subject-independent split | **91,50%** |
+| **Penelitian ini** | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | 10-fold CV | **91,57%** |
+| **Penelitian ini** | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | Train/test split 80:20 (5× rata-rata) | **90,36%** |
+| **Penelitian ini** | Early Fusion concat (citra + heatmap landmark), ResNet-18 TL | Train/test split 70:30 (5× rata-rata) | **88,27%** |
 
 ---
 
@@ -87,19 +87,19 @@ Log: `logs/benchmark_kdef_samplelevel_ef_b1.log`
 
 | Paper | Kelas KDEF | Protokol | Akurasi | Terverifikasi? |
 |---|:---:|---|:---:|:---:|
-| Lasri et al. (2022) | 7 (happiness, fear, sadness, neutral, disgust, anger, surprise) | 10-fold CV sample-level | 99,00% | ✅ |
-| Lasri et al. (2022) | 7 | Holdout **80:20** sample-level | 86,33% | ✅ |
-| Akhand et al. (2021) | 7 (afraid, angry, disgusted, happy, neutral, sad, surprised) | 10-fold CV sample-level | 96,51% | ✅ |
-| Grover & Bansal (2024) | 7 (angry, disgust, fear, happy, sad, surprise, neutral) | Holdout sample-level (**tidak dirinci rasionya**) | 94,00% | ⚠️ rasio tidak dirinci |
-| Singh et al. (2025) | 7 (angry, disgust, fear, happy, sad, surprise, neutral) | Holdout **70:30** sample-level | 88,01% | ✅ |
+| Lasri et al. (2022) | 7 (happiness, fear, sadness, neutral, disgust, anger, surprise) | 10-fold CV | 99,00% | ✅ |
+| Lasri et al. (2022) | 7 | Train/test split **80:20** | 86,33% | ✅ |
+| Akhand et al. (2021) | 7 (afraid, angry, disgusted, happy, neutral, sad, surprised) | 10-fold CV | 96,51% | ✅ |
+| Grover & Bansal (2024) | 7 (angry, disgust, fear, happy, sad, surprise, neutral) | Train/test split (**tidak dirinci rasionya**) | 94,00% | ⚠️ rasio tidak dirinci |
+| Singh et al. (2025) | 7 (angry, disgust, fear, happy, sad, surprise, neutral) | Train/test split **70:30** | 88,01% | ✅ |
 
 **Catatan kelas:** Semua paper menggunakan **7 kelas termasuk neutral, tanpa contempt** — sama dengan KDEF penelitian ini. ✅
 
-**Catatan Akhand:** Menggunakan seluruh 4900 gambar KDEF (frontal + profil). Holdout 90:10 menghasilkan 98,78% — terlalu tinggi karena test set sangat kecil (~490 gambar). Angka 10-fold CV (96,51%) lebih representatif dan yang dipakai untuk perbandingan.
+**Catatan Akhand:** Menggunakan seluruh 4900 gambar KDEF (frontal + profil). Train/test split 90:10 menghasilkan 98,78% — terlalu tinggi karena test set sangat kecil (~490 gambar). Angka 10-fold CV (96,51%) lebih representatif dan yang dipakai untuk perbandingan.
 
 **Catatan Grover:** Test set 8793 gambar melebihi total KDEF (4900), mengindikasikan augmentasi dilakukan sebelum split. Protokol tidak dirinci secara eksplisit.
 
-**Catatan Lasri:** Punya dua hasil — 10-fold CV (99%) jauh lebih tinggi dari Holdout 80:20 (86,33%). Keduanya dicantumkan di tabel agar perbandingan lebih lengkap.
+**Catatan Lasri:** Punya dua hasil — 10-fold CV (99%) jauh lebih tinggi dari Train/test split 80:20 (86,33%). Keduanya dicantumkan di tabel agar perbandingan lebih lengkap.
 
 
 **Catatan Kurniawardhani et al. (2022):** Hanya menggunakan **490 gambar frontal** dari KDEF (70 per kelas, 35 pria + 35 wanita), bukan 4900 gambar penuh. Test set hanya 49 gambar. Hasil 82% harus diinterpretasikan dengan hati-hati.
@@ -122,9 +122,9 @@ per split). Tidak ada class imbalance, sehingga:
 
 Gap antara penelitian ini (91,50% subject-wise) dan paper pembanding (88–97%)
 perlu dilihat dari dua sisi:
-- **vs Akhand (96,51%)**: Protokol berbeda — Akhand pakai 10-fold CV sample-level
+- **vs Akhand (96,51%)**: Protokol berbeda — Akhand pakai 10-fold CV
   yang lebih longgar. Dengan protokol sama, hasil penelitian ini diperkirakan lebih tinggi.
-- **vs Grover (94,00%)**: Protokol Grover tidak dirinci, kemungkinan sample-level.
+- **vs Grover (94,00%)**: Protokol Grover tidak dirinci, kemungkinan.
 - **vs Singh (88,01%)**: Penelitian ini sudah **unggul** bahkan pada protokol
   subject-wise yang lebih ketat (91,50% > 88,01%).
 
@@ -132,16 +132,16 @@ perlu dilihat dari dua sisi:
 
 > Pada dataset KDEF, model Early Fusion concat TL mencapai akurasi **91,50%**
 > menggunakan protokol subject-wise holdout yang lebih ketat. Dengan protokol
-> sample-level yang sama, model mencapai **88,27%** (Holdout 70:30) hingga
+> yang sama, model mencapai **88,27%** (Train/test split 70:30) hingga
 > **91,57%** (10-fold CV).
 >
 > Penelitian ini **mengungguli Singh et al. (2025)** pada protokol yang setara
-> (Holdout 70:30: 88,27% vs 88,01%). Dibandingkan Grover (Holdout: 90,36% vs
+> (Train/test split 70:30: 88,27% vs 88,01%). Dibandingkan Grover (Train/test split: 90,36% vs
 > 94,00%) dan Akhand (10-fold CV: 91,57% vs 96,51%), gap ~3–5% terutama
 > disebabkan perbedaan arsitektur backbone (ResNet-18 vs DenseNet-161/CNN khusus)
 > dan protokol evaluasi yang lebih ketat (subject-wise). Dibandingkan Lasri
 > (10-fold CV: 91,57% vs 99,00%), gap yang besar disebabkan Lasri menggunakan
-> seluruh 4900 gambar KDEF dengan sample-level split yang memungkinkan data
+> seluruh 4900 gambar KDEF dengan split yang memungkinkan data
 > leakage antar subjek.
 
 ---
@@ -152,10 +152,10 @@ Dataset: `kdef_7class` (2941 sampel), model: Early Fusion concat TL B1.
 
 | Protokol | Accuracy | Macro F1 | Weighted F1 | File |
 |---|:---:|:---:|:---:|---|
-| Subject-wise holdout | 91,50% | 91,40% | 91,40% | `all_metrics_tables.md` §3 |
-| **10-fold CV sample-level** | **91,57% ± 1,22%** | **91,51% ± 1,27%** | 91,51% | `kdef_7c_cv10_earlyfusion_b1.json` |
-| **Holdout 80:20 (5× rata-rata)** | **90,36% ± 1,12%** | **90,29% ± 1,14%** | 90,28% | `kdef_7c_holdout8020_earlyfusion_b1.json` |
-| **Holdout 70:30 (5× rata-rata)** | **88,27% ± 1,18%** | **88,15% ± 1,21%** | 88,14% | `kdef_7c_holdout7030_earlyfusion_b1.json` |
+| Subject-independent split | 91,50% | 91,40% | 91,40% | `all_metrics_tables.md` §3 |
+| **10-fold CV** | **91,57% ± 1,22%** | **91,51% ± 1,27%** | 91,51% | `kdef_7c_cv10_earlyfusion_b1.json` |
+| **Train/test split 80:20 (5× rata-rata)** | **90,36% ± 1,12%** | **90,29% ± 1,14%** | 90,28% | `kdef_7c_holdout8020_earlyfusion_b1.json` |
+| **Train/test split 70:30 (5× rata-rata)** | **88,27% ± 1,18%** | **88,15% ± 1,21%** | 88,14% | `kdef_7c_holdout7030_earlyfusion_b1.json` |
 
 ---
 

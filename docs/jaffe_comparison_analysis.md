@@ -2,7 +2,7 @@
 
 > **Catatan:** Pada protokol subject-wise, konfigurasi terbaik berdasarkan
 > **accuracy** dan **macro F1** menunjuk pada model yang berbeda. Oleh karena itu,
-> **kedua konfigurasi dijalankan** pada protokol sample-level untuk perbandingan
+> **kedua konfigurasi dijalankan** pada protokol untuk perbandingan
 > lengkap:
 > - **Konfigurasi A** — terbaik berdasarkan **Macro F1**: Intermediate scratch,
 >   facs_plus_bs_80, B2 → acc=50,00%, macro_f1=**52,87%**
@@ -62,15 +62,15 @@ adalah scalar features, bukan koordinat spasial.
 
 ## 3. Hasil Penelitian Ini pada JAFFE
 
-### 3.1 Subject-wise Holdout — Protokol Utama
+### 3.1 Subject-wise Train/test split — Protokol Utama
 
 Dataset: `jaffe_7class` (213 sampel), split subject-wise 70:10:20.
 Sumber: `docs/all_metrics_tables.md` §6.4
 
 | Konfigurasi | Protokol | Accuracy | Macro F1 | Weighted F1 |
 |---|---|:---:|:---:|:---:|
-| A — scratch, facs_plus_bs_80, B2 | Subject-wise holdout | 50,00% | **52,87%** | 51,99% |
-| B — TL, blendshape_52, B3 | Subject-wise holdout | **55,00%** | 52,55% | 53,04% |
+| A — scratch, facs_plus_bs_80, B2 | Subject-independent split | 50,00% | **52,87%** | 51,99% |
+| B — TL, blendshape_52, B3 | Subject-independent split | **55,00%** | 52,55% | 53,04% |
 
 ### 3.2 Sample-level
 
@@ -79,10 +79,10 @@ Output: `models/benchmark/jaffe_samplelevel/`
 
 | Konfigurasi | Protokol | Accuracy | Macro F1 | Weighted F1 |
 |---|---|:---:|:---:|:---:|
-| A — scratch, facs_plus_bs_80, B2 | Holdout 80:20 (5× rata-rata) | 73,49% ± 6,99% | 72,00% ± 8,21% | 71,34% |
-| A — scratch, facs_plus_bs_80, B2 | 10-fold CV sample-level | 75,26% ± 11,04% | 75,07% ± 11,03% | 74,97% |
-| B — TL, blendshape_52, B3 | Holdout 80:20 (5× rata-rata) | **84,19% ± 6,14%** | **83,62% ± 6,20%** | 83,65% |
-| B — TL, blendshape_52, B3 | 10-fold CV sample-level | **82,21% ± 10,30%** | **81,10% ± 10,65%** | 81,40% |
+| A — scratch, facs_plus_bs_80, B2 | Train/test split 80:20 (5× rata-rata) | 73,49% ± 6,99% | 72,00% ± 8,21% | 71,34% |
+| A — scratch, facs_plus_bs_80, B2 | 10-fold CV | 75,26% ± 11,04% | 75,07% ± 11,03% | 74,97% |
+| B — TL, blendshape_52, B3 | Train/test split 80:20 (5× rata-rata) | **84,19% ± 6,14%** | **83,62% ± 6,20%** | 83,65% |
+| B — TL, blendshape_52, B3 | 10-fold CV | **82,21% ± 10,30%** | **81,10% ± 10,65%** | 81,40% |
 
 ---
 
@@ -102,18 +102,18 @@ terbaik yang dipilih dari all_metrics_tables.
 
 | Penelitian | Metode | Protokol | Akurasi |
 |---|---|---|:---:|
-| Akhand et al. (2021) | DenseNet-161, Transfer Learning | 10-fold CV sample-level | 99,52% |
-| Singh et al. (2025) / MMSAD | CNN ringan (modul emosi MMSAD) | Holdout 80:20 sample-level | 98,50% |
-| Lasri et al. (2022) | VGG-16, Transfer Learning | 10-fold CV sample-level | 98,00% |
-| Lasri et al. (2022) | VGG-16, Transfer Learning | Holdout 80:20 sample-level | 97,70% |
+| Akhand et al. (2021) | DenseNet-161, Transfer Learning | 10-fold CV | 99,52% |
+| Singh et al. (2025) / MMSAD | CNN ringan (modul emosi MMSAD) | Train/test split 80:20 | 98,50% |
+| Lasri et al. (2022) | VGG-16, Transfer Learning | 10-fold CV | 98,00% |
+| Lasri et al. (2022) | VGG-16, Transfer Learning | Train/test split 80:20 | 97,70% |
 | Wadhawan & Gandhi (2023) | Ensemble TL landmark-aware | 10-fold CV subject-independent | 97,14% |
-| Gautam & Seeja (2023) | HOG + CNN | Holdout sample-level | 91,43% |
-| **Penelitian ini** (Konfigurasi A) | Intermediate Fusion scratch (citra + facs_plus_bs_80), B2 | Holdout 80:20 (5× rata-rata) | **73,49%** |
-| **Penelitian ini** (Konfigurasi A) | Intermediate Fusion scratch (citra + facs_plus_bs_80), B2 | 10-fold CV sample-level | **75,26%** |
-| **Penelitian ini** (Konfigurasi B) | Intermediate Fusion TL (citra + blendshape_52), ResNet-18 TL, B3 | Holdout 80:20 (5× rata-rata) | **84,19%** |
-| **Penelitian ini** (Konfigurasi B) | Intermediate Fusion TL (citra + blendshape_52), ResNet-18 TL, B3 | 10-fold CV sample-level | **82,21%** |
-| **Penelitian ini** *(protokol utama, Konfigurasi A)* | Intermediate Fusion scratch (citra + facs_plus_bs_80), B2 | Subject-wise holdout | 50,00% |
-| **Penelitian ini** *(protokol utama, Konfigurasi B)* | Intermediate Fusion TL (citra + blendshape_52), ResNet-18 TL, B3 | Subject-wise holdout | **55,00%** |
+| Gautam & Seeja (2023) | HOG + CNN | Train/test split (rasio tidak dirinci) | 91,43% |
+| **Penelitian ini** (Konfigurasi A) | Intermediate Fusion scratch (citra + facs_plus_bs_80), B2 | Train/test split 80:20 (5× rata-rata) | **73,49%** |
+| **Penelitian ini** (Konfigurasi A) | Intermediate Fusion scratch (citra + facs_plus_bs_80), B2 | 10-fold CV | **75,26%** |
+| **Penelitian ini** (Konfigurasi B) | Intermediate Fusion TL (citra + blendshape_52), ResNet-18 TL, B3 | Train/test split 80:20 (5× rata-rata) | **84,19%** |
+| **Penelitian ini** (Konfigurasi B) | Intermediate Fusion TL (citra + blendshape_52), ResNet-18 TL, B3 | 10-fold CV | **82,21%** |
+| **Penelitian ini** *(protokol utama, Konfigurasi A)* | Intermediate Fusion scratch (citra + facs_plus_bs_80), B2 | Subject-independent split | 50,00% |
+| **Penelitian ini** *(protokol utama, Konfigurasi B)* | Intermediate Fusion TL (citra + blendshape_52), ResNet-18 TL, B3 | Subject-independent split | **55,00%** |
 
 ---
 
@@ -121,9 +121,9 @@ terbaik yang dipilih dari all_metrics_tables.
 
 | Paper | Kelas | Nama Kelas | Protokol | Terverifikasi? |
 |---|:---:|---|---|:---:|
-| Akhand et al. (2021) | 7 | Afraid, Angry, Disgusted, Sad, Happy, Surprised, Neutral | 10-fold CV sample-level | ✅ |
-| Singh et al. (2025) | 7 | Anger, Fear, Disgust, Happiness, Neutral, Sadness, Surprise | Holdout 80:20 sample-level | ✅ |
-| Lasri et al. (2022) | 7 | Angry, Disgust, Fear, Happiness, Sad, Surprise, Neutral | Holdout 80:20 + 10-fold CV | ✅ |
+| Akhand et al. (2021) | 7 | Afraid, Angry, Disgusted, Sad, Happy, Surprised, Neutral | 10-fold CV | ✅ |
+| Singh et al. (2025) | 7 | Anger, Fear, Disgust, Happiness, Neutral, Sadness, Surprise | Train/test split 80:20 | ✅ |
+| Lasri et al. (2022) | 7 | Angry, Disgust, Fear, Happiness, Sad, Surprise, Neutral | Train/test split 80:20 + 10-fold CV | ✅ |
 | Wadhawan & Gandhi (2023) | 7 | Anger, Disgust, Fear, Happiness, Sadness, Surprise, Neutral | 10-fold **subject-independent** | ✅ |
 | Gautam & Seeja (2023) | 7 | 6 basic + neutral (tidak eksplisit) | Tidak dirinci (train/test Kaggle) | ⚠️ |
 
@@ -131,7 +131,7 @@ terbaik yang dipilih dari all_metrics_tables.
 
 **Catatan Singh:** Dalam teks eksperimen disebutkan akurasi **98,1%**, sedangkan abstract dan tabel comparison menyebut **98,50%**. Yang digunakan di tabel adalah 98,50% (angka tabel comparison Singh).
 
-**Catatan Akhand:** Holdout 90:10 menghasilkan 100% (terlalu kecil test set — ~21 gambar), 10-fold CV lebih valid → 99,52% yang dipakai.
+**Catatan Akhand:** Train/test split 90:10 menghasilkan 100% (terlalu kecil test set — ~21 gambar), 10-fold CV lebih valid → 99,52% yang dipakai.
 
 ---
 
@@ -150,7 +150,7 @@ kecil dan homogen (semua perempuan Jepang).
 ### 7.2 Mengapa Angka Literatur Sangat Tinggi (97–99%)?
 
 Hampir seluruh paper pembanding (Akhand, Singh, Lasri, Gautam) menggunakan
-**sample-level split** — gambar dari subjek yang sama tersebar di train dan test.
+**random split** — gambar dari subjek yang sama tersebar di train dan test.
 Dengan hanya 213 gambar dari 10 orang, model dapat "mengenali wajah" subjek
 yang sudah dilihat saat training → angka menjadi sangat tinggi (97–100%).
 
@@ -164,7 +164,7 @@ yang sudah dilihat saat training → angka menjadi sangat tinggi (97–100%).
 
 > Rendahnya akurasi pada protokol subject-wise (50–55%) mencerminkan tantangan
 > genuine generalisasi lintas-subjek pada dataset JAFFE yang sangat kecil
-> (213 gambar, 10 subjek). Dengan protokol sample-level yang sama dengan
+> (213 gambar, 10 subjek). Dengan protokol yang sama dengan
 > literatur, model terbaik (Konfigurasi B) mencapai **84,19%**, masih terdapat
 > gap ~15% dibanding paper terbaik (99,52%). Gap ini terutama disebabkan oleh:
 > (1) model penelitian ini dioptimalkan untuk dataset primer dan bersifat
@@ -177,7 +177,7 @@ yang sudah dilihat saat training → angka menjadi sangat tinggi (97–100%).
 
 ## Lampiran A: Hasil Lengkap Benchmark JAFFE
 
-### A.1 Subject-wise Holdout — Kedua Konfigurasi
+### A.1 Subject-wise Train/test split — Kedua Konfigurasi
 
 Sumber: `docs/all_metrics_tables.md` §6.4
 
@@ -192,10 +192,10 @@ Output: `models/benchmark/jaffe_samplelevel/`
 
 | Konfigurasi | Protokol | Accuracy | Macro F1 | Weighted F1 |
 |---|---|:---:|:---:|:---:|
-| A — scratch, facs_plus_bs_80, B2 | Holdout 80:20 (5× rata-rata) | 73,49% ± 6,99% | 72,00% ± 8,21% | 71,34% |
-| A — scratch, facs_plus_bs_80, B2 | 10-fold CV sample-level | 75,26% ± 11,04% | 75,07% ± 11,03% | 74,97% |
-| **B — TL, blendshape_52, B3** | **Holdout 80:20 (5× rata-rata)** | **84,19% ± 6,14%** | **83,62% ± 6,20%** | 83,65% |
-| **B — TL, blendshape_52, B3** | **10-fold CV sample-level** | **82,21% ± 10,30%** | **81,10% ± 10,65%** | 81,40% |
+| A — scratch, facs_plus_bs_80, B2 | Train/test split 80:20 (5× rata-rata) | 73,49% ± 6,99% | 72,00% ± 8,21% | 71,34% |
+| A — scratch, facs_plus_bs_80, B2 | 10-fold CV | 75,26% ± 11,04% | 75,07% ± 11,03% | 74,97% |
+| **B — TL, blendshape_52, B3** | **Train/test split 80:20 (5× rata-rata)** | **84,19% ± 6,14%** | **83,62% ± 6,20%** | 83,65% |
+| **B — TL, blendshape_52, B3** | **10-fold CV** | **82,21% ± 10,30%** | **81,10% ± 10,65%** | 81,40% |
 
 ---
 

@@ -78,20 +78,20 @@ Sumber: `docs/all_metrics_tables.md` §4.
 
 ## 4. Tabel Perbandingan dengan Penelitian Terdahulu
 
-Semua paper pembanding menggunakan **fixed split resmi RAF-DB** (holdout test set resmi).
+Semua paper pembanding menggunakan **fixed split resmi RAF-DB** (train/test split resmi).
 
 | Penelitian | Metode | Protokol | Akurasi |
 |---|---|---|:---:|
-| Ruan et al. (2021) / FDRL | Feature decomposition-reconstruction | Holdout (test set resmi) | 89,47% |
-| Zhao et al. (2021) / EfficientFace | Lightweight CNN + label distribution | Holdout (test set resmi) | 88,36% |
-| Wang et al. (2020b) / SCN | Self-cure network | Holdout (test set resmi) | 88,14% |
-| Singh et al. (2025) / MMSAD | CNN ringan citra (modul emosi MMSAD) | Holdout (test set resmi) | 87,50% |
-| Wang et al. (2020a) / RAN | Region attention network | Holdout (test set resmi) | 86,90% |
-| Wang et al. (2021) / OAENet | Oriented attention ensemble network | Holdout (test set resmi) | 86,50% |
-| Zhang et al. (2021) / IE-DBN | Identity-expression dual branch network | Holdout (test set resmi) | 84,75% |
-| Grover & Bansal (2024) | CNN ringan (citra) | Holdout (test set resmi) | 84,40% |
-| **Penelitian ini** (Konfigurasi A) | Late Fusion (citra + landmark raw_136), ResNet-18 TL | Holdout (split resmi), B1 | **83,14%** |
-| **Penelitian ini** (Konfigurasi B) | Late Fusion (citra + landmark raw_136), ResNet-18 TL | Holdout (split resmi), B3 | 82,73% |
+| Ruan et al. (2021) / FDRL | Feature decomposition-reconstruction | Train/test split ~80:20 (split resmi) | 89,47% |
+| Zhao et al. (2021) / EfficientFace | Lightweight CNN + label distribution | Train/test split ~80:20 (split resmi) | 88,36% |
+| Wang et al. (2020b) / SCN | Self-cure network | Train/test split ~80:20 (split resmi) | 88,14% |
+| Singh et al. (2025) / MMSAD | CNN ringan citra (modul emosi MMSAD) | Train/test split ~80:20 (split resmi) | 87,50% |
+| Wang et al. (2020a) / RAN | Region attention network | Train/test split ~80:20 (split resmi) | 86,90% |
+| Wang et al. (2021) / OAENet | Oriented attention ensemble network | Train/test split ~80:20 (split resmi) | 86,50% |
+| Zhang et al. (2021) / IE-DBN | Identity-expression dual branch network | Train/test split ~80:20 (split resmi) | 84,75% |
+| Grover & Bansal (2024) | CNN ringan (citra) | Train/test split ~80:20 (split resmi) | 84,40% |
+| **Penelitian ini** (Konfigurasi A) | Late Fusion (citra + landmark raw_136), ResNet-18 TL | Train/test split ~80:20 (split resmi), B1 | **83,14%** |
+| **Penelitian ini** (Konfigurasi B) | Late Fusion (citra + landmark raw_136), ResNet-18 TL | Train/test split ~80:20 (split resmi), B3 | 82,73% |
 
 ---
 
@@ -104,14 +104,14 @@ Semua paper pembanding menggunakan **fixed split resmi RAF-DB** (holdout test se
 
 | Paper | Kelas | Protokol | Akurasi | Terverifikasi? |
 |---|:---:|---|:---:|:---:|
-| Ruan et al. (2021) / FDRL | 7 | Holdout test set resmi | 89,47% | ✅ |
-| Zhao et al. (2021) / EfficientFace | 7 | Holdout test set resmi | 88,36% | ✅ |
-| Wang et al. (2020b) / SCN | 7 | Holdout test set resmi | 88,14% | ✅ |
-| Singh et al. (2025) | 7 | Holdout test set resmi | 87,50% | ✅ |
-| Wang et al. (2020a) / RAN | 7 | Holdout test set resmi | 86,90% | ✅ |
-| Wang et al. (2021) / OAENet | 7 | Holdout test set resmi | 86,50% | ✅ |
-| Zhang et al. (2021) / IE-DBN | 7 | Holdout test set resmi *(eksplisit)* | 84,75% | ✅ |
-| Grover & Bansal (2024) | 7 | Holdout | 84,40% | ✅ |
+| Ruan et al. (2021) / FDRL | 7 | Train/test split ~80:20 (split resmi) | 89,47% | ✅ |
+| Zhao et al. (2021) / EfficientFace | 7 | Train/test split ~80:20 (split resmi) | 88,36% | ✅ |
+| Wang et al. (2020b) / SCN | 7 | Train/test split ~80:20 (split resmi) | 88,14% | ✅ |
+| Singh et al. (2025) | 7 | Train/test split ~80:20 (split resmi) | 87,50% | ✅ |
+| Wang et al. (2020a) / RAN | 7 | Train/test split ~80:20 (split resmi) | 86,90% | ✅ |
+| Wang et al. (2021) / OAENet | 7 | Train/test split ~80:20 (split resmi) | 86,50% | ✅ |
+| Zhang et al. (2021) / IE-DBN | 7 | Train/test split ~80:20 (split resmi) *(eksplisit)* | 84,75% | ✅ |
+| Grover & Bansal (2024) | 7 | Train/test split | 84,40% | ✅ |
 
 **Catatan kelas:** Semua paper menggunakan **7 kelas** (6 ekspresi dasar + neutral, tanpa contempt) — sama dengan RAF-DB penelitian ini. ✅
 
