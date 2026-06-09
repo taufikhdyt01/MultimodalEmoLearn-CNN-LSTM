@@ -725,7 +725,17 @@ def fig_fusion_inference_throughput(scheme):
     ax.set_xlabel("inference throughput (samples/sec) — mean across runs")
     ax.set_xlim(0, max(vals) * 1.18)
     ax.set_title(f"Inference throughput per fusion strategy — Primer {scheme}")
-    plt.tight_layout()
+    # Late Fusion tidak punya joint inference pass (menggabungkan softmax cached
+    # dari dua branch unimodal), jadi throughput-nya tidak diukur/dicatat.
+    if not any("Late" in lbl for lbl in labels):
+        fig.text(0.5, 0.005,
+                 "Catatan: Late Fusion dikecualikan — tidak ada joint inference pass "
+                 "(menggabungkan softmax cached dari dua branch unimodal), "
+                 "sehingga throughput tidak diukur.",
+                 ha="center", fontsize=7.5, color="#555")
+        plt.tight_layout(rect=[0, 0.05, 1, 1])
+    else:
+        plt.tight_layout()
     out = FIG_ROOT / "comparisons" / f"inference_throughput_fusion_{scheme}.png"
     fig.savefig(out, dpi=150); plt.close(fig)
     print(f"  wrote {out.relative_to(PROJECT)}")

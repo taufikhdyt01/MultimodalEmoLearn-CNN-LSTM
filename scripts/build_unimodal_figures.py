@@ -70,6 +70,40 @@ for bname, bdir, _, _ in BENCHMARKS:
         print(f"{bname} {sk}: {len(benchmark_runs[bname][sk])} unimodal runs")
 
 
+# ---------- Fusion loader (untuk leaderboard cross-dataset unimodal + fusion) ----------
+FUSION_PREFIXES = ("fusion_early_", "fusion_intermediate_", "fusion_late_")
+
+
+def load_fusion_dir(scheme_dir: Path):
+    out = []
+    if not scheme_dir.exists():
+        return out
+    for results_file in scheme_dir.glob("*/results.json"):
+        method = results_file.parent.name
+        if not method.startswith(FUSION_PREFIXES):
+            continue
+        try:
+            d = json.load(open(results_file))
+        except Exception:
+            continue
+        for run_key, run in d.get("runs", {}).items():
+            run["_method_dir"] = method
+            run["_run_key"] = run_key
+            out.append(run)
+    return out
+
+
+primer_fusion = {}
+for scheme, sk in [("3class", "3c"), ("7class", "7c")]:
+    primer_fusion[sk] = load_fusion_dir(PRIMER / scheme / "Unified")
+
+benchmark_fusion = {}  # {bench_name: {sk: [fusion runs]}}
+for bname, bdir, _, _ in BENCHMARKS:
+    benchmark_fusion[bname] = {}
+    for scheme, sk in [("3class", "3c"), ("7class", "7c")]:
+        benchmark_fusion[bname][sk] = load_fusion_dir(bdir / scheme / "Unified")
+
+
 def to_macro(r):
     return r.get("test", {}).get("macro_f1")
 
@@ -688,36 +722,137 @@ def _pick_mf1(rows_lm, rows_img, kind, spec, scheme):
                  and r["scenario"] == "B1" and r["scheme"] == scheme), None)
 
 
-def fig_primer_vs_benchmark(scheme, bname, bcolor):
-    runs = benchmark_runs[bname][scheme]
-    if not runs:
+# ============================================================
+# Cross-dataset leaderboards: unimodal + fusion pooled, colored by type
+# ============================================================
+FEAT_ABBR = {"raw_136": "r136", "facs_28": "f28", "blendshape_52": "bs52",
+             "facs_plus_bs_80": "fb80"}
+TYPE_COLOR = {"image": "#3b7dd8", "landmark": "#91cc75", "fusion": "#e07b00"}
+LANDMARK_DIRS = {"raw_136", "facs_28", "blendshape_52", "facs_plus_bs_80"}
+IMAGE_DIRS = {"cnn_scratch", "cnn_tl"}
+
+
+def parse_fusion_key(rk):
+    parts = rk.split("_")
+    if len(parts) < 4 or parts[0] != "fusion":
+        return None
+    scheme = parts[-1]
+    scenario = parts[-2].upper()
+    mid = parts[1:-2]
+    if not mid:
+        return None
+    ftype = mid[0]
+    body = mid[1:]
+    if body and body[-1] == "faceapi":
+        source = "FA"; body = body[:-1]
+    else:
+        source = "MP"
+    if ftype == "early":
+        # Early-concat (fusion_early_tl/_scratch) tidak punya token 'concat';
+        # hanya varian gated yang punya token 'gated'.
+        if body and body[0] == "gated":
+            mode = "gated"; variant = body[1] if len(body) > 1 else "scratch"
+        else:
+            mode = "concat"; variant = body[0] if body else "scratch"
+        feature = "raw_136"
+    else:
+        mode = ""
+        variant = body[0] if body else "scratch"
+        feature = "_".join(body[1:]) if len(body) > 1 else "raw_136"
+    return {"ftype": ftype, "mode": mode, "variant": variant, "feature": feature,
+            "source": source, "scheme": scheme, "scenario": scenario}
+
+
+def fusion_label(info):
+    """Label fusion ringkas, mis. 'Early concat TL B1', 'Inter TL f28 B2', 'Late Sc r136 B3'."""
+    var = "TL" if info["variant"] == "tl" else "Sc"
+    if info["ftype"] == "early":
+        base = f"Early {info['mode']} {var}"          # feature selalu raw_136 → diabaikan
+    else:
+        ft = "Inter" if info["ftype"] == "intermediate" else "Late"
+        base = f"{ft} {var} {FEAT_ABBR.get(info['feature'], info['feature'])}"
+    if info["source"] == "FA":
+        base += " FA"
+    return f"{base} {info['scenario']}"
+
+
+def build_candidates(runs, scheme):
+    """Pool unimodal + fusion runs (semua scenario) → [(label, mf1, type)].
+
+    Dedup by run_key: sebagian run fusion (varian FA / feature) tersimpan di lebih
+    dari satu direktori hasil dengan run_key identik. Benchmark hanya punya MP —
+    loader tidak memfilter source, jadi apa pun yang ada di results.json terpakai.
+    """
+    cands, seen = [], set()
+    for r in runs:
+        md = r.get("_method_dir", "")
+        rk = r.get("_run_key", "")
+        mf1 = to_macro(r)
+        if mf1 is None or rk in seen:
+            continue
+        seen.add(rk)
+        parts = rk.split("_")
+        if parts[-1] != scheme:
+            continue
+        scn = parts[-2].upper()
+        if md in IMAGE_DIRS:
+            cands.append((f"{md.upper()} {scn}", mf1, "image"))
+        elif md in LANDMARK_DIRS:
+            si = next((i for i, p in enumerate(parts) if p in ("mediapipe", "faceapi")), None)
+            if si is None:
+                continue
+            src = "MP" if parts[si] == "mediapipe" else "FA"
+            arch = parts[-3]
+            feat = "_".join(p for j, p in enumerate(parts[:-3]) if j != si)
+            cands.append((f"{arch.upper()} {FEAT_ABBR.get(feat, feat)}/{src} {scn}", mf1, "landmark"))
+        elif md.startswith("fusion_"):
+            info = parse_fusion_key(rk)
+            if info is None or info["scheme"] != scheme:
+                continue
+            cands.append((fusion_label(info), mf1, "fusion"))
+    return cands
+
+
+def _panel_top(ax, runs, scheme, title, top_n=5):
+    cands = build_candidates(runs, scheme)
+    cands.sort(key=lambda t: -t[1])
+    cands = cands[:top_n]
+    if not cands:
+        ax.set_title(f"{title} (no data)"); ax.axis("off"); return set()
+    ys = np.arange(len(cands))[::-1]
+    labels = [c[0] for c in cands]; vals = [c[1] for c in cands]; types = [c[2] for c in cands]
+    ax.barh(ys, vals, color=[TYPE_COLOR[t] for t in types], edgecolor="black", linewidth=0.3)
+    for y, v in zip(ys, vals):
+        ax.text(v + max(vals) * 0.01, y, f"{v:.3f}", va="center", fontsize=7)
+    ax.set_yticks(ys); ax.set_yticklabels(labels, fontsize=7.5)
+    ax.set_xlim(0, max(vals) * 1.20)
+    ax.set_xlabel("test macro_f1")
+    ax.set_title(title, fontsize=10)
+    return set(types)
+
+
+def _type_legend(fig, used):
+    from matplotlib.patches import Patch
+    handles = [Patch(facecolor=TYPE_COLOR[t], label=t.capitalize())
+               for t in ("image", "landmark", "fusion") if t in used]
+    if handles:
+        fig.legend(handles=handles, loc="lower center", ncol=3, fontsize=9, frameon=False)
+
+
+def fig_primer_vs_benchmark(scheme, bname, top_n=5):
+    """2-panel top-5 (Primer | benchmark), pool unimodal + fusion, warna per tipe."""
+    bruns = benchmark_runs[bname][scheme] + benchmark_fusion[bname][scheme]
+    if not bruns:
         return
-    p_lm = collect_landmark_rows(primer[scheme])
-    p_img = collect_image_rows(primer[scheme])
-    b_lm = collect_landmark_rows(runs)
-    b_img = collect_image_rows(runs)
-    p_vals, b_vals, labels = [], [], []
-    for name, kind, spec in METHOD_SPECS:
-        pv = _pick_mf1(p_lm, p_img, kind, spec, scheme)
-        bv = _pick_mf1(b_lm, b_img, kind, spec, scheme)
-        if pv is not None or bv is not None:
-            p_vals.append(pv); b_vals.append(bv); labels.append(name)
-    fig, ax = plt.subplots(figsize=(10, 5))
-    x = np.arange(len(labels)); width = 0.4
-    ax.bar(x - width/2, [v if v is not None else 0 for v in p_vals], width,
-           label="Primer", color="#3b7dd8")
-    ax.bar(x + width/2, [v if v is not None else 0 for v in b_vals], width,
-           label=bname, color=bcolor)
-    for i, (pv, bv) in enumerate(zip(p_vals, b_vals)):
-        if pv is not None:
-            ax.text(i - width/2, pv + 0.005, f"{pv:.3f}", ha="center", fontsize=7)
-        if bv is not None:
-            ax.text(i + width/2, bv + 0.005, f"{bv:.3f}", ha="center", fontsize=7)
-    ax.set_xticks(x); ax.set_xticklabels(labels, rotation=25, ha="right", fontsize=8)
-    ax.set_ylabel("test macro_f1 (B1, MP source)")
-    ax.set_title(f"Cross-dataset: Primer vs {bname} — {scheme}, B1")
-    ax.legend()
-    plt.tight_layout()
+    fig, axes = plt.subplots(1, 2, figsize=(11, 5.0))
+    used = set()
+    used |= _panel_top(axes[0], primer[scheme] + primer_fusion[scheme], scheme,
+                       f"Primer — top-{top_n}", top_n)
+    used |= _panel_top(axes[1], bruns, scheme, f"{bname} — top-{top_n}", top_n)
+    _type_legend(fig, used)
+    plt.suptitle(f"Cross-dataset top-{top_n}: Primer vs {bname} — {scheme} (unimodal + fusion)",
+                 fontsize=12)
+    plt.tight_layout(rect=[0, 0.05, 1, 0.95])
     slug = bname.lower().replace("-", "").replace("+", "plus")
     out = FIG_ROOT / "comparisons" / f"primer_vs_{slug}_{scheme}.png"
     fig.savefig(out, dpi=150); plt.close(fig)
@@ -763,41 +898,22 @@ def fig_primer_vs_all_benchmarks(scheme):
 
 
 def fig_benchmark_leaderboard(scheme, top_n=5):
-    """Best unimodal model per benchmark + Primer (top-N by macro_f1, B1)."""
-    datasets = [("Primer", primer[scheme])]
+    """Top-N per dataset (Primer + benchmark), pool unimodal + fusion, warna per tipe."""
+    datasets = [("Primer", primer[scheme] + primer_fusion[scheme])]
     for bname, _, _, _ in BENCHMARKS:
-        if benchmark_runs[bname][scheme]:
-            datasets.append((bname, benchmark_runs[bname][scheme]))
+        runs = benchmark_runs[bname][scheme] + benchmark_fusion[bname][scheme]
+        if runs:
+            datasets.append((bname, runs))
     if len(datasets) < 2:
         return
-    fig, axes = plt.subplots(1, len(datasets), figsize=(4.2*len(datasets), 5), squeeze=False)
+    fig, axes = plt.subplots(1, len(datasets), figsize=(4.4*len(datasets), 5.2), squeeze=False)
     axes = axes[0]
+    used = set()
     for ax, (dname, runs) in zip(axes, datasets):
-        lm = collect_landmark_rows(runs)
-        img = collect_image_rows(runs)
-        rows = []
-        for r in lm:
-            if r["scenario"] == "B1" and r["scheme"] == scheme and r["mf1"] is not None:
-                label = f"{r['arch'].upper()} {r['feature']}/{r['source']}"
-                rows.append((label, r["mf1"]))
-        for r in img:
-            if r["scenario"] == "B1" and r["scheme"] == scheme and r["mf1"] is not None:
-                rows.append((r["arch"].upper(), r["mf1"]))
-        rows.sort(key=lambda t: -t[1])
-        rows = rows[:top_n]
-        if not rows:
-            ax.set_title(f"{dname} (no data)"); continue
-        ys = np.arange(len(rows))[::-1]
-        labels = [t[0] for t in rows]
-        vals = [t[1] for t in rows]
-        ax.barh(ys, vals, color="#3b7dd8" if dname == "Primer" else "#73c0de")
-        ax.set_yticks(ys); ax.set_yticklabels(labels, fontsize=8)
-        for y, v in zip(ys, vals):
-            ax.text(v + 0.005, y, f"{v:.3f}", va="center", fontsize=7)
-        ax.set_xlim(0, max(vals) * 1.18)
-        ax.set_title(f"{dname} — top-{len(rows)} ({scheme}, B1)")
-        ax.set_xlabel("test macro_f1")
-    plt.tight_layout()
+        used |= _panel_top(ax, runs, scheme, f"{dname} — top-{top_n}", top_n)
+    _type_legend(fig, used)
+    plt.suptitle(f"Top-{top_n} per Dataset (unimodal + fusion) — {scheme}", fontsize=12)
+    plt.tight_layout(rect=[0, 0.05, 1, 0.96])
     out = FIG_ROOT / "leaderboards" / f"benchmark_top{top_n}_{scheme}.png"
     fig.savefig(out, dpi=150); plt.close(fig)
     print(f"  wrote {out.relative_to(PROJECT)}")
@@ -1244,8 +1360,8 @@ for scheme in ("3c", "7c"):
     fig_multi_metric_unimodal(scheme)
     fig_inference_throughput(scheme)
     fig_per_class_metrics_top(scheme)
-    for bname, _, _, bcolor in BENCHMARKS:
-        fig_primer_vs_benchmark(scheme, bname, bcolor)
+    for bname, _, _, _ in BENCHMARKS:
+        fig_primer_vs_benchmark(scheme, bname)
     fig_primer_vs_all_benchmarks(scheme)
     fig_benchmark_leaderboard(scheme, top_n=5)
 

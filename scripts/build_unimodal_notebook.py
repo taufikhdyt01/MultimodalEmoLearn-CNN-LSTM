@@ -751,9 +751,179 @@ CK+/JAFFE relatif balanced; RAF-DB skewed seperti dataset in-the-wild).
 
 code("""display(Image(filename=str(FIG_ROOT/'dataset'/'class_distribution.png')))""")
 
+md("""#### 4.11.1 (Update) Cross-dataset leaderboards: unimodal + fusion
+
+> Cell di bawah me-*regenerate* `primer_vs_{dataset}_{3c,7c}.png` (§4.12) dan `benchmark_top5_{3c,7c}.png` (§4.14) dengan **menggabungkan kandidat unimodal + fusion** (hasil benchmark fusion ada di `models/benchmark/{ds}_7class/{3,7}class/Unified/fusion_*/`). Top-5 per dataset, bar diwarnai per tipe: **image=biru, landmark=hijau, fusion=oranye**, label fusion ringkas (mis. `Early concat TL B1`, `Inter TL f28 B2`, `Late Sc r136 B3`). Benchmark hanya punya source **MP** untuk fusion — loader mengambil apa adanya tanpa filter FA. Output menimpa PNG lama, lalu ditampilkan di cell §4.12 & §4.14.
+""")
+
+code("""# === Cross-dataset leaderboards (unimodal + fusion) ===
+from matplotlib.patches import Patch
+
+_BENCH = [('KDEF', PROJECT/'models/benchmark/kdef_7class'),
+          ('RAF-DB', PROJECT/'models/benchmark/rafdb_7class'),
+          ('CK+', PROJECT/'models/benchmark/ckplus_7class'),
+          ('JAFFE', PROJECT/'models/benchmark/jaffe_7class')]
+_FUSION_PREF = ('fusion_early_', 'fusion_intermediate_', 'fusion_late_')
+_FEAT_ABBR = {'raw_136':'r136','facs_28':'f28','blendshape_52':'bs52','facs_plus_bs_80':'fb80'}
+_TYPE_COLOR = {'image':'#3b7dd8','landmark':'#91cc75','fusion':'#e07b00'}
+_LMD = {'raw_136','facs_28','blendshape_52','facs_plus_bs_80'}
+_IMD = {'cnn_scratch','cnn_tl'}
+
+
+def _load_dir(scheme_dir, keep):
+    out = []
+    if not scheme_dir.exists():
+        return out
+    for rf in scheme_dir.glob('*/results.json'):
+        md = rf.parent.name
+        if not keep(md):
+            continue
+        try:
+            d = json.load(open(rf))
+        except Exception:
+            continue
+        for rk, run in d.get('runs', {}).items():
+            run['_method_dir'] = md
+            run['_run_key'] = rk
+            out.append(run)
+    return out
+
+
+_uni = lambda sd: _load_dir(sd, lambda m: m in UNIMODAL_DIRS)
+_fus = lambda sd: _load_dir(sd, lambda m: m.startswith(_FUSION_PREF))
+
+primer_fusion = {sk: _fus(PRIMER/sc/'Unified') for sc, sk in [('3class','3c'),('7class','7c')]}
+benchmark_uni = {bn: {sk: _uni(bd/sc/'Unified') for sc, sk in [('3class','3c'),('7class','7c')]} for bn, bd in _BENCH}
+benchmark_fus = {bn: {sk: _fus(bd/sc/'Unified') for sc, sk in [('3class','3c'),('7class','7c')]} for bn, bd in _BENCH}
+
+
+def _parse_fusion(rk):
+    parts = rk.split('_')
+    if len(parts) < 4 or parts[0] != 'fusion':
+        return None
+    scheme = parts[-1]; scenario = parts[-2].upper(); mid = parts[1:-2]
+    if not mid:
+        return None
+    ftype = mid[0]; body = mid[1:]
+    if body and body[-1] == 'faceapi':
+        source = 'FA'; body = body[:-1]
+    else:
+        source = 'MP'
+    if ftype == 'early':
+        if body and body[0] == 'gated':
+            mode = 'gated'; variant = body[1] if len(body) > 1 else 'scratch'
+        else:
+            mode = 'concat'; variant = body[0] if body else 'scratch'
+        feature = 'raw_136'
+    else:
+        mode = ''; variant = body[0] if body else 'scratch'
+        feature = '_'.join(body[1:]) if len(body) > 1 else 'raw_136'
+    return {'ftype':ftype,'mode':mode,'variant':variant,'feature':feature,'source':source,'scheme':scheme,'scenario':scenario}
+
+
+def _fusion_label(info):
+    var = 'TL' if info['variant'] == 'tl' else 'Sc'
+    if info['ftype'] == 'early':
+        base = f\"Early {info['mode']} {var}\"
+    else:
+        ft = 'Inter' if info['ftype'] == 'intermediate' else 'Late'
+        base = f\"{ft} {var} {_FEAT_ABBR.get(info['feature'], info['feature'])}\"
+    if info['source'] == 'FA':
+        base += ' FA'
+    return f\"{base} {info['scenario']}\"
+
+
+def _candidates(runs, scheme):
+    cands, seen = [], set()
+    for r in runs:
+        md = r.get('_method_dir',''); rk = r.get('_run_key','')
+        mf1 = r.get('test', {}).get('macro_f1')
+        if mf1 is None or rk in seen:
+            continue
+        seen.add(rk)
+        parts = rk.split('_')
+        if parts[-1] != scheme:
+            continue
+        scn = parts[-2].upper()
+        if md in _IMD:
+            cands.append((f\"{md.upper()} {scn}\", mf1, 'image'))
+        elif md in _LMD:
+            si = next((i for i, p in enumerate(parts) if p in ('mediapipe','faceapi')), None)
+            if si is None:
+                continue
+            src = 'MP' if parts[si] == 'mediapipe' else 'FA'
+            arch = parts[-3]; feat = '_'.join(p for j, p in enumerate(parts[:-3]) if j != si)
+            cands.append((f\"{arch.upper()} {_FEAT_ABBR.get(feat, feat)}/{src} {scn}\", mf1, 'landmark'))
+        elif md.startswith('fusion_'):
+            info = _parse_fusion(rk)
+            if info is None or info['scheme'] != scheme:
+                continue
+            cands.append((_fusion_label(info), mf1, 'fusion'))
+    return cands
+
+
+def _panel(ax, runs, scheme, title, top_n=5):
+    c = _candidates(runs, scheme); c.sort(key=lambda t: -t[1]); c = c[:top_n]
+    if not c:
+        ax.set_title(f\"{title} (no data)\"); ax.axis('off'); return set()
+    ys = np.arange(len(c))[::-1]
+    labels = [t[0] for t in c]; vals = [t[1] for t in c]; types = [t[2] for t in c]
+    ax.barh(ys, vals, color=[_TYPE_COLOR[t] for t in types], edgecolor='black', linewidth=0.3)
+    for y, v in zip(ys, vals):
+        ax.text(v + max(vals)*0.01, y, f\"{v:.3f}\", va='center', fontsize=7)
+    ax.set_yticks(ys); ax.set_yticklabels(labels, fontsize=7.5)
+    ax.set_xlim(0, max(vals)*1.20); ax.set_xlabel('test macro_f1'); ax.set_title(title, fontsize=10)
+    return set(types)
+
+
+def _legend(fig, used):
+    h = [Patch(facecolor=_TYPE_COLOR[t], label=t.capitalize()) for t in ('image','landmark','fusion') if t in used]
+    if h:
+        fig.legend(handles=h, loc='lower center', ncol=3, fontsize=9, frameon=False)
+
+
+def regen_primer_vs(scheme, bname, top_n=5):
+    bruns = benchmark_uni[bname][scheme] + benchmark_fus[bname][scheme]
+    if not bruns:
+        return
+    fig, axes = plt.subplots(1, 2, figsize=(11, 5.0)); used = set()
+    used |= _panel(axes[0], primer[scheme] + primer_fusion[scheme], scheme, f\"Primer — top-{top_n}\", top_n)
+    used |= _panel(axes[1], bruns, scheme, f\"{bname} — top-{top_n}\", top_n)
+    _legend(fig, used)
+    plt.suptitle(f\"Cross-dataset top-{top_n}: Primer vs {bname} — {scheme} (unimodal + fusion)\", fontsize=12)
+    plt.tight_layout(rect=[0, 0.05, 1, 0.95])
+    slug = bname.lower().replace('-', '').replace('+', 'plus')
+    out = FIG_ROOT/'comparisons'/f'primer_vs_{slug}_{scheme}.png'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=150); plt.close(fig); print('wrote', out.name)
+
+
+def regen_benchmark_top5(scheme, top_n=5):
+    datasets = [('Primer', primer[scheme] + primer_fusion[scheme])]
+    for bn, _ in _BENCH:
+        runs = benchmark_uni[bn][scheme] + benchmark_fus[bn][scheme]
+        if runs:
+            datasets.append((bn, runs))
+    fig, axes = plt.subplots(1, len(datasets), figsize=(4.4*len(datasets), 5.2), squeeze=False)
+    axes = axes[0]; used = set()
+    for ax, (dn, runs) in zip(axes, datasets):
+        used |= _panel(ax, runs, scheme, f\"{dn} — top-{top_n}\", top_n)
+    _legend(fig, used)
+    plt.suptitle(f\"Top-{top_n} per Dataset (unimodal + fusion) — {scheme}\", fontsize=12)
+    plt.tight_layout(rect=[0, 0.05, 1, 0.96])
+    out = FIG_ROOT/'leaderboards'/f'benchmark_top{top_n}_{scheme}.png'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=150); plt.close(fig); print('wrote', out.name)
+
+
+for _sc in ('3c', '7c'):
+    for _bn, _ in _BENCH:
+        regen_primer_vs(_sc, _bn)
+    regen_benchmark_top5(_sc)""")
+
 md("""### 4.12 Cross-dataset: Primer vs setiap benchmark
 
-Apakah ranking method konsisten antara Primer (in-the-wild) dan tiap benchmark? Comparison di scenario B1, source MediaPipe.
+Top-5 per dataset (Primer vs tiap benchmark), menggabungkan kandidat **unimodal + fusion** atas semua scenario. Bar diwarnai per tipe (image / landmark / fusion).
 """)
 
 code("""display(Image(filename=str(FIG_ROOT/'comparisons'/'primer_vs_kdef_3c.png')))
@@ -775,7 +945,7 @@ display(Image(filename=str(FIG_ROOT/'comparisons'/'primer_vs_all_benchmarks_7c.p
 
 md("""### 4.14 Top-5 Leaderboard per Dataset (cross-dataset)
 
-Top-5 model unimodal per dataset (Primer + 4 benchmark) berdasarkan macro_f1 di B1.
+Top-5 model per dataset (Primer + 4 benchmark) berdasarkan macro_f1 — menggabungkan kandidat **unimodal + fusion** atas semua scenario. Bar diwarnai per tipe: image=biru, landmark=hijau, fusion=oranye. (Figure di-regenerate di §4.11.1.)
 """)
 
 code("""display(Image(filename=str(FIG_ROOT/'leaderboards'/'benchmark_top5_3c.png')))
