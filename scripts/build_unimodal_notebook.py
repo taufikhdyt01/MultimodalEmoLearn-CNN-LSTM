@@ -268,6 +268,107 @@ Mean macro_f1 (atas **arch (FCNN+CNN1D) × scenario**) untuk tiap feature diband
 code("""display(Image(filename=str(FIG_ROOT/'comparisons'/'rq2_feature_decomposition_delta_3c.png')))
 display(Image(filename=str(FIG_ROOT/'comparisons'/'rq2_feature_decomposition_delta_7c.png')))""")
 
+md(r"""##### (Perbaikan) RQ2 Δ plot — semua feature tampil
+
+> **Fix Gambar 5.10.** Sebelumnya hanya `FACS_28` yang muncul; `Blendshape_52` dan `FACS+BS_80` kosong karena masalah *source grouping* yang sama. Cell di bawah me-*regenerate* delta plot (Δ vs baseline `raw_136` per source):
+> - **FACS_28**: bar MP & FA
+> - **Blendshape_52**: satu bar *MP only*
+> - **FACS+BS_80**: bar MP & FA (FA = hybrid, lihat legenda)
+> - Baseline `raw_136` per source dicantumkan di legenda.""")
+
+code(r"""# === FIX: rq2_feature_decomposition_delta_{3c,7c}.png — source-aware ===
+# Bug yang sama dengan feature_comparison: blendshape_52 & facs_plus_bs_80
+# ter-skip. Cell ini self-contained (mendefinisikan ulang parser robust).
+from matplotlib.patches import Patch
+
+_MP, _FA, _MPONLY = "#e07b00", "#3b7dd8", "#9e9e9e"
+_MP_ONLY = {"blendshape_52"}
+_HYBRID = {"facs_plus_bs_80"}
+
+
+def _collect_lm_robust(runs):
+    rows = []
+    for r in runs:
+        parts = r['_run_key'].split('_')
+        si = next((i for i, p in enumerate(parts) if p in ('mediapipe', 'faceapi')), None)
+        if si is None:
+            continue
+        rows.append({'source': 'MP' if parts[si] == 'mediapipe' else 'FA',
+                     'feature': '_'.join(p for j, p in enumerate(parts[:-3]) if j != si),
+                     'arch': parts[-3], 'scenario': parts[-2].upper(), 'scheme': parts[-1],
+                     'mf1': r.get('test', {}).get('macro_f1')})
+    return rows
+
+
+def _mean_mf1(lm, feature, source, scheme):
+    vals = [r['mf1'] for r in lm if r['feature'] == feature and r['source'] == source
+            and r['scheme'] == scheme and r['mf1'] is not None]
+    return float(np.mean(vals)) if vals else None
+
+
+def fig_rq2_delta_fixed(scheme):
+    lm = _collect_lm_robust(primer[scheme])
+    features = [("facs_28", "FACS_28"), ("blendshape_52", "Blendshape_52"),
+                ("facs_plus_bs_80", "FACS+BS_80")]
+    base = {src: _mean_mf1(lm, 'raw_136', src, scheme) for src in ('MP', 'FA')}
+    fig, ax = plt.subplots(figsize=(10.5, 5.4))
+    width, x = 0.38, np.arange(len(features))
+    has_mponly = has_hybrid = False
+    for si, src in enumerate(('MP', 'FA')):
+        if base[src] is None:
+            continue
+        for xi, (feat, _lbl) in enumerate(features):
+            if feat in _MP_ONLY and src == 'FA':
+                continue
+            m = _mean_mf1(lm, feat, src, scheme)
+            if m is None:
+                continue
+            d = m - base[src]
+            if feat in _MP_ONLY:
+                offset, color = 0.0, _MPONLY
+                has_mponly = True
+            else:
+                offset = (si - 0.5) * width
+                color = _MP if src == 'MP' else _FA
+            hatch = '//' if (src == 'FA' and feat in _HYBRID) else None
+            has_hybrid = has_hybrid or bool(hatch)
+            ax.bar(xi + offset, d, width, color=color, alpha=0.9, hatch=hatch,
+                   edgecolor='black', linewidth=0.4)
+            tcol = "#1a7f37" if d > 0 else "#cf222e"
+            ax.text(xi + offset, d + (0.003 if d >= 0 else -0.006),
+                    f"Δ={d:+.3f}\n({m:.3f})", ha='center',
+                    va='bottom' if d >= 0 else 'top', fontsize=6.8, color=tcol)
+    ax.axhline(0, color='black', linewidth=0.8)
+    # headroom proporsional ke range data: bawah lebih lega utk label 2-baris
+    # pada bar negatif (mis. FACS_28 MP di 7c) agar tidak keluar kotak.
+    ymin, ymax = ax.get_ylim()
+    rng = (ymax - ymin) or 1.0
+    ax.set_ylim(ymin - rng * 0.45, ymax + rng * 0.30)
+    ax.set_xticks(x); ax.set_xticklabels([f[1] for f in features])
+    ax.set_ylabel("Δ macro_f1 vs raw_136 (mean over arch × scenario)")
+    ax.set_title(f"RQ2: Feature decomposition — Δ vs raw_136 baseline — {scheme}")
+    handles = []
+    if base['MP'] is not None:
+        handles.append(Patch(facecolor=_MP, label=f"MediaPipe (raw_136 baseline = {base['MP']:.4f})"))
+    if base['FA'] is not None:
+        handles.append(Patch(facecolor=_FA, label=f"face-api.js (raw_136 baseline = {base['FA']:.4f})"))
+    if has_mponly:
+        handles.append(Patch(facecolor=_MPONLY, label='MP only (Blendshape_52)'))
+    if has_hybrid:
+        handles.append(Patch(facecolor=_FA, hatch='//', label='FA hybrid: FACS=FA, blendshape=MP'))
+    ax.legend(handles=handles, loc='best', fontsize=8)
+    plt.tight_layout()
+    out = FIG_ROOT / 'comparisons' / f'rq2_feature_decomposition_delta_{scheme}.png'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print('wrote', out.name)
+
+
+for _sc in ('3c', '7c'):
+    fig_rq2_delta_fixed(_sc)
+display(Image(filename=str(FIG_ROOT / 'comparisons' / 'rq2_feature_decomposition_delta_3c.png')))
+display(Image(filename=str(FIG_ROOT / 'comparisons' / 'rq2_feature_decomposition_delta_7c.png')))""")
+
 md("""**Tabel ringkas RQ2** — mean mf1 + Δ vs raw_136 baseline per (feature × source × scheme):
 """)
 
@@ -313,6 +414,59 @@ Pelengkap RQ1/RQ2: best run per kategori unimodal dievaluasi dengan **3 metrik s
 code("""display(Image(filename=str(FIG_ROOT/'comparisons'/'multi_metric_unimodal_3c.png')))
 display(Image(filename=str(FIG_ROOT/'comparisons'/'multi_metric_unimodal_7c.png')))""")
 
+md(r"""#### 4.0.3.b CNN Transfer Learning vs Training from Scratch
+
+> **Gambar 5.6 (baru).** Perbandingan langsung CNN image branch: **Transfer Learning (ResNet-18 ImageNet)** vs **Training from Scratch**, untuk skema 7c (panel a) dan 3c (panel b). Bar berkelompok per skenario B1/B2/B3, Y-axis = test `macro_f1`, nilai ditampilkan di atas tiap bar.
+>
+> Output: `docs/figures/unimodal/comparisons/cnn_tl_vs_scratch_{7c,3c}.png`.""")
+
+code(r"""# === NEW: CNN Transfer Learning (ResNet-18) vs Training from Scratch ===
+# Modul Unimodal CNN image branch. Data: results Primer cnn_tl & cnn_scratch.
+def _cnn_mf1(runs, method, scenario, scheme):
+    for r in runs:
+        if r['_method_dir'] != method:
+            continue
+        parts = r['_run_key'].split('_')          # e.g. cnn_tl_b1_3c
+        if parts[-1] == scheme and parts[-2].upper() == scenario:
+            return r.get('test', {}).get('macro_f1')
+    return None
+
+
+def fig_cnn_tl_vs_scratch(scheme):
+    runs = primer[scheme]
+    scns = ['B1', 'B2', 'B3']
+    scratch = [_cnn_mf1(runs, 'cnn_scratch', s, scheme) for s in scns]
+    tl = [_cnn_mf1(runs, 'cnn_tl', s, scheme) for s in scns]
+    fig, ax = plt.subplots(figsize=(7.5, 5))
+    x, width = np.arange(len(scns)), 0.38
+    b1 = ax.bar(x - width/2, [v or 0 for v in scratch], width,
+                label='CNN from Scratch', color="#cf222e", alpha=0.9,
+                edgecolor='black', linewidth=0.4)
+    b2 = ax.bar(x + width/2, [v or 0 for v in tl], width,
+                label='CNN Transfer Learning (ResNet-18)', color="#3b7dd8",
+                alpha=0.9, edgecolor='black', linewidth=0.4)
+    for bars, vals in ((b1, scratch), (b2, tl)):
+        for rect, v in zip(bars, vals):
+            if v is not None:
+                ax.text(rect.get_x() + rect.get_width()/2, v + 0.006,
+                        f"{v:.3f}", ha='center', fontsize=8)
+    ax.set_xticks(x); ax.set_xticklabels(scns)
+    ax.set_xlabel('Skenario'); ax.set_ylabel('test macro_f1')
+    ax.set_title(f'CNN Image Branch: Transfer Learning vs Scratch — {scheme}')
+    ax.legend(fontsize=8)
+    ax.set_ylim(0, max([v for v in (scratch + tl) if v] + [0.1]) * 1.18)
+    plt.tight_layout()
+    out = FIG_ROOT / 'comparisons' / f'cnn_tl_vs_scratch_{scheme}.png'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print('wrote', out.name)
+
+
+for _sc in ('7c', '3c'):   # panel a = 7c, panel b = 3c
+    fig_cnn_tl_vs_scratch(_sc)
+display(Image(filename=str(FIG_ROOT / 'comparisons' / 'cnn_tl_vs_scratch_7c.png')))
+display(Image(filename=str(FIG_ROOT / 'comparisons' / 'cnn_tl_vs_scratch_3c.png')))""")
+
 md("""#### 4.0.4 Inference throughput per arch (samples/sec)
 
 Relevan untuk klaim *applicability* / deployment trade-off — landmark-based model jauh lebih cepat dibandingkan image CNN (no convolution heavy).
@@ -355,49 +509,7 @@ per_class_df = pd.DataFrame(rows)
 per_class_df.style.format({'precision':'{:.3f}','recall':'{:.3f}','f1':'{:.3f}'}, na_rep='-') \\
                   .background_gradient(subset=['precision','recall','f1'], cmap='RdYlGn', vmin=0, vmax=1)""")
 
-md("""#### 4.0.6 Grad-CAM — Interpretability CNN image branch
-
-Grad-CAM (Gradient-weighted Class Activation Mapping) untuk **CNN_TL** menunjukkan region citra yang paling kontribusi ke prediksi. Validasi kualitatif bahwa model **menatap region wajah relevan** (mata, mulut, alis) — bukan background. Side-by-side dengan kompetitornya di fusion (lihat notebook multimodal §4.0.9).
-
-> **Sumber:** existing outputs di `outputs/gradcam/` (3c) dan `outputs/gradcam_7c/` (7c) dari `scripts/run_gradcam_3c.py` & `scripts/run_gradcam_7c.py`. Deep-dive analisis ada di `notebooks/73_gradcam_analysis.ipynb` (overview) dan `notebooks/86_gradcam_error_analysis.ipynb` (error case).
-
-**Side-by-side comparison (CNN_TL vs fusion variants), 3c — 1 sample per kelas:**
-""")
-
-code("""GRADCAM_3C = PROJECT/'outputs'/'gradcam'
-for f in ['gradcam_comparison_cls0_sample273.png',
-          'gradcam_comparison_cls1_sample129.png',
-          'gradcam_comparison_cls2_sample337.png']:
-    print(f'--- {f} ---')
-    display(Image(filename=str(GRADCAM_3C/f)))""")
-
-md("""**Side-by-side comparison, 7c — 1 sample per kelas:**
-""")
-
-code("""GRADCAM_7C = PROJECT/'outputs'/'gradcam_7c'
-for f in ['gradcam_comparison_angry_s339.png',
-          'gradcam_comparison_disgust_s25.png',
-          'gradcam_comparison_fear_s562.png',
-          'gradcam_comparison_happy_s762.png',
-          'gradcam_comparison_neutral_s851.png',
-          'gradcam_comparison_sad_s337.png',
-          'gradcam_comparison_surprise_s289.png']:
-    print(f'--- {f} ---')
-    display(Image(filename=str(GRADCAM_7C/f)))""")
-
-md("""**Error case analysis — CNN_TL (3c):**
-
-Sample yang misclassified — Grad-CAM menunjukkan model menatap region yang salah / kurang informatif.
-""")
-
-code("""display(Image(filename=str(GRADCAM_3C/'gradcam_cnn_tl_error.png')))""")
-
-md("""**Insight Grad-CAM untuk RQ1:**
-- CNN_TL biasanya **menatap region wajah** (terutama mata + mulut) untuk decision — ini validasi bahwa ResNet-18 pretrained ImageNet sudah berhasil di-finetune untuk semantik wajah.
-- Untuk minority class 7c (disgust/fear), Grad-CAM cenderung **diffuse** (tidak fokus ke satu region) → tantangan untuk model image-only di kelas dengan few-shot.
-- Bandingkan dengan fusion (multimodal notebook): apakah landmark guidance membuat attention map lebih fokus?
-
-### 4.1 Heatmap Master Table
+md("""### 4.1 Heatmap Master Table
 """)
 
 code("""display(Image(filename=str(FIG_ROOT/'comparisons'/'heatmap_master_3c.png')))
@@ -435,6 +547,100 @@ Mean macro_f1 (atas arch × scenario) untuk tiap representasi landmark, dipecah 
 code("""display(Image(filename=str(FIG_ROOT/'comparisons'/'feature_comparison_3c.png')))
 display(Image(filename=str(FIG_ROOT/'comparisons'/'feature_comparison_7c.png')))""")
 
+md(r"""#### 4.5.1 (Perbaikan) Feature Comparison — source-aware
+
+> **Fix Gambar 5.8.** Pada versi sebelumnya bar `blendshape_52` dan `facs_plus_bs_80` **kosong** karena grouping MP vs FA tidak mengenali dua konvensi penamaan `run_key` (`mediapipe_raw_136_...` vs `blendshape_52_mediapipe_...`). Cell di bawah me-*regenerate* figure dengan parser yang robust:
+> - `raw_136`, `facs_28`: bar **MP** dan **FA** terpisah
+> - `blendshape_52`: satu bar **abu-abu** berlabel *MP only* (tidak ada varian face-api.js)
+> - `facs_plus_bs_80`: bar **MP** + **FA**, dengan FA diberi *hatch* dan catatan legenda bahwa komponennya **hybrid** (FACS dari FA, blendshape dari MP)
+>
+> Nilai = mean `macro_f1` over arch × scenario; error bar = range. Output menimpa `docs/figures/unimodal/comparisons/feature_comparison_{3c,7c}.png` (yang ditampilkan di cell §4.5 di atas).""")
+
+code(r'''# === FIX: feature_comparison_{3c,7c}.png — source-aware (blendshape_52 MP-only, fb80 hybrid) ===
+# Root cause: collect_landmark_rows / parse_landmark_key hanya mengenali run_key
+# yang DIAWALI 'mediapipe'/'faceapi' (mis. mediapipe_raw_136_...). Namun key
+# blendshape_52_mediapipe_... dan facs_plus_bs_80_mediapipe_... diawali nama
+# feature, sehingga ter-skip -> bar kosong. Parser di bawah mencari token source
+# di posisi mana pun.
+from matplotlib.patches import Patch
+
+MP_COLOR, FA_COLOR, MPONLY_COLOR = "#e07b00", "#3b7dd8", "#9e9e9e"
+FEAT_ORDER = ["raw_136", "facs_28", "blendshape_52", "facs_plus_bs_80"]
+MP_ONLY_FEATURES = {"blendshape_52"}        # tidak ada varian face-api.js
+HYBRID_FA_FEATURES = {"facs_plus_bs_80"}    # FA = FACS(FA) + blendshape(MP)
+
+
+def collect_landmark_rows_robust(runs):
+    """Parse run_key landmark tanpa peduli urutan token (source-first / feature-first)."""
+    rows = []
+    for r in runs:
+        parts = r['_run_key'].split('_')
+        src_idx = next((i for i, p in enumerate(parts) if p in ('mediapipe', 'faceapi')), None)
+        if src_idx is None:
+            continue  # baris image CNN — ditangani terpisah
+        source = 'MP' if parts[src_idx] == 'mediapipe' else 'FA'
+        arch, scn, scheme = parts[-3], parts[-2].upper(), parts[-1]
+        feature = '_'.join(p for j, p in enumerate(parts[:-3]) if j != src_idx)
+        rows.append({'source': source, 'feature': feature, 'arch': arch,
+                     'scenario': scn, 'scheme': scheme,
+                     'mf1': r.get('test', {}).get('macro_f1')})
+    return rows
+
+
+def _feat_stats(lm, feature, source, scheme):
+    vals = [r['mf1'] for r in lm if r['feature'] == feature and r['source'] == source
+            and r['scheme'] == scheme and r['mf1'] is not None]
+    return (np.mean(vals), np.max(vals) - np.min(vals)) if vals else None
+
+
+def fig_feature_compare_fixed(scheme):
+    lm = collect_landmark_rows_robust(primer[scheme])
+    fig, ax = plt.subplots(figsize=(9.5, 5.2))
+    width, x = 0.38, np.arange(len(FEAT_ORDER))
+    has_hybrid = False
+    for xi, feat in enumerate(FEAT_ORDER):
+        if feat in MP_ONLY_FEATURES:
+            st = _feat_stats(lm, feat, 'MP', scheme)
+            if st:
+                m, e = st
+                ax.bar(xi, m, width, yerr=e, capsize=4, color=MPONLY_COLOR,
+                       alpha=0.95, edgecolor='black', linewidth=0.4)
+                ax.text(xi, m + e + 0.006, f"{m:.3f}\n(MP only)", ha='center', fontsize=7)
+            continue
+        for j, src in enumerate(('MP', 'FA')):
+            st = _feat_stats(lm, feat, src, scheme)
+            if st is None:
+                continue
+            m, e = st
+            offset = (j - 0.5) * width
+            hatch = '//' if (src == 'FA' and feat in HYBRID_FA_FEATURES) else None
+            ax.bar(xi + offset, m, width, yerr=e, capsize=4,
+                   color=MP_COLOR if src == 'MP' else FA_COLOR, alpha=0.9,
+                   hatch=hatch, edgecolor='black', linewidth=0.4)
+            ax.text(xi + offset, m + e + 0.006, f"{m:.3f}", ha='center', fontsize=7)
+            has_hybrid = has_hybrid or bool(hatch)
+    ax.set_xticks(x); ax.set_xticklabels(FEAT_ORDER, fontsize=9)
+    ax.set_ylabel("mean test macro_f1 (over arch × scenario)")
+    ax.set_title(f"Feature Comparison — {scheme} (error bar = range across arch × scenario)")
+    handles = [Patch(facecolor=MP_COLOR, label='MediaPipe (MP)'),
+               Patch(facecolor=FA_COLOR, label='face-api.js (FA)'),
+               Patch(facecolor=MPONLY_COLOR, label='MP only (no FA variant)')]
+    if has_hybrid:
+        handles.append(Patch(facecolor=FA_COLOR, hatch='//',
+                             label='FA hybrid: FACS=FA, blendshape=MP'))
+    ax.legend(handles=handles, title='Source', fontsize=8)
+    plt.tight_layout()
+    out = FIG_ROOT / 'comparisons' / f'feature_comparison_{scheme}.png'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print('wrote', out.name)
+
+
+for _sc in ('3c', '7c'):
+    fig_feature_compare_fixed(_sc)
+display(Image(filename=str(FIG_ROOT / 'comparisons' / 'feature_comparison_3c.png')))
+display(Image(filename=str(FIG_ROOT / 'comparisons' / 'feature_comparison_7c.png')))''')
+
 md("""### 4.6 Architecture Comparison: FCNN vs CNN1D
 
 Mean macro_f1 (atas scenarios) untuk FCNN vs CNN1D pada tiap (feature, source).
@@ -470,6 +676,63 @@ Per-epoch `val_macro_f1` untuk top-3 landmark + top-3 image. Bintang ⭐ = best 
 
 code("""display(Image(filename=str(FIG_ROOT/'training_curves'/'top3_3c.png')))
 display(Image(filename=str(FIG_ROOT/'training_curves'/'top3_7c.png')))""")
+
+md("""#### 4.9.1 Konvergensi Top-3 per Modalitas (legend anonim)
+
+> Training curves `val_macro_f1` per epoch untuk **top-3 landmark** (panel kiri) dan **top-3 image/CNN** (panel kanan), per scheme. Legend **sengaja tidak menyebut representasi fitur** (raw_136/facs_28/blendshape_52/facs_plus_bs_80) agar tidak membocorkan detail dekomposisi yang baru dibahas di RQ berikutnya — cukup `Top-k {modalitas} (skenario, val best)`. ★ = best epoch. Output: `docs/figures/unimodal/training_curves/top3_convergence_{7c,3c}.png`.
+""")
+
+code("""# === NEW: Training Curves anonim — konvergensi top-3 per modalitas (tanpa nama fitur) ===
+# Legend tidak menyebut representasi fitur (raw_136/facs_28/blendshape_52/
+# facs_plus_bs_80) agar tidak membocorkan detail dekomposisi yang dibahas di RQ
+# berikutnya. Label = peringkat + modalitas + skenario + best val_macro_f1.
+def _best_mf1(r):
+    return r.get('test', {}).get('macro_f1')
+
+
+def fig_training_curves_anon(scheme):
+    runs = primer[scheme]
+    cats = [('Landmark', {'raw_136', 'facs_28', 'blendshape_52', 'facs_plus_bs_80'}, 'landmark'),
+            ('Image (CNN)', {'cnn_scratch', 'cnn_tl'}, 'image')]
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4.6), sharey=True)
+    for ax, (title, dirs, tag) in zip(axes, cats):
+        cand = [r for r in runs if r['_method_dir'] in dirs and _best_mf1(r) is not None]
+        cand.sort(key=_best_mf1, reverse=True)
+        for i, r in enumerate(cand[:3], start=1):
+            hist = r.get('training', {}).get('history', [])
+            if not hist:
+                continue
+            ep = [h['epoch'] for h in hist]
+            val = [h.get('val_macro_f1') for h in hist]
+            be = r.get('training', {}).get('best_epoch')
+            if be is not None and 1 <= be <= len(val):
+                best_val = val[be - 1]
+            else:
+                best_val = max(v for v in val if v is not None)
+            scn = r.get('hyperparams', {}).get('scenario', '?')
+            label = f'Top-{i} {tag} ({scn}, val {best_val:.3f})'
+            line, = ax.plot(ep, val, marker='o', markersize=3, linewidth=1.5, label=label)
+            if be is not None and 1 <= be <= len(val):
+                ax.scatter([be], [val[be - 1]], marker='*', s=150,
+                           color=line.get_color(), edgecolor='k', zorder=10)
+        ax.set_xlabel('epoch')
+        ax.set_title(f'Top-3 {title} — {scheme}')
+        ax.legend(fontsize=8, loc='lower right')
+        ax.grid(alpha=0.3)
+    axes[0].set_ylabel('val_macro_f1')
+    plt.suptitle(f'Training Curves — konvergensi top-3 per modalitas, {scheme} (★ = best epoch)')
+    plt.tight_layout()
+    out = FIG_ROOT / 'training_curves' / f'top3_convergence_{scheme}.png'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+    print('wrote', out.name)
+
+
+for _sc in ('7c', '3c'):
+    fig_training_curves_anon(_sc)
+display(Image(filename=str(FIG_ROOT / 'training_curves' / 'top3_convergence_7c.png')))
+display(Image(filename=str(FIG_ROOT / 'training_curves' / 'top3_convergence_3c.png')))""")
 
 md("""### 4.10 Resource Usage
 

@@ -92,6 +92,35 @@ def collect_landmark_rows(runs):
     return rows
 
 
+def collect_landmark_rows_sourceaware(runs):
+    """Seperti collect_landmark_rows tapi mengenali DUA konvensi penamaan run_key.
+
+    - source-first : mediapipe_raw_136_fcnn_b1_3c  / faceapi_facs_28_cnn1d_b2_7c
+    - feature-first: blendshape_52_mediapipe_fcnn_b1_3c
+                     facs_plus_bs_80_faceapi_cnn1d_b3_7c
+
+    collect_landmark_rows() hanya menangani konvensi source-first sehingga
+    blendshape_52 (MP-only) dan facs_plus_bs_80 ter-skip → bar kosong di
+    fig_feature_compare & fig_rq2_feature_decomposition_delta. Helper ini mencari
+    token source di posisi mana pun. Sengaja dipisah agar figure lain yang
+    memakai collect_landmark_rows() tidak berubah perilakunya.
+    """
+    rows = []
+    for r in runs:
+        rk = r["_run_key"]
+        parts = rk.split("_")
+        src_idx = next((i for i, p in enumerate(parts)
+                        if p in ("mediapipe", "faceapi")), None)
+        if src_idx is None:
+            continue
+        source = "MP" if parts[src_idx] == "mediapipe" else "FA"
+        feature = "_".join(p for j, p in enumerate(parts[:-3]) if j != src_idx)
+        rows.append({"source": source, "feature": feature, "arch": parts[-3],
+                     "scenario": parts[-2].upper(), "scheme": parts[-1],
+                     "mf1": to_macro(r), "key": rk, "run": r})
+    return rows
+
+
 def collect_image_rows(runs):
     rows = []
     for r in runs:
@@ -285,36 +314,61 @@ def fig_fa_vs_mp(scheme):
 # ============================================================
 # 5. Feature comparison (raw / facs / blendshape / fb80) — at best scenario per
 # ============================================================
+FEAT_ORDER = ["raw_136", "facs_28", "blendshape_52", "facs_plus_bs_80"]
+MP_ONLY_FEATURES = {"blendshape_52"}        # tidak ada varian face-api.js
+HYBRID_FA_FEATURES = {"facs_plus_bs_80"}    # FA = FACS(FA) + blendshape(MP)
+
+
+def _feat_stats(lm, feature, source, scheme):
+    vals = [r["mf1"] for r in lm if r["feature"] == feature and r["source"] == source
+            and r["scheme"] == scheme and r["mf1"] is not None]
+    return (np.mean(vals), np.max(vals) - np.min(vals)) if vals else None
+
+
 def fig_feature_compare(scheme):
-    lm = collect_landmark_rows(primer[scheme])
-    feat_order = ["raw_136", "facs_28", "blendshape_52", "facs_plus_bs_80"]
-    src_order = ["MP", "FA"]
-    # Average over arch + scenario per (feature, source)
-    fig, ax = plt.subplots(figsize=(9, 5))
-    x = np.arange(len(feat_order)); width = 0.4
-    for j, src in enumerate(src_order):
-        means, errs, exists = [], [], []
-        for feat in feat_order:
-            vals = [r["mf1"] for r in lm
-                    if r["feature"] == feat and r["source"] == src
-                    and r["scheme"] == scheme and r["mf1"] is not None]
-            if vals:
-                means.append(np.mean(vals)); errs.append(np.max(vals) - np.min(vals))
-                exists.append(True)
-            else:
-                means.append(0); errs.append(0); exists.append(False)
-        offset = (j - 0.5) * width
-        color = "#e07b00" if src == "MP" else "#3b7dd8"
-        ax.bar(x + offset, means, width, yerr=errs, capsize=4,
-               label=src, color=color, alpha=0.9)
-        for i, (m, e, ok) in enumerate(zip(means, errs, exists)):
-            if ok:
-                ax.text(i + offset, m + e + 0.005, f"{m:.3f}",
-                        ha="center", fontsize=7)
-    ax.set_xticks(x); ax.set_xticklabels(feat_order, fontsize=9)
+    """Mean macro_f1 per representasi landmark, dipecah per source.
+
+    blendshape_52 hanya punya MP (bar abu-abu "MP only"); facs_plus_bs_80 punya
+    MP & FA tapi komponen FA bersifat hybrid (FACS dari FA, blendshape dari MP).
+    Pakai collect_landmark_rows_sourceaware agar dua feature tsb tidak ter-skip.
+    """
+    from matplotlib.patches import Patch
+    lm = collect_landmark_rows_sourceaware(primer[scheme])
+    mp_c, fa_c, mponly_c = "#e07b00", "#3b7dd8", "#9e9e9e"
+    fig, ax = plt.subplots(figsize=(9.5, 5.2))
+    width, x = 0.38, np.arange(len(FEAT_ORDER))
+    has_hybrid = False
+    for xi, feat in enumerate(FEAT_ORDER):
+        if feat in MP_ONLY_FEATURES:
+            st = _feat_stats(lm, feat, "MP", scheme)
+            if st:
+                m, e = st
+                ax.bar(xi, m, width, yerr=e, capsize=4, color=mponly_c,
+                       alpha=0.95, edgecolor="black", linewidth=0.4)
+                ax.text(xi, m + e + 0.006, f"{m:.3f}\n(MP only)", ha="center", fontsize=7)
+            continue
+        for j, src in enumerate(("MP", "FA")):
+            st = _feat_stats(lm, feat, src, scheme)
+            if st is None:
+                continue
+            m, e = st
+            offset = (j - 0.5) * width
+            hatch = "//" if (src == "FA" and feat in HYBRID_FA_FEATURES) else None
+            ax.bar(xi + offset, m, width, yerr=e, capsize=4,
+                   color=mp_c if src == "MP" else fa_c, alpha=0.9,
+                   hatch=hatch, edgecolor="black", linewidth=0.4)
+            ax.text(xi + offset, m + e + 0.006, f"{m:.3f}", ha="center", fontsize=7)
+            has_hybrid = has_hybrid or bool(hatch)
+    ax.set_xticks(x); ax.set_xticklabels(FEAT_ORDER, fontsize=9)
     ax.set_ylabel("mean test macro_f1 (over arch × scenario)")
     ax.set_title(f"Feature Comparison — {scheme} (error bar = range across arch × scenario)")
-    ax.legend(title="Source")
+    handles = [Patch(facecolor=mp_c, label="MediaPipe (MP)"),
+               Patch(facecolor=fa_c, label="face-api.js (FA)"),
+               Patch(facecolor=mponly_c, label="MP only (no FA variant)")]
+    if has_hybrid:
+        handles.append(Patch(facecolor=fa_c, hatch="//",
+                             label="FA hybrid: FACS=FA, blendshape=MP"))
+    ax.legend(handles=handles, title="Source", fontsize=8)
     plt.tight_layout()
     out = FIG_ROOT / "comparisons" / f"feature_comparison_{scheme}.png"
     fig.savefig(out, dpi=150); plt.close(fig)
@@ -470,6 +524,49 @@ def fig_training_curves(scheme):
     plt.suptitle(f"Training curves — top-3 unimodal per category, {scheme}")
     plt.tight_layout()
     out = FIG_ROOT / "training_curves" / f"top3_{scheme}.png"
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print(f"  wrote {out.relative_to(PROJECT)}")
+
+
+def fig_training_curves_anon(scheme):
+    """Top-3 landmark (kiri) vs top-3 image (kanan) — konvergensi val_macro_f1.
+
+    Legend sengaja TIDAK menyebut representasi fitur (raw_136/facs_28/blendshape_52/
+    facs_plus_bs_80) supaya tidak membocorkan detail dekomposisi yang baru dibahas
+    di RQ berikutnya. Label = peringkat + modalitas + skenario + best val_macro_f1.
+    """
+    runs = primer[scheme]
+    cats = [("Landmark", {"raw_136", "facs_28", "blendshape_52", "facs_plus_bs_80"}, "landmark"),
+            ("Image (CNN)", {"cnn_scratch", "cnn_tl"}, "image")]
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4.6), sharey=True)
+    for ax, (title, dirs, tag) in zip(axes, cats):
+        cand = [r for r in runs if r["_method_dir"] in dirs and to_macro(r) is not None]
+        cand.sort(key=to_macro, reverse=True)
+        for i, r in enumerate(cand[:3], start=1):
+            hist = r.get("training", {}).get("history", [])
+            if not hist:
+                continue
+            ep = [h["epoch"] for h in hist]
+            val = [h.get("val_macro_f1") for h in hist]
+            be = r.get("training", {}).get("best_epoch")
+            if be is not None and 1 <= be <= len(val):
+                best_val = val[be - 1]
+            else:
+                best_val = max(v for v in val if v is not None)
+            scn = r.get("hyperparams", {}).get("scenario", "?")
+            label = f"Top-{i} {tag} ({scn}, val {best_val:.3f})"
+            line, = ax.plot(ep, val, marker="o", markersize=3, linewidth=1.5, label=label)
+            if be is not None and 1 <= be <= len(val):
+                ax.scatter([be], [val[be - 1]], marker="*", s=150,
+                           color=line.get_color(), edgecolor="k", zorder=10)
+        ax.set_xlabel("epoch")
+        ax.set_title(f"Top-3 {title} — {scheme}")
+        ax.legend(fontsize=8, loc="lower right")
+        ax.grid(alpha=0.3)
+    axes[0].set_ylabel("val_macro_f1")
+    plt.suptitle(f"Training Curves — konvergensi top-3 per modalitas, {scheme} (★ = best epoch)")
+    plt.tight_layout()
+    out = FIG_ROOT / "training_curves" / f"top3_convergence_{scheme}.png"
     fig.savefig(out, dpi=150); plt.close(fig)
     print(f"  wrote {out.relative_to(PROJECT)}")
 
@@ -799,47 +896,67 @@ def fig_rq2_feature_decomposition_delta(scheme):
 
     Mean over arch & scenario, dipisah per source. Positive = improvement.
     """
-    lm = collect_landmark_rows(primer[scheme])
+    from matplotlib.patches import Patch
+    lm = collect_landmark_rows_sourceaware(primer[scheme])
     features = [("facs_28", "FACS_28"), ("blendshape_52", "Blendshape_52"),
                 ("facs_plus_bs_80", "FACS+BS_80")]
-    sources = [("MP", "MediaPipe"), ("FA", "face-api.js")]
+    mp_c, fa_c, mponly_c = "#e07b00", "#3b7dd8", "#9e9e9e"
 
-    fig, ax = plt.subplots(figsize=(10, 5))
-    width = 0.35
+    def _mean(feat, src):
+        st = _feat_stats(lm, feat, src, scheme)
+        return st[0] if st else None
+
+    base = {src: _mean("raw_136", src) for src in ("MP", "FA")}
+    fig, ax = plt.subplots(figsize=(10.5, 5.4))
+    width = 0.38
     x = np.arange(len(features))
-    for si, (src, src_lbl) in enumerate(sources):
-        baseline_vals = [r["mf1"] for r in lm
-                         if r["feature"] == "raw_136" and r["source"] == src
-                         and r["scheme"] == scheme and r["mf1"] is not None]
-        if not baseline_vals:
+    has_mponly = has_hybrid = False
+    for si, src in enumerate(("MP", "FA")):
+        if base[src] is None:
             continue
-        baseline_mean = np.mean(baseline_vals)
-        deltas, abs_vals = [], []
-        for feat, _ in features:
-            vals = [r["mf1"] for r in lm
-                    if r["feature"] == feat and r["source"] == src
-                    and r["scheme"] == scheme and r["mf1"] is not None]
-            if vals:
-                m = np.mean(vals)
-                deltas.append(m - baseline_mean); abs_vals.append(m)
+        for xi, (feat, _lbl) in enumerate(features):
+            if feat in MP_ONLY_FEATURES and src == "FA":
+                continue
+            m = _mean(feat, src)
+            if m is None:
+                continue
+            d = m - base[src]
+            if feat in MP_ONLY_FEATURES:
+                offset, color = 0.0, mponly_c
+                has_mponly = True
             else:
-                deltas.append(None); abs_vals.append(None)
-        bars = ax.bar(x + (si - 0.5) * width,
-                      [d if d is not None else 0 for d in deltas],
-                      width,
-                      label=f"{src_lbl} (raw_136 baseline = {baseline_mean:.4f})",
-                      color="#3b7dd8" if src == "FA" else "#91cc75")
-        for i, (d, a) in enumerate(zip(deltas, abs_vals)):
-            if d is None: continue
-            color = "#1a7f37" if d > 0 else "#cf222e"
-            ax.text(i + (si - 0.5) * width, d + (0.002 if d >= 0 else -0.005),
-                    f"Δ={d:+.4f}\n({a:.4f})", ha="center",
-                    va="bottom" if d >= 0 else "top", fontsize=7, color=color)
+                offset = (si - 0.5) * width
+                color = mp_c if src == "MP" else fa_c
+            hatch = "//" if (src == "FA" and feat in HYBRID_FA_FEATURES) else None
+            has_hybrid = has_hybrid or bool(hatch)
+            ax.bar(xi + offset, d, width, color=color, alpha=0.9, hatch=hatch,
+                   edgecolor="black", linewidth=0.4)
+            tcol = "#1a7f37" if d > 0 else "#cf222e"
+            ax.text(xi + offset, d + (0.003 if d >= 0 else -0.006),
+                    f"Δ={d:+.3f}\n({m:.3f})", ha="center",
+                    va="bottom" if d >= 0 else "top", fontsize=6.8, color=tcol)
     ax.axhline(0, color="black", linewidth=0.8)
+    # headroom proporsional ke range data: bawah lebih lega utk label 2-baris
+    # pada bar negatif (mis. FACS_28 MP di 7c) agar tidak keluar kotak.
+    ymin, ymax = ax.get_ylim()
+    rng = (ymax - ymin) or 1.0
+    ax.set_ylim(ymin - rng * 0.45, ymax + rng * 0.30)
     ax.set_xticks(x); ax.set_xticklabels([f[1] for f in features])
     ax.set_ylabel("Δ macro_f1 vs raw_136 (mean over arch × scenario)")
     ax.set_title(f"RQ2: Feature decomposition — Δ vs raw_136 baseline — {scheme}")
-    ax.legend(loc="best", fontsize=8)
+    handles = []
+    if base["MP"] is not None:
+        handles.append(Patch(facecolor=mp_c,
+                             label=f"MediaPipe (raw_136 baseline = {base['MP']:.4f})"))
+    if base["FA"] is not None:
+        handles.append(Patch(facecolor=fa_c,
+                             label=f"face-api.js (raw_136 baseline = {base['FA']:.4f})"))
+    if has_mponly:
+        handles.append(Patch(facecolor=mponly_c, label="MP only (Blendshape_52)"))
+    if has_hybrid:
+        handles.append(Patch(facecolor=fa_c, hatch="//",
+                             label="FA hybrid: FACS=FA, blendshape=MP"))
+    ax.legend(handles=handles, loc="best", fontsize=8)
     plt.tight_layout()
     out = FIG_ROOT / "comparisons" / f"rq2_feature_decomposition_delta_{scheme}.png"
     fig.savefig(out, dpi=150); plt.close(fig)
@@ -903,6 +1020,44 @@ def get_per_class_report(run):
 # Multi-metric summary — accuracy / macro_f1 / weighted_f1
 # (RQ1: best run per kategori; RQ2/RQ3 sebagai pelengkap)
 # ============================================================
+def fig_cnn_tl_vs_scratch(scheme):
+    """CNN image branch: Transfer Learning (ResNet-18) vs Training from Scratch."""
+    def _mf1(method, scenario):
+        for r in primer[scheme]:
+            if r["_method_dir"] != method:
+                continue
+            parts = r["_run_key"].split("_")
+            if parts[-1] == scheme and parts[-2].upper() == scenario:
+                return to_macro(r)
+        return None
+
+    scns = ["B1", "B2", "B3"]
+    scratch = [_mf1("cnn_scratch", s) for s in scns]
+    tl = [_mf1("cnn_tl", s) for s in scns]
+    fig, ax = plt.subplots(figsize=(7.5, 5))
+    x, width = np.arange(len(scns)), 0.38
+    b1 = ax.bar(x - width / 2, [v or 0 for v in scratch], width,
+                label="CNN from Scratch", color="#cf222e", alpha=0.9,
+                edgecolor="black", linewidth=0.4)
+    b2 = ax.bar(x + width / 2, [v or 0 for v in tl], width,
+                label="CNN Transfer Learning (ResNet-18)", color="#3b7dd8",
+                alpha=0.9, edgecolor="black", linewidth=0.4)
+    for bars, vals in ((b1, scratch), (b2, tl)):
+        for rect, v in zip(bars, vals):
+            if v is not None:
+                ax.text(rect.get_x() + rect.get_width() / 2, v + 0.006,
+                        f"{v:.3f}", ha="center", fontsize=8)
+    ax.set_xticks(x); ax.set_xticklabels(scns)
+    ax.set_xlabel("Skenario"); ax.set_ylabel("test macro_f1")
+    ax.set_title(f"CNN Image Branch: Transfer Learning vs Scratch — {scheme}")
+    ax.legend(fontsize=8)
+    ax.set_ylim(0, max([v for v in (scratch + tl) if v] + [0.1]) * 1.18)
+    plt.tight_layout()
+    out = FIG_ROOT / "comparisons" / f"cnn_tl_vs_scratch_{scheme}.png"
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print(f"  wrote {out.relative_to(PROJECT)}")
+
+
 def fig_multi_metric_unimodal(scheme):
     """Best run per kategori unimodal × 3 metrik (acc, mf1, wf1)."""
     lm = collect_landmark_rows(primer[scheme])
@@ -1081,9 +1236,11 @@ for scheme in ("3c", "7c"):
     fig_confusion_top(scheme)
     fig_per_class_f1(scheme)
     fig_training_curves(scheme)
+    fig_training_curves_anon(scheme)
     fig_resources(scheme)
     fig_rq1_modality_contribution(scheme)
     fig_rq2_feature_decomposition_delta(scheme)
+    fig_cnn_tl_vs_scratch(scheme)
     fig_multi_metric_unimodal(scheme)
     fig_inference_throughput(scheme)
     fig_per_class_metrics_top(scheme)

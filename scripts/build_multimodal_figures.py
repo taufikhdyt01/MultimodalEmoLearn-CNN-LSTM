@@ -58,6 +58,37 @@ def fusion_runs(runs):
     return {k: v for k, v in runs.items() if v.get("_method_dir", "").startswith("fusion_")}
 
 
+STRATEGY_ORDER = ["Early-concat TL", "Early-concat Scratch",
+                  "Early-gated TL", "Early-gated Scratch",
+                  "Intermediate TL", "Intermediate Scratch",
+                  "Late TL", "Late Scratch"]
+
+
+def strategy_from_method(md):
+    """Map results dir name -> 'Early-concat TL' dst.
+
+    Pakai _method_dir (bukan run_key) karena run_key Early-concat
+    (fusion_early_tl / fusion_early_scratch) tidak punya token 'concat' eksplisit
+    sehingga tidak bisa dibedakan dari varian gated lewat parsing key.
+    """
+    if not md or not md.startswith("fusion_"):
+        return None
+    variant = "TL" if "_tl" in md else ("Scratch" if "_scratch" in md else None)
+    if variant is None:
+        return None
+    if md.startswith("fusion_early_gated"):
+        base = "Early-gated"
+    elif md.startswith("fusion_early"):
+        base = "Early-concat"
+    elif md.startswith("fusion_intermediate"):
+        base = "Intermediate"
+    elif md.startswith("fusion_late"):
+        base = "Late"
+    else:
+        return None
+    return f"{base} {variant}"
+
+
 # ============================================================
 # 1. Fusion master heatmap (per scheme, fusion × variant × source × scenario)
 # ============================================================
@@ -787,6 +818,117 @@ def rq3_summary_table():
 # ============================================================
 # Run all
 # ============================================================
+def fig_fusion_scenario_b1b2b3(scheme):
+    """Skenario B1/B2/B3 per strategi fusi (best config per strategy × scenario)."""
+    runs = fusion_runs(load_all(PRIMER / f"{scheme[0]}class" / "Unified"))
+    scn_colors = {"B1": "#3b7dd8", "B2": "#91cc75", "B3": "#fac858"}
+    best = {s: {"B1": None, "B2": None, "B3": None} for s in STRATEGY_ORDER}
+    for r in runs.values():
+        lab = strategy_from_method(r.get("_method_dir"))
+        if lab not in best:
+            continue
+        mf1 = to_macro(r)
+        if mf1 is None:
+            continue
+        scn = r["_run_key"].split("_")[-2].upper()
+        if scn not in best[lab]:
+            continue
+        if best[lab][scn] is None or mf1 > best[lab][scn]:
+            best[lab][scn] = mf1
+    strategies = [s for s in STRATEGY_ORDER
+                  if any(best[s][c] is not None for c in ("B1", "B2", "B3"))]
+    if not strategies:
+        return
+    fig, ax = plt.subplots(figsize=(13, 5.6))
+    x, width = np.arange(len(strategies)), 0.26
+    for j, scn in enumerate(("B1", "B2", "B3")):
+        vals = [best[s][scn] if best[s][scn] is not None else 0 for s in strategies]
+        bars = ax.bar(x + (j - 1) * width, vals, width, label=scn,
+                      color=scn_colors[scn], alpha=0.9, edgecolor="black", linewidth=0.3)
+        for rect, v in zip(bars, vals):
+            if v > 0:
+                ax.text(rect.get_x() + rect.get_width() / 2, v + 0.005,
+                        f"{v:.3f}", ha="center", fontsize=6, rotation=90)
+    ax.set_xticks(x); ax.set_xticklabels(strategies, rotation=25, ha="right", fontsize=8)
+    ax.set_ylabel("best test macro_f1 (over feature variant × source)")
+    ax.set_title(f"Skenario B1 / B2 / B3 per Strategi Fusi — Primer {scheme}")
+    ax.legend(title="Skenario", fontsize=8)
+    ax.set_ylim(0, max([best[s][c] for s in strategies for c in ("B1", "B2", "B3")
+                        if best[s][c]] + [0.1]) * 1.15)
+    plt.tight_layout()
+    out = FIG_ROOT / "comparisons" / f"fusion_scenario_b1b2b3_{scheme}.png"
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print(f"  wrote {out.relative_to(PROJECT)}")
+
+
+def fig_resource_compare_fusion(scheme):
+    """Resource footprint per strategi fusi: training time / params / VRAM.
+
+    Late Fusion tidak punya fase joint-training → ketiga metrik N/A.
+    """
+    runs = fusion_runs(load_all(PRIMER / f"{scheme[0]}class" / "Unified"))
+    agg = {s: {"time": [], "params": [], "vram": []} for s in STRATEGY_ORDER}
+    for r in runs.values():
+        lab = strategy_from_method(r.get("_method_dir"))
+        if lab not in agg:
+            continue
+        tr = r.get("training", {})
+        t = tr.get("elapsed_sec")
+        if not isinstance(t, (int, float)) and lab.startswith("Late"):
+            # Late fusion tidak punya joint-training; total cost = latih kedua branch
+            ib = r.get("image_branch", {}).get("elapsed_sec")
+            lb = r.get("landmark_branch", {}).get("elapsed_sec")
+            if isinstance(ib, (int, float)) and isinstance(lb, (int, float)):
+                t = ib + lb
+        if isinstance(t, (int, float)):
+            agg[lab]["time"].append(t)
+        if isinstance(tr.get("peak_vram_mb"), (int, float)):
+            agg[lab]["vram"].append(tr["peak_vram_mb"])
+        npar = r.get("model", {}).get("n_params")
+        if isinstance(npar, (int, float)):
+            agg[lab]["params"].append(npar)
+    strategies = STRATEGY_ORDER
+    have_params = any(agg[s]["params"] for s in strategies)
+    have_vram = any(agg[s]["vram"] for s in strategies)
+    panels = [("Mean training time", "time", "seconds", 1.0)]
+    if have_params:
+        panels.append(("Model size", "params", "juta params (M)", 1e-6))
+    if have_vram:
+        panels.append(("Peak VRAM", "vram", "MB", 1.0))
+    n = len(panels)
+    fig, axes = plt.subplots(1, n, figsize=(5.4 * n, 5.4))
+    if n == 1:
+        axes = [axes]
+    colors = plt.cm.tab10(np.linspace(0, 1, len(strategies)))
+    x = np.arange(len(strategies))
+    missing = set()
+    for ax, (title, field, ylabel, scale) in zip(axes, panels):
+        vals = [np.mean(agg[s][field]) * scale if agg[s][field] else None for s in strategies]
+        vmax = max([v for v in vals if v is not None] + [1.0])
+        for i, (s, v) in enumerate(zip(strategies, vals)):
+            if v is None:
+                missing.add(s)
+                ax.text(i, vmax * 0.02, "N/A", ha="center", va="bottom",
+                        fontsize=7, color="#888", rotation=90)
+                continue
+            ax.bar(i, v, color=colors[i], alpha=0.9, edgecolor="black", linewidth=0.4)
+            ax.text(i, v + vmax * 0.01,
+                    f"{v:.2f}" if scale == 1e-6 else f"{v:.1f}", ha="center", fontsize=7)
+        ax.set_xticks(x); ax.set_xticklabels(strategies, rotation=30, ha="right", fontsize=7.5)
+        ax.set_ylabel(ylabel); ax.set_title(title)
+    plt.suptitle(f"Resource Footprint per Strategi Fusi — Primer {scheme}", fontsize=12)
+    if missing:
+        fig.text(0.5, 0.005,
+                 "Late Fusion: training time = total melatih kedua branch unimodal "
+                 "(image + landmark). N/A = params & peak VRAM tidak dicatat karena "
+                 "tidak ada model gabungan tunggal yang dilatih.",
+                 ha="center", fontsize=7.5, color="#555")
+    plt.tight_layout(rect=[0, 0.04, 1, 0.96])
+    out = FIG_ROOT / "comparisons" / f"resource_compare_fusion_{scheme}.png"
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print(f"  wrote {out.relative_to(PROJECT)}")
+
+
 if __name__ == "__main__":
     for scheme in ("3c", "7c"):
         fig_fusion_master_heatmap(scheme)
@@ -799,6 +941,8 @@ if __name__ == "__main__":
         fig_fusion_multi_metric(scheme)
         fig_fusion_inference_throughput(scheme)
         fig_fusion_per_class_metrics(scheme)
+        fig_fusion_scenario_b1b2b3(scheme)
+        fig_resource_compare_fusion(scheme)
     fig_cross_dataset_best_fusion()
     fig_training_time_comparison()
     fig_late_fusion_weights()

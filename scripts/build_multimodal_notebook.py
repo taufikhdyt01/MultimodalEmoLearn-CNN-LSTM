@@ -259,6 +259,88 @@ Distribusi mf1 per fusion strategy (Early dipecah menjadi concat & gated). Boxpl
 code("""display(Image(filename=str(FIG_ROOT/'comparisons'/'rq3_fusion_strategy_comparison_3c.png')))
 display(Image(filename=str(FIG_ROOT/'comparisons'/'rq3_fusion_strategy_comparison_7c.png')))""")
 
+md(r"""#### 4.0.2.b Skenario B1 / B2 / B3 per Strategi Fusi
+
+> **Gambar 5.15 (baru).** Komparasi skenario imbalance B1/B2/B3 untuk **8 kombinasi strategi × variant** (Early-concat TL/Scratch, Early-gated TL/Scratch, Intermediate TL/Scratch, Late TL/Scratch), Primer 7c (panel a) dan 3c (panel b). Tiap strategi menampilkan **best config per scenario** (max `macro_f1` over feature variant × source), supaya bar bersih dan langsung membandingkan respons tiap strategi terhadap imbalance.
+>
+> Strategi diturunkan dari nama direktori (`_method_dir`), bukan `run_key`, agar Early-concat tidak tertukar dengan Early-gated. Output: `docs/figures/multimodal/comparisons/fusion_scenario_b1b2b3_{7c,3c}.png`.""")
+
+code(r"""# === NEW: Skenario B1/B2/B3 per Fusion Strategy ===
+# best config per (strategy × scenario), over semua feature variant & source.
+# Catatan: strategy diturunkan dari _method_dir (bukan run_key) karena run_key
+# Early-concat (fusion_early_tl / fusion_early_scratch) tidak punya token
+# 'concat' eksplisit sehingga parser key tidak bisa membedakannya dari varian
+# gated — akibatnya kalau pakai parser key, Early-concat bisa hilang.
+STRATEGY_ORDER = ['Early-concat TL', 'Early-concat Scratch',
+                  'Early-gated TL', 'Early-gated Scratch',
+                  'Intermediate TL', 'Intermediate Scratch',
+                  'Late TL', 'Late Scratch']
+SCN_COLORS = {'B1': '#3b7dd8', 'B2': '#91cc75', 'B3': '#fac858'}
+
+
+def strategy_from_method(md):
+    if not md or not md.startswith('fusion_'):
+        return None
+    variant = 'TL' if '_tl' in md else ('Scratch' if '_scratch' in md else None)
+    if variant is None:
+        return None
+    if md.startswith('fusion_early_gated'):
+        base = 'Early-gated'
+    elif md.startswith('fusion_early'):
+        base = 'Early-concat'
+    elif md.startswith('fusion_intermediate'):
+        base = 'Intermediate'
+    elif md.startswith('fusion_late'):
+        base = 'Late'
+    else:
+        return None
+    return f'{base} {variant}'
+
+
+def fig_fusion_scenario_b1b2b3(scheme):
+    best = {s: {'B1': None, 'B2': None, 'B3': None} for s in STRATEGY_ORDER}
+    for r in primer_fusion[scheme]:
+        lab = strategy_from_method(r['_method_dir'])
+        if lab not in best:
+            continue
+        mf1 = r.get('test', {}).get('macro_f1')
+        if mf1 is None:
+            continue
+        scn = r['_run_key'].split('_')[-2].upper()
+        if scn not in best[lab]:
+            continue
+        if best[lab][scn] is None or mf1 > best[lab][scn]:
+            best[lab][scn] = mf1
+    strategies = [s for s in STRATEGY_ORDER
+                  if any(best[s][c] is not None for c in ('B1', 'B2', 'B3'))]
+    fig, ax = plt.subplots(figsize=(13, 5.6))
+    x, width = np.arange(len(strategies)), 0.26
+    for j, scn in enumerate(('B1', 'B2', 'B3')):
+        vals = [best[s][scn] if best[s][scn] is not None else 0 for s in strategies]
+        bars = ax.bar(x + (j - 1) * width, vals, width, label=scn,
+                      color=SCN_COLORS[scn], alpha=0.9, edgecolor='black', linewidth=0.3)
+        for rect, v in zip(bars, vals):
+            if v > 0:
+                ax.text(rect.get_x() + rect.get_width() / 2, v + 0.005,
+                        f'{v:.3f}', ha='center', fontsize=6, rotation=90)
+    ax.set_xticks(x); ax.set_xticklabels(strategies, rotation=25, ha='right', fontsize=8)
+    ax.set_ylabel('best test macro_f1 (over feature variant × source)')
+    ax.set_title(f'Skenario B1 / B2 / B3 per Strategi Fusi — Primer {scheme}')
+    ax.legend(title='Skenario', fontsize=8)
+    ax.set_ylim(0, max([best[s][c] for s in strategies for c in ('B1', 'B2', 'B3')
+                        if best[s][c]] + [0.1]) * 1.15)
+    plt.tight_layout()
+    out = FIG_ROOT / 'comparisons' / f'fusion_scenario_b1b2b3_{scheme}.png'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print('wrote', out.name)
+
+
+for _sc in ('7c', '3c'):   # panel a = 7c, panel b = 3c
+    fig_fusion_scenario_b1b2b3(_sc)
+display(Image(filename=str(FIG_ROOT / 'comparisons' / 'fusion_scenario_b1b2b3_7c.png')))
+display(Image(filename=str(FIG_ROOT / 'comparisons' / 'fusion_scenario_b1b2b3_3c.png')))""")
+
 md("""#### 4.0.3 RQ3.c — Fusion × feature decomposition (heatmap)
 
 Heatmap menunjukkan **best mf1 lintas scenario** untuk tiap kombinasi (strategy + variant + source) × feature. Catatan: Early Fusion hanya support raw_136 (baris Early hanya terisi di kolom raw_136).
@@ -357,70 +439,7 @@ per_class_fusion_df = pd.DataFrame(rows)
 per_class_fusion_df.style.format({'precision':'{:.3f}','recall':'{:.3f}','f1':'{:.3f}'}, na_rep='-') \\
                          .background_gradient(subset=['precision','recall','f1'], cmap='RdYlGn', vmin=0, vmax=1)""")
 
-md("""#### 4.0.8 Grad-CAM — Interpretability image branch (CNN_TL → Fusion)
-
-Grad-CAM membandingkan attention map **CNN_TL standalone** vs **Early Fusion TL** vs **Intermediate Fusion TL** image branch. Visualisasi apakah landmark guidance (heatmap di Early, coord features di Intermediate) **menggeser attention** ke region yang lebih meaningful.
-
-> **Sumber:** outputs/gradcam (3c), outputs/gradcam_7c (7c) via `scripts/run_gradcam_3c.py` & `scripts/run_gradcam_7c.py`. Late Fusion juga di-gen (combined per-branch).
-
-**Side-by-side 3c (positive / neutral / negative):**
-""")
-
-code("""GRADCAM_3C = PROJECT/'outputs'/'gradcam'
-for f in ['gradcam_comparison_cls0_sample273.png',
-          'gradcam_comparison_cls1_sample129.png',
-          'gradcam_comparison_cls2_sample337.png']:
-    print(f'--- {f} ---')
-    display(Image(filename=str(GRADCAM_3C/f)))""")
-
-md("""**Side-by-side 7c — sampel per kelas:**
-""")
-
-code("""GRADCAM_7C = PROJECT/'outputs'/'gradcam_7c'
-for f in ['gradcam_comparison_angry_s339.png',
-          'gradcam_comparison_disgust_s25.png',
-          'gradcam_comparison_fear_s562.png',
-          'gradcam_comparison_happy_s762.png',
-          'gradcam_comparison_neutral_s851.png',
-          'gradcam_comparison_sad_s337.png',
-          'gradcam_comparison_surprise_s289.png']:
-    print(f'--- {f} ---')
-    display(Image(filename=str(GRADCAM_7C/f)))""")
-
-md("""**Error case analysis — Early/Intermediate/Late Fusion (3c & 7c):**
-
-Sample yang misclassified untuk tiap arsitektur fusion. Diagnosa mengapa fusion gagal di kasus tertentu.
-""")
-
-code("""print('--- Early Fusion TL error (3c) ---')
-display(Image(filename=str(GRADCAM_3C/'gradcam_earlyfusion_tl_error.png')))
-print('--- Intermediate Fusion TL error (3c) ---')
-display(Image(filename=str(GRADCAM_3C/'gradcam_intermediate_tl_error.png')))
-print('--- Late Fusion TL error (3c) ---')
-display(Image(filename=str(GRADCAM_3C/'gradcam_latefusion_tl_error.png')))""")
-
-code("""print('--- Early Fusion TL error (7c) ---')
-display(Image(filename=str(GRADCAM_7C/'gradcam_earlyfusion_tl_error.png')))
-print('--- Intermediate Fusion TL error (7c) ---')
-display(Image(filename=str(GRADCAM_7C/'gradcam_intermediate_tl_error.png')))
-print('--- Late Fusion error (7c) ---')
-display(Image(filename=str(GRADCAM_7C/'gradcam_latefusion_error.png')))""")
-
-md("""**Insight Grad-CAM untuk RQ3:**
-
-- **Early Fusion TL** dengan landmark heatmap channel cenderung membuat attention **lebih fokus** di region landmark-rich (mata, mulut) dibanding CNN_TL polos — bukti kualitatif bahwa landmark prior berguna.
-- **Intermediate Fusion TL** image branch menampilkan attention yang **berbeda dari CNN_TL standalone** — model belajar pakai branch image untuk pattern berbeda saat ada concurrent landmark feature.
-- **Late Fusion** tidak menggeser attention CNN (karena training terpisah) — keunggulannya hanya di decision-level combination.
-- Untuk minority class 7c (disgust, fear), fusion Grad-CAM masih diffuse → modality combination tidak fully menyelesaikan few-shot challenge.
-
-### 4.0.9 Deep-dive notebook
-Untuk analisis Grad-CAM yang lebih komprehensif (semua sample, multi-class confusion case), lihat:
-- `notebooks/73_gradcam_analysis.ipynb` — overview
-- `notebooks/86_gradcam_error_analysis.ipynb` — error case studi 3c
-
----
-
-**Insight RQ3 dari data Primer:**
+md("""**Insight RQ3 dari data Primer:**
 
 - **3-class (3c)**: Late Fusion paling sering juara di B1; Intermediate menang di B2 (TL); Late TL menang di B3. Pola: **decision-level fusion (Late) optimal saat class-count rendah** karena weighted softmax robust terhadap mismatch skala antar branch.
 - **7-class (7c)**: Intermediate Fusion menang di B1; Late di B2 & B3. Pada class-count tinggi, **feature-level fusion (Intermediate)** menunjukkan keunggulan di skenario standar (B1), tapi Late lebih stabil di scenario dengan sampler imbalance.
@@ -467,6 +486,114 @@ Wall-clock training time per fusion type — early & intermediate yang train end
 """)
 
 code("""display(Image(filename=str(FIG_ROOT/'comparisons'/'training_time_comparison.png')))""")
+
+md(r"""#### 4.5.1 Resource Footprint per Strategi Fusi
+
+> **Gambar 5.17 (lengkap).** Khusus strategi fusi (bukan unimodal), 3 sub-panel per scheme: **(1) mean training time**, **(2) model size** dalam juta params (`model.n_params`), **(3) peak VRAM** (`training.peak_vram_mb`). Ke-8 strategi tampil di kedua scheme (7c & 3c).
+>
+> **Late Fusion** kini juga punya bar **training time** = total melatih kedua branch unimodal (`image_branch.elapsed_sec + landmark_branch.elapsed_sec`), karena Late tidak melatih satu model gabungan melainkan menggabungkan dua branch terpisah. Untuk panel **params** & **peak VRAM**, Late tetap **N/A** (tidak ada model gabungan tunggal yang dilog). Output: `docs/figures/multimodal/comparisons/resource_compare_fusion_{7c,3c}.png`.""")
+
+code(r"""# === NEW: Resource Footprint per Fusion Strategy (training time / params / VRAM) ===
+# Sumber field di results.json tiap run:
+#   training.elapsed_sec   -> training time (detik), untuk Early & Intermediate
+#   training.peak_vram_mb  -> peak VRAM (MB)
+#   model.n_params         -> jumlah parameter
+# Late Fusion TIDAK punya fase joint-training. Training time-nya dihitung dari
+# total melatih kedua branch unimodal (image_branch.elapsed_sec +
+# landmark_branch.elapsed_sec). Params & peak VRAM tetap N/A (tidak ada model
+# gabungan tunggal yang dilatih → tidak dilog).
+_RES_ORDER = ['Early-concat TL', 'Early-concat Scratch',
+              'Early-gated TL', 'Early-gated Scratch',
+              'Intermediate TL', 'Intermediate Scratch',
+              'Late TL', 'Late Scratch']
+
+
+def _strategy_from_method(md):
+    if not md or not md.startswith('fusion_'):
+        return None
+    variant = 'TL' if '_tl' in md else ('Scratch' if '_scratch' in md else None)
+    if variant is None:
+        return None
+    if md.startswith('fusion_early_gated'):
+        base = 'Early-gated'
+    elif md.startswith('fusion_early'):
+        base = 'Early-concat'
+    elif md.startswith('fusion_intermediate'):
+        base = 'Intermediate'
+    elif md.startswith('fusion_late'):
+        base = 'Late'
+    else:
+        return None
+    return f'{base} {variant}'
+
+
+def fig_resource_compare_fusion(scheme):
+    agg = {s: {'time': [], 'params': [], 'vram': []} for s in _RES_ORDER}
+    for r in primer_fusion[scheme]:
+        lab = _strategy_from_method(r['_method_dir'])
+        if lab not in agg:
+            continue
+        tr = r.get('training', {})
+        t = tr.get('elapsed_sec')
+        if not isinstance(t, (int, float)) and lab.startswith('Late'):
+            ib = r.get('image_branch', {}).get('elapsed_sec')
+            lb = r.get('landmark_branch', {}).get('elapsed_sec')
+            if isinstance(ib, (int, float)) and isinstance(lb, (int, float)):
+                t = ib + lb
+        if isinstance(t, (int, float)):
+            agg[lab]['time'].append(t)
+        if isinstance(tr.get('peak_vram_mb'), (int, float)):
+            agg[lab]['vram'].append(tr['peak_vram_mb'])
+        npar = r.get('model', {}).get('n_params')
+        if isinstance(npar, (int, float)):
+            agg[lab]['params'].append(npar)
+    strategies = _RES_ORDER
+    have_params = any(agg[s]['params'] for s in strategies)
+    have_vram = any(agg[s]['vram'] for s in strategies)
+    panels = [('Mean training time', 'time', 'seconds', 1.0)]
+    if have_params:
+        panels.append(('Model size', 'params', 'juta params (M)', 1e-6))
+    if have_vram:
+        panels.append(('Peak VRAM', 'vram', 'MB', 1.0))
+    n = len(panels)
+    fig, axes = plt.subplots(1, n, figsize=(5.4 * n, 5.4))
+    if n == 1:
+        axes = [axes]
+    colors = plt.cm.tab10(np.linspace(0, 1, len(strategies)))
+    x = np.arange(len(strategies))
+    missing = set()
+    for ax, (title, field, ylabel, scale) in zip(axes, panels):
+        vals = [np.mean(agg[s][field]) * scale if agg[s][field] else None for s in strategies]
+        vmax = max([v for v in vals if v is not None] + [1.0])
+        for i, (s, v) in enumerate(zip(strategies, vals)):
+            if v is None:
+                missing.add(s)
+                ax.text(i, vmax * 0.02, 'N/A', ha='center', va='bottom',
+                        fontsize=7, color='#888', rotation=90)
+                continue
+            ax.bar(i, v, color=colors[i], alpha=0.9, edgecolor='black', linewidth=0.4)
+            ax.text(i, v + vmax * 0.01,
+                    f'{v:.2f}' if scale == 1e-6 else f'{v:.1f}', ha='center', fontsize=7)
+        ax.set_xticks(x); ax.set_xticklabels(strategies, rotation=30, ha='right', fontsize=7.5)
+        ax.set_ylabel(ylabel); ax.set_title(title)
+    plt.suptitle(f'Resource Footprint per Strategi Fusi — Primer {scheme}', fontsize=12)
+    if missing:
+        fig.text(0.5, 0.005,
+                 'Late Fusion: training time = total melatih kedua branch unimodal '
+                 '(image + landmark). N/A = params & peak VRAM tidak dicatat karena '
+                 'tidak ada model gabungan tunggal yang dilatih.',
+                 ha='center', fontsize=7.5, color='#555')
+    plt.tight_layout(rect=[0, 0.04, 1, 0.96])
+    out = FIG_ROOT / 'comparisons' / f'resource_compare_fusion_{scheme}.png'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print('wrote', out.name, '| params:', have_params, '| vram:', have_vram)
+
+
+for _sc in ('7c', '3c'):
+    fig_resource_compare_fusion(_sc)
+display(Image(filename=str(FIG_ROOT / 'comparisons' / 'resource_compare_fusion_7c.png')))
+display(Image(filename=str(FIG_ROOT / 'comparisons' / 'resource_compare_fusion_3c.png')))""")
 
 md("""### 4.6 Fusion vs Unimodal Terbaik per Dataset (Cross-dataset)
 
